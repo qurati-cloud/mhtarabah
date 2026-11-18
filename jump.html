@@ -369,6 +369,19 @@ function getSpriteBounds(img,pose){
 }
 
 
+function prepareMohammadImages(){
+ for(const [pose,img] of Object.entries(mohammadImages)){
+  const prepare=()=>{
+   if(img.naturalWidth>0&&!spriteBounds[pose]){
+    getSpriteBounds(img,pose);
+   }
+  };
+  if(img.complete)prepare();
+  else img.addEventListener("load",prepare,{once:true});
+ }
+}
+prepareMohammadImages();
+
 function drawMohammad(){
  const pose=characterPose();
  const img=mohammadImages[pose];
@@ -383,7 +396,7 @@ function drawMohammad(){
  ctx.restore();
 
  if(img.complete&&img.naturalWidth>0){
-  const bounds=getSpriteBounds(img,pose);
+  const bounds=spriteBounds[pose]||getSpriteBounds(img,pose);
   const scale=Math.min(size.w/bounds.w,size.h/bounds.h);
   const w=bounds.w*scale;
   const h=bounds.h*scale;
