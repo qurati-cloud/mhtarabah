@@ -138,9 +138,9 @@ function isDuck(){
 
 
 const CHARACTER={
- run:{w:110,h:135},
- jump:{w:115,h:140},
- duck:{w:120,h:78}
+ run:{w:110,h:125},
+ jump:{w:110,h:125},
+ duck:{w:115,h:72}
 };
 
 function characterPose(){
@@ -342,6 +342,65 @@ const RUN_FRAMES=8;
 
 const spriteBounds={};
 
+const runFrameBounds=[];
+
+function prepareRunningFrames(){
+ if(!runningSheet.complete||!runningSheet.naturalWidth)return;
+
+ const fw=runningSheet.naturalWidth/RUN_FRAMES;
+ const fh=runningSheet.naturalHeight;
+
+ const c=document.createElement("canvas");
+ c.width=runningSheet.naturalWidth;
+ c.height=fh;
+
+ const g=c.getContext("2d",{willReadFrequently:true});
+ g.drawImage(runningSheet,0,0);
+
+ const pixels=g.getImageData(0,0,c.width,c.height).data;
+
+ runFrameBounds.length=0;
+
+ for(let frame=0;frame<RUN_FRAMES;frame++){
+  const x0=Math.round(frame*fw);
+  const x1=Math.round((frame+1)*fw);
+
+  let left=x1,top=fh,right=-1,bottom=-1;
+
+  for(let y=0;y<fh;y++){
+   for(let x=x0;x<x1;x++){
+    if(pixels[(y*c.width+x)*4+3]>30){
+     left=Math.min(left,x);
+     right=Math.max(right,x);
+     top=Math.min(top,y);
+     bottom=Math.max(bottom,y);
+    }
+   }
+  }
+
+  if(right>=left){
+   runFrameBounds.push({
+    x:left,y:top,
+    w:right-left+1,
+    h:bottom-top+1
+   });
+  }else{
+   runFrameBounds.push({
+    x:x0,y:0,w:x1-x0,h:fh
+   });
+  }
+ }
+}
+
+if(runningSheet.complete&&runningSheet.naturalWidth){
+ prepareRunningFrames();
+}else{
+ runningSheet.addEventListener(
+  "load",prepareRunningFrames,{once:true}
+ );
+}
+
+
 function getSpriteBounds(img,pose){
  if(spriteBounds[pose])return spriteBounds[pose];
 
@@ -394,54 +453,66 @@ prepareMohammadImages();
 function drawMohammad(){
  const pose=characterPose();
  const size=CHARACTER[pose];
+ const footY=GROUND-runner.y+2;
+ const centerX=runner.x+55;
 
  ctx.save();
  ctx.globalAlpha=.16;
  ctx.fillStyle="#000";
  ctx.beginPath();
- ctx.ellipse(runner.x+size.w/2,GROUND+4,36,6,0,0,Math.PI*2);
+ ctx.ellipse(centerX,GROUND+4,36,6,0,0,Math.PI*2);
  ctx.fill();
  ctx.restore();
 
- const footY=GROUND-runner.y+2;
-
  if(pose==="run"&&runningSheet.complete&&runningSheet.naturalWidth>0){
-  const frameWidth=runningSheet.naturalWidth/RUN_FRAMES;
-  const frameHeight=runningSheet.naturalHeight;
+  const ratio=Math.max(1,Math.min(10,speed/235));
+  const fps=7+ratio*1.5;
+  const frame=Math.floor(clock*fps)%RUN_FRAMES;
 
-  const speedRatio=Math.max(1,Math.min(10,speed/235));
-  const framesPerSecond=7+speedRatio*1.5;
-  const frame=Math.floor(clock*framesPerSecond)%RUN_FRAMES;
+  const bounds=runFrameBounds[frame];
 
-  const targetH=size.h;
-  const targetW=size.w;
-  const x=runner.x;
+  if(bounds){
+   const scale=Math.min(
+    size.w/bounds.w,
+    size.h/bounds.h
+   );
 
-  ctx.drawImage(
-   runningSheet,
-   frame*frameWidth,0,frameWidth,frameHeight,
-   x,footY-targetH,targetW,targetH
-  );
-  return;
+   const w=bounds.w*scale;
+   const h=bounds.h*scale;
+
+   ctx.drawImage(
+    runningSheet,
+    bounds.x,bounds.y,bounds.w,bounds.h,
+    centerX-w/2,footY-h,w,h
+   );
+   return;
+  }
  }
 
  const img=mohammadImages[pose];
 
  if(img.complete&&img.naturalWidth>0){
   const bounds=spriteBounds[pose]||getSpriteBounds(img,pose);
-  const scale=Math.min(size.w/bounds.w,size.h/bounds.h);
+  const scale=Math.min(
+   size.w/bounds.w,
+   size.h/bounds.h
+  );
+
   const w=bounds.w*scale;
   const h=bounds.h*scale;
-  const x=runner.x+(size.w-w)/2;
 
   ctx.drawImage(
    img,
    bounds.x,bounds.y,bounds.w,bounds.h,
-   x,footY-h,w,h
+   centerX-w/2,footY-h,w,h
   );
  }else{
   ctx.fillStyle="#28458f";
-  ctx.fillRect(runner.x,footY-size.h,size.w,size.h);
+  ctx.fillRect(
+   centerX-size.w/2,
+   footY-size.h,
+   size.w,size.h
+  );
  }
 }
 
