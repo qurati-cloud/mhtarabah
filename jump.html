@@ -476,8 +476,8 @@ function drawMohammad(){
 
  if(pose==="run"&&runningSheet.complete&&runningSheet.naturalWidth>0){
   const ratio=Math.max(1,Math.min(10,speed/235));
-  const fps=7+ratio*1.5;
-  const frame=Math.floor(clock*fps)%RUN_FRAMES;
+  const fps=6+ratio*1.2;
+  const frame=Math.floor(clock*fps)%(RUN_FRAMES-1);
 
   const bounds=runFrameBounds[frame];
 
