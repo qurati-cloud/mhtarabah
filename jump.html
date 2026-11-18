@@ -372,8 +372,12 @@ function getSpriteBounds(img,pose){
 function prepareMohammadImages(){
  for(const [pose,img] of Object.entries(mohammadImages)){
   const prepare=()=>{
-   if(img.naturalWidth>0&&!spriteBounds[pose]){
-    getSpriteBounds(img,pose);
+   try{
+    if(img.naturalWidth>0&&!spriteBounds[pose]){
+     getSpriteBounds(img,pose);
+    }
+   }catch(error){
+    console.warn("Sprite preparation:",pose,error);
    }
   };
   if(img.complete)prepare();
@@ -491,11 +495,19 @@ function draw(){
 }
 
 function loop(now){
- const dt=last?Math.min(.04,(now-last)/1000):0;
- last=now;
- update(dt);
- draw();
  requestAnimationFrame(loop);
+ try{
+  const dt=last?Math.min(.04,(now-last)/1000):0;
+  last=now;
+  update(dt);
+  draw();
+ }catch(error){
+  console.error("Game loop error:",error);
+  const message=document.getElementById("message");
+  if(message){
+   message.textContent="حدث خطأ أثناء تشغيل اللعبة: "+error.message;
+  }
+ }
 }
 
 $("start").onclick=start;
