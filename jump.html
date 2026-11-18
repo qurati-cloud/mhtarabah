@@ -336,6 +336,10 @@ function background(){
 
 
 
+const runningSheet=new Image();
+runningSheet.src="mohammad-running-frames.png";
+const RUN_FRAMES=8;
+
 const spriteBounds={};
 
 function getSpriteBounds(img,pose){
@@ -389,7 +393,6 @@ prepareMohammadImages();
 
 function drawMohammad(){
  const pose=characterPose();
- const img=mohammadImages[pose];
  const size=CHARACTER[pose];
 
  ctx.save();
@@ -400,27 +403,45 @@ function drawMohammad(){
  ctx.fill();
  ctx.restore();
 
+ const footY=GROUND-runner.y+2;
+
+ if(pose==="run"&&runningSheet.complete&&runningSheet.naturalWidth>0){
+  const frameWidth=runningSheet.naturalWidth/RUN_FRAMES;
+  const frameHeight=runningSheet.naturalHeight;
+
+  const speedRatio=Math.max(1,Math.min(10,speed/235));
+  const framesPerSecond=7+speedRatio*1.5;
+  const frame=Math.floor(clock*framesPerSecond)%RUN_FRAMES;
+
+  const targetH=size.h;
+  const targetW=size.w;
+  const x=runner.x;
+
+  ctx.drawImage(
+   runningSheet,
+   frame*frameWidth,0,frameWidth,frameHeight,
+   x,footY-targetH,targetW,targetH
+  );
+  return;
+ }
+
+ const img=mohammadImages[pose];
+
  if(img.complete&&img.naturalWidth>0){
   const bounds=spriteBounds[pose]||getSpriteBounds(img,pose);
   const scale=Math.min(size.w/bounds.w,size.h/bounds.h);
   const w=bounds.w*scale;
   const h=bounds.h*scale;
   const x=runner.x+(size.w-w)/2;
-  const footY=GROUND-runner.y+2;
 
-  ctx.save();
-
-  // إيقاع ركض خفيف بلا اهتزاز للأعلى والأسفل
   ctx.drawImage(
    img,
    bounds.x,bounds.y,bounds.w,bounds.h,
    x,footY-h,w,h
   );
-
-  ctx.restore();
  }else{
   ctx.fillStyle="#28458f";
-  ctx.fillRect(runner.x,GROUND-runner.y-size.h,size.w,size.h);
+  ctx.fillRect(runner.x,footY-size.h,size.w,size.h);
  }
 }
 
