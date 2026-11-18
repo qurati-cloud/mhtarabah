@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#ffb45f">
+<title>عمليات حسابية — محمد وحبيبة</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ font-family:Tahoma,Arial,sans-serif;
+ background:linear-gradient(180deg,#fff0cf,#fffaf0);
+ color:#463426;
+ min-height:100vh;
+}
+header{
+ background:linear-gradient(135deg,#ffac53,#ffe1a0);
+ text-align:center;
+ padding:16px;
+ border-radius:0 0 30px 30px;
+}
+header img{
+ display:block;
+ margin:auto;
+ max-height:125px;
+ max-width:80%;
+ object-fit:contain;
+}
+h1{margin:8px;font-size:clamp(26px,5vw,40px)}
+main{max-width:850px;margin:25px auto;padding:0 14px}
+.panel{
+ background:white;
+ padding:24px;
+ border-radius:25px;
+ box-shadow:0 8px 25px #71441515;
+}
+.top{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:12px;
+ flex-wrap:wrap;
+}
+button,.back{
+ font:inherit;
+ font-weight:bold;
+ border:0;
+ border-radius:15px;
+ padding:13px 16px;
+ background:#ffdfa9;
+ color:#463426;
+ cursor:pointer;
+ text-decoration:none;
+}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,.back:focus-visible{
+ outline:3px solid #2776c6;
+ outline-offset:3px;
+}
+.badge{
+ background:#e2f0d8;
+ border-radius:12px;
+ padding:10px;
+}
+.progress{
+ height:14px;
+ background:#eee1d0;
+ border-radius:20px;
+ overflow:hidden;
+ margin:24px 0;
+}
+#bar{
+ width:0%;
+ height:100%;
+ background:#e5a04d;
+ transition:width .25s;
+}
+#stats{text-align:center;color:#82634b}
+#question{
+ text-align:center;
+ font-size:clamp(25px,4vw,37px);
+ line-height:1.9;
+ margin:30px 0;
+ unicode-bidi:plaintext;
+}
+.choices{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:14px;
+}
+.choice{
+ min-height:85px;
+ font-size:clamp(20px,3vw,28px);
+ background:#fff1da;
+ border:2px solid #efcb9c;
+}
+.correct{background:#ccefc9;border-color:#429d49}
+.wrong{background:#ffd4d4;border-color:#d64c4c}
+#message{
+ min-height:55px;
+ text-align:center;
+ font-size:20px;
+ font-weight:bold;
+ margin-top:20px;
+}
+.actions{
+ display:flex;
+ justify-content:center;
+ gap:10px;
+ flex-wrap:wrap;
+ margin:15px 0;
+}
+footer{text-align:center;padding:25px;color:#8b715b}
+@media(max-width:520px){
+ .panel{padding:15px}
+ .choices{grid-template-columns:1fr}
+ .choice{min-height:65px}
+ .top{justify-content:center}
+}
+</style>
+</head>
+<body>
+
+<header>
+<img src="mohammad-habiba.png" alt="محمد وحبيبة">
+<h1>عمليات حسابية</h1>
+</header>
+
+<main>
+<section class="panel">
+<div class="top">
+<a class="back" href="index.html">العودة إلى الألعاب</a>
+<strong class="badge" id="level">السؤال 1 من 200</strong>
+</div>
+
+<div class="progress"><div id="bar"></div></div>
+<div id="stats"></div>
+<h2 id="question">جار تحميل الأسئلة...</h2>
+<div class="choices" id="choices"></div>
+<div id="message" aria-live="polite"></div>
+
+<div class="actions">
+<button id="previous" onclick="move(-1)">السؤال السابق</button>
+<button id="next" onclick="move(1)">السؤال التالي</button>
+<button onclick="retry()">إعادة المحاولة</button>
+</div>
+</section>
+</main>
+
+<footer>محمد وحبيبة</footer>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const KEY = "mh_math_v1";
+const TOTAL = 200;
+
+let questions = [];
+let current = 1;
+let progress = {unlocked:1,stars:{}};
+let answered = false;
+
+function loadProgress(){
+ try{
+  const saved = JSON.parse(localStorage.getItem(KEY));
+  if(saved && typeof saved==="object"){
+   progress.unlocked = Math.max(
+    1,Math.min(TOTAL,Number(saved.unlocked)||1)
+   );
+   progress.stars =
+    saved.stars && typeof saved.stars==="object"
+    ? saved.stars : {};
+  }
+ }catch(e){}
+}
+
+function saveProgress(){
+ try{
+  localStorage.setItem(KEY,JSON.stringify(progress));
+ }catch(e){}
+}
+
+function completedCount(){
+ return Object.values(progress.stars)
+  .filter(value=>value===1).length;
+}
+
+function render(){
+ const q = questions[current-1];
+ if(!q)return;
+
+ answered = progress.stars[current]===1;
+
+ $("level").textContent =
+  "السؤال "+current+" من "+TOTAL;
+
+ $("bar").style.width = (current/TOTAL*100)+"%";
+
+ $("stats").textContent =
+  "الأسئلة المنجزة: "+completedCount()+
+  " من "+TOTAL+" | ⭐ "+completedCount();
+
+ $("question").textContent = q.question;
+ $("choices").replaceChildren();
+ $("message").textContent = "";
+
+ q.options.forEach((option,index)=>{
+  const button = document.createElement("button");
+  button.className = "choice";
+  button.textContent = "أبجد"[index]+") "+option;
+
+  if(answered){
+   button.disabled = true;
+   if(index===q.answer)button.classList.add("correct");
+  }else{
+   button.onclick = ()=>answer(index);
+  }
+
+  $("choices").appendChild(button);
+ });
+
+ if(answered){
+  $("message").textContent = "أجبت عن هذا السؤال";
+ }
+
+ $("previous").disabled = current===1;
+ $("next").disabled =
+  current===TOTAL || current>=progress.unlocked;
+}
+
+function answer(index){
+ if(answered)return;
+
+ const q = questions[current-1];
+ const buttons = $("choices").querySelectorAll("button");
+
+ if(index!==q.answer){
+  buttons[index].classList.add("wrong");
+  $("message").textContent =
+   "الإجابة غير صحيحة، حاول مرة أخرى";
+  return;
+ }
+
+ answered = true;
+ progress.stars[current] = 1;
+ progress.unlocked = Math.max(
+  progress.unlocked,Math.min(TOTAL,current+1)
+ );
+ saveProgress();
+
+ buttons.forEach((button,i)=>{
+  button.disabled = true;
+  button.classList.remove("wrong");
+  if(i===q.answer)button.classList.add("correct");
+ });
+
+ $("message").textContent =
+  current===TOTAL
+  ? "🏆 أحسنت! أنهيت جميع الأسئلة!"
+  : "⭐ أحسنت! إجابة صحيحة";
+
+ $("stats").textContent =
+  "الأسئلة المنجزة: "+completedCount()+
+  " من "+TOTAL+" | ⭐ "+completedCount();
+
+ $("next").disabled = current===TOTAL;
+}
+
+function move(direction){
+ const target = current+direction;
+ if(target<1 || target>TOTAL)return;
+ if(target>progress.unlocked)return;
+ current = target;
+ render();
+}
+
+function retry(){
+ if(!questions.length)return;
+ if(progress.stars[current]===1){
+  $("message").textContent = "لقد أجبت عن هذا السؤال بالفعل";
+  return;
+ }
+ render();
+}
+
+async function init(){
+ loadProgress();
+ current = progress.unlocked;
+
+ $("previous").disabled = true;
+ $("next").disabled = true;
+
+ try{
+  const response = await fetch("math-questions.json");
+  if(!response.ok)throw Error("Failed to load");
+  const data = await response.json();
+
+  if(!Array.isArray(data)||data.length!==TOTAL){
+   throw Error("Incomplete data");
+  }
+
+  questions = data;
+  render();
+ }catch(e){
+  $("question").textContent = "تعذر تحميل الأسئلة";
+  $("message").textContent =
+   "تأكد من وجود ملف math-questions.json على الموقع";
+ }
+}
+
+init();
+</script>
+</body>
+</html>
