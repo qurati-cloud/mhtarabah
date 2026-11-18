@@ -264,6 +264,14 @@ let questions = [];
 let current = 1;
 let progress = {unlocked:1,stars:{}};
 let answered = false;
+let autoNextTimer = null;
+function cancelAutoNext(){
+ if(autoNextTimer !== null){
+  clearTimeout(autoNextTimer);
+  autoNextTimer = null;
+ }
+}
+
 let loading = null;
 
 function loadProgress(){
@@ -328,6 +336,7 @@ async function openCapitals(){
 }
 
 function goHome(){
+ cancelAutoNext();
  $("play").classList.add("hidden");
  $("home").classList.remove("hidden");
 }
@@ -338,6 +347,7 @@ function completedCount(){
 }
 
 function render(){
+ cancelAutoNext();
  const q = questions[current-1];
  if(!q)return;
 
@@ -423,9 +433,20 @@ function answer(index){
   " | النجوم: "+completedCount();
 
  $("next").disabled = current===TOTAL;
+
+ if(current < TOTAL){
+  const answeredQuestion = current;
+  autoNextTimer = setTimeout(()=>{
+   autoNextTimer = null;
+   if(current === answeredQuestion && answered){
+    move(1);
+   }
+  },1000);
+ }
 }
 
 function move(direction){
+ cancelAutoNext();
  const target = current+direction;
  if(target<1 || target>TOTAL)return;
  if(target>progress.unlocked)return;

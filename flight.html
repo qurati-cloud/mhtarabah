@@ -27,7 +27,7 @@ button{border:0;border-radius:13px;padding:14px 22px;background:#ffad47;font-siz
 <body>
 <header>
 <h1>✈️ تحدي الطيران</h1>
-<div>محمد وحبيبة — إلى أي مسافة تستطيع الوصول؟</div>
+<div></div>
 </header>
 <main>
 <p><a href="index.html">↩ العودة إلى الألعاب</a></p>
@@ -51,7 +51,7 @@ button{border:0;border-radius:13px;padding:14px 22px;background:#ffad47;font-siz
 <button id="pause">⏸ إيقاف</button>
 </div>
 <p class="note">
-الكمبيوتر: الأسهم أو W و S — الهاتف: أزرار اللمس.
+الكمبيوتر: الأسهم أو W و S — الهاتف: اسحب إصبعك للأعلى أو للأسفل على شاشة اللعبة.
 <br>
 الرقم الشخصي محفوظ على هذا الجهاز. الرقم العالمي يحتاج إلى ربط قاعدة بيانات مشتركة.
 </p>
@@ -334,6 +334,70 @@ function hold(id,direction){
 }
 hold("up","up");
 hold("down","down");
+
+// التحكم بالطائرة بالسحب على شاشة الهاتف
+(function enableFlightTouch(){
+ const canvas = document.getElementById("game");
+ if(!canvas) return;
+
+ let activePointer = null;
+ let lastY = 0;
+
+ function stopTouch(){
+  activePointer = null;
+  input.up = false;
+  input.down = false;
+ }
+
+ canvas.addEventListener("pointerdown", e=>{
+  if(e.pointerType !== "touch" && e.pointerType !== "pen") return;
+  if(activePointer !== null) return;
+
+  e.preventDefault();
+  activePointer = e.pointerId;
+  lastY = e.clientY;
+
+  input.up = false;
+  input.down = false;
+
+  try{
+   canvas.setPointerCapture(e.pointerId);
+  }catch(err){}
+ });
+
+ canvas.addEventListener("pointermove", e=>{
+  if(e.pointerId !== activePointer) return;
+
+  e.preventDefault();
+
+  const delta = e.clientY - lastY;
+
+  if(delta < -2){
+   input.up = true;
+   input.down = false;
+  }else if(delta > 2){
+   input.up = false;
+   input.down = true;
+  }
+
+  lastY = e.clientY;
+ });
+
+ for(const event of [
+  "pointerup",
+  "pointercancel",
+  "lostpointercapture"
+ ]){
+  canvas.addEventListener(event,e=>{
+   if(e.pointerId === activePointer){
+    stopTouch();
+   }
+  });
+ }
+
+ window.addEventListener("blur",stopTouch);
+})();
+
 document.addEventListener("keydown",e=>{
  if(["ArrowUp","ArrowDown","KeyW","KeyS","Space"].includes(e.code))
   e.preventDefault();
