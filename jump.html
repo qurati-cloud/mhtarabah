@@ -41,12 +41,12 @@ canvas{display:block;width:100%;height:auto;background:#8edaff;border:4px solid 
 <strong>ساعد محمدًا على تجاوز الحواجز!</strong>
 </div>
 <section class="stats">
-<div class="stat"><small>المسافة الحالية</small><b id="distance">0 م</b></div>
-<div class="stat"><small>النجوم الحالية</small><b id="stars">0 ⭐</b></div>
+<div class="stat"><small>المسافة المقطوعة</small><b id="distance">0 م</b></div>
+<div class="stat"><small>النجوم المجمّعة</small><b id="stars">0 ⭐</b></div>
 <div class="stat"><small>السرعة</small><b id="speed">1×</b></div>
-<div class="stat"><small>رقمك القياسي للمسافة</small><b id="record">0 م</b></div>
-<div class="stat"><small>رقمك القياسي للنجوم</small><b id="starRecord">0 ⭐</b></div>
-<div class="stat"><small>مجموع النجوم المحفوظة</small><b id="totalStars">0 ⭐</b></div>
+<div class="stat"><small>أطول مسافة قطعتها</small><b id="record">0 م</b></div>
+<div class="stat"><small>أكبر عدد نجوم جمعته</small><b id="starRecord">0 ⭐</b></div>
+<div class="stat"><small>مجموع النجوم</small><b id="totalStars">0 ⭐</b></div>
 </section>
 
 <canvas id="game" width="900" height="500"></canvas>
@@ -71,8 +71,15 @@ const canvas=$("game"),ctx=canvas.getContext("2d");
 const W=900,H=500,GROUND=410;
 const KEY="mh_obstacles_v1";
 
-const mohammad=new Image();
-mohammad.src="mohammad-character.png";
+const mohammadImages={
+ run:new Image(),
+ jump:new Image(),
+ duck:new Image()
+};
+
+mohammadImages.run.src="mohammad-run.png";
+mohammadImages.jump.src="mohammad-jump.png";
+mohammadImages.duck.src="mohammad-duck.png";
 
 let mode="ready",last=0,clock=0;
 let distance=0,score=0,speed=235;
@@ -127,15 +134,35 @@ function isDuck(){
  return runner.y===0&&(downHeld||clock<duckUntil);
 }
 
+
+const CHARACTER={
+ run:{w:110,h:135},
+ jump:{w:115,h:140},
+ duck:{w:120,h:78}
+};
+
+function characterPose(){
+ if(runner.y>0)return "jump";
+ if(isDuck())return "duck";
+ return "run";
+}
+
+
 function playerBox(){
- let duck=isDuck();
+ const pose=characterPose();
+ const size=CHARACTER[pose];
+
+ const w=pose==="duck"?78:58;
+ const h=pose==="duck"?45:pose==="jump"?108:110;
+
  return {
-  x:runner.x+12,
-  y:GROUND-runner.y-(duck?38:86),
-  w:43,
-  h:duck?38:86
+  x:runner.x+(size.w-w)/2,
+  y:GROUND-runner.y-h,
+  w:w,
+  h:h
  };
 }
+
 
 function reset(){
  distance=0;score=0;speed=235;clock=0;
@@ -304,52 +331,58 @@ function background(){
  }
 }
 
-function drawMohammad(){
- const ducked=isDuck();
- const x=runner.x,y=GROUND-runner.y;
- const h=ducked?42:95;
- const w=ducked?82:70;
 
- // ظل
+function drawMohammad(){
+ const pose=characterPose();
+ const img=mohammadImages[pose];
+ const size=CHARACTER[pose];
+
+ // الظل على الأرض
  ctx.save();
  ctx.globalAlpha=.16;
  ctx.fillStyle="#000";
  ctx.beginPath();
- ctx.ellipse(runner.x+34,GROUND+5,34,7,0,0,Math.PI*2);
+ ctx.ellipse(
+  runner.x+size.w/2,
+  GROUND+5,
+  38,7,0,0,Math.PI*2
+ );
  ctx.fill();
  ctx.restore();
 
- if(mohammad.complete&&mohammad.naturalWidth>0){
-  ctx.save();
+ if(img.complete && img.naturalWidth>0){
 
-  // رسم محمد بحجم مختلف عند الانحناء
-  ctx.drawImage(
-   mohammad,
-   0,0,mohammad.naturalWidth,mohammad.naturalHeight,
-   x,y-h,w,h
+  // الحفاظ على أبعاد الصورة الأصلية
+  const scale=Math.min(
+   size.w/img.naturalWidth,
+   size.h/img.naturalHeight
   );
 
-  // حركة القدمين أثناء الركض
-  if(!ducked&&runner.y===0){
-   const step=Math.sin(clock*17)*9;
-   ctx.strokeStyle="#243a79";
-   ctx.lineWidth=9;
-   ctx.lineCap="round";
-   ctx.beginPath();
-   ctx.moveTo(x+24,y-16);
-   ctx.lineTo(x+22+step,y-3);
-   ctx.moveTo(x+45,y-16);
-   ctx.lineTo(x+45-step,y-3);
-   ctx.stroke();
-  }
+  const w=img.naturalWidth*scale;
+  const h=img.naturalHeight*scale;
 
-  ctx.restore();
+  // حركة بسيطة أثناء الركض
+  const bounce=pose==="run"&&mode==="running"
+   ?Math.abs(Math.sin(clock*13))*3
+   :0;
+
+  ctx.drawImage(
+   img,
+   runner.x+(size.w-w)/2,
+   GROUND-runner.y-h-bounce,
+   w,h
+  );
+
  }else{
-  // شكل احتياطي حتى تحميل الصورة
-  round(x,y-h,w,h,13,"#273b8e");
-  circle(x+w/2,y-h+23,17,"#f2bc8c");
+  ctx.fillStyle="#28458f";
+  ctx.fillRect(
+   runner.x,
+   GROUND-runner.y-size.h,
+   size.w,size.h
+  );
  }
 }
+
 
 function drawObstacle(o){
  if(o.type==="ground"){
