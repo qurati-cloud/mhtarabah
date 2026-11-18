@@ -6,51 +6,52 @@
 <title>الحواجز | محمد وحبيبة</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#fff8ed;color:#493627;font-family:Tahoma,Arial,sans-serif}
-header{text-align:center;background:linear-gradient(120deg,#ffe4a5,#ffb76a);padding:14px}
-header img{display:block;max-height:105px;max-width:80%;margin:auto;object-fit:contain}
-header h1{margin:7px;font-size:28px}
-main{max-width:960px;margin:18px auto;padding:0 12px}
-.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
-a,button{font:inherit;font-weight:bold;border:0;border-radius:13px;padding:12px 17px;background:#ffbd70;color:#493627;text-decoration:none;cursor:pointer}
+body{margin:0;background:#eaf6ff;color:#17384d;font-family:Tahoma,Arial,sans-serif}
+header{text-align:center;padding:16px;background:linear-gradient(110deg,#ffad50,#ffe3a3)}
+header h1{margin:0;font-size:28px}
+main{max-width:1000px;margin:auto;padding:12px}
+.top{margin:12px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.top a{color:#174a6b;text-decoration:underline}
+.top strong{color:#526d80}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:15px 0}
+.stat{background:white;border-radius:13px;padding:12px;text-align:center;box-shadow:0 2px 8px #d7e6ef}
+.stat small{display:block;color:#597284;min-height:30px}
+.stat b{display:block;font-size:20px;margin-top:7px}
+canvas{display:block;width:100%;height:auto;background:#83d1ff;border:4px solid white;border-radius:18px;touch-action:none}
+#message{text-align:center;font-size:19px;font-weight:bold;min-height:48px;padding:12px}
+.controls{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:12px 0}
+button{border:0;border-radius:13px;padding:14px 22px;background:#ffad47;color:#17384d;font:inherit;font-size:18px;font-weight:bold;cursor:pointer;touch-action:none}
 button:disabled{opacity:.5}
-.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:12px 0}
-.stat{background:white;border-radius:14px;padding:12px;text-align:center;box-shadow:0 3px 10px #0001}
-.stat small{display:block;color:#7c6652;min-height:34px}
-.stat b{display:block;font-size:21px;margin-top:5px}
-canvas{display:block;width:100%;height:auto;background:#8edaff;border:4px solid white;border-radius:18px;touch-action:none}
-#message{text-align:center;font-weight:bold;font-size:19px;min-height:48px;padding:12px}
-.controls{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
-.control{min-width:130px;min-height:70px;background:white;touch-action:none}
-.note{text-align:center;color:#746453;font-size:14px;line-height:1.8}
-@media(max-width:520px){
+.control{background:white;min-width:130px;min-height:75px}
+.note{text-align:center;color:#526d80;font-size:13px;line-height:1.8}
+@media(max-width:550px){
 .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
 .stat b{font-size:17px}
 .stat small{font-size:12px}
+.control{min-width:100px}
 }
 </style>
 </head>
 <body>
-<header>
-<img src="mohammad-habiba.png" alt="محمد وحبيبة">
-<h1>الحواجز</h1>
-</header>
+<header><h1>🏃 الحواجز</h1></header>
 <main>
 <div class="top">
 <a href="index.html">العودة إلى الألعاب</a>
-<strong>ساعد محمدًا على تجاوز الحواجز!</strong>
+<strong>ساعد محمدًا على جمع النجوم وتجاوز الحواجز!</strong>
 </div>
 <section class="stats">
-<div class="stat"><small>المسافة المقطوعة</small><b id="distance">0 م</b></div>
+<div class="stat"><small>المسافة المقطوعة التقريبية</small><b id="distance">0 م</b></div>
 <div class="stat"><small>النجوم المجمّعة</small><b id="stars">0 ⭐</b></div>
-<div class="stat"><small>السرعة</small><b id="speed">1×</b></div>
-<div class="stat"><small>أطول مسافة قطعتها</small><b id="record">0 م</b></div>
-<div class="stat"><small>أكبر عدد نجوم جمعته</small><b id="starRecord">0 ⭐</b></div>
-<div class="stat"><small>مجموع النجوم</small><b id="totalStars">0 ⭐</b></div>
+<div class="stat"><small>الوقت</small><b id="time">00:00</b></div>
+<div class="stat"><small>السرعة</small><b id="speed">×1.0</b></div>
+<div class="stat"><small>رقمك القياسي في المسافة المقطوعة التقريبية</small><b id="record">0 م</b></div>
+<div class="stat"><small>رقمك القياسي في النجوم</small><b id="starRecord">0 ⭐</b></div>
+<div class="stat"><small>الرقم القياسي الدولي لمجموع النجوم</small><b id="globalStars">بانتظار الربط</b></div>
+<div class="stat"><small>الرقم القياسي الدولي للمسافة المقطوعة التقريبية</small><b id="global">بانتظار الربط</b></div>
 </section>
 
 <canvas id="game" width="900" height="500"></canvas>
-<div id="message" aria-live="polite">اضغط ابدأ، واقفز فوق الصناديق وانحنِ تحت الحواجز!</div>
+<div id="message" aria-live="polite">اضغط ابدأ واجمع النجوم وتجاوز الحواجز!</div>
 <div class="controls">
 <button id="up" class="control">⬆ قفز</button>
 <button id="down" class="control">⬇ انحناء</button>
@@ -82,7 +83,7 @@ mohammadImages.jump.src="mohammad-jump.png";
 mohammadImages.duck.src="mohammad-duck.png";
 
 let mode="ready",last=0,clock=0;
-let distance=0,score=0,speed=235;
+let distance=0,score=0,speed=235,elapsed=0;
 let obstacles=[],stars=[];
 let obstacleTimer=2,starTimer=1;
 let runner={x:130,y:0,vy:0};
@@ -148,13 +149,12 @@ function characterPose(){
 }
 
 
+
 function playerBox(){
  const pose=characterPose();
  const size=CHARACTER[pose];
-
- const w=pose==="duck"?78:58;
- const h=pose==="duck"?45:pose==="jump"?108:110;
-
+ const w=pose==="duck"?70:55;
+ const h=pose==="duck"?43:pose==="jump"?104:108;
  return {
   x:runner.x+(size.w-w)/2,
   y:GROUND-runner.y-h,
@@ -164,8 +164,9 @@ function playerBox(){
 }
 
 
+
 function reset(){
- distance=0;score=0;speed=235;clock=0;
+ distance=0;score=0;speed=235;clock=0;elapsed=0;
  obstacles=[];stars=[];
  obstacleTimer=2;starTimer=1;
  runner.y=0;runner.vy=0;
@@ -225,7 +226,7 @@ function spawnObstacle(){
   // حاجز معلّق: المرور من تحته يحتاج انحناء
   obstacles.push({
    type:"high",
-   x:W+20,y:GROUND-98,w:65,h:48
+   x:W+20,y:GROUND-115,w:65,h:40
   });
  }else{
   obstacles.push({
@@ -247,8 +248,9 @@ function update(dt){
  if(mode!=="running")return;
 
  clock+=dt;
+ elapsed+=dt;
+ speed=235*(1+9*Math.min(1,elapsed/120));
  distance+=speed*dt/15;
- speed=Math.min(900,235+distance*.8);
 
  runner.y+=runner.vy*dt;
  runner.vy-=2000*dt;
@@ -261,7 +263,7 @@ function update(dt){
  if(obstacleTimer<=0){
   spawnObstacle();
   // مسافات مناسبة للقفز والانحناء
-  obstacleTimer=Math.max(1.05,2.1-speed/950)+rand(.25,.65);
+  obstacleTimer=rand(1.65,2.15);
  }
 
  starTimer-=dt;
@@ -332,56 +334,90 @@ function background(){
 }
 
 
+
+const spriteBounds={};
+
+function getSpriteBounds(img,pose){
+ if(spriteBounds[pose])return spriteBounds[pose];
+
+ const c=document.createElement("canvas");
+ c.width=img.naturalWidth;
+ c.height=img.naturalHeight;
+ const g=c.getContext("2d",{willReadFrequently:true});
+ g.drawImage(img,0,0);
+
+ const data=g.getImageData(0,0,c.width,c.height).data;
+ let left=c.width,top=c.height,right=-1,bottom=-1;
+
+ for(let y=0;y<c.height;y++){
+  for(let x=0;x<c.width;x++){
+   if(data[(y*c.width+x)*4+3]>25){
+    left=Math.min(left,x);
+    right=Math.max(right,x);
+    top=Math.min(top,y);
+    bottom=Math.max(bottom,y);
+   }
+  }
+ }
+
+ const bounds=right>=left
+  ?{x:left,y:top,w:right-left+1,h:bottom-top+1}
+  :{x:0,y:0,w:c.width,h:c.height};
+
+ spriteBounds[pose]=bounds;
+ return bounds;
+}
+
+
 function drawMohammad(){
  const pose=characterPose();
  const img=mohammadImages[pose];
  const size=CHARACTER[pose];
 
- // الظل على الأرض
  ctx.save();
  ctx.globalAlpha=.16;
  ctx.fillStyle="#000";
  ctx.beginPath();
- ctx.ellipse(
-  runner.x+size.w/2,
-  GROUND+5,
-  38,7,0,0,Math.PI*2
- );
+ ctx.ellipse(runner.x+size.w/2,GROUND+4,36,6,0,0,Math.PI*2);
  ctx.fill();
  ctx.restore();
 
- if(img.complete && img.naturalWidth>0){
+ if(img.complete&&img.naturalWidth>0){
+  const bounds=getSpriteBounds(img,pose);
+  const scale=Math.min(size.w/bounds.w,size.h/bounds.h);
+  const w=bounds.w*scale;
+  const h=bounds.h*scale;
+  const x=runner.x+(size.w-w)/2;
+  const footY=GROUND-runner.y+2;
 
-  // الحفاظ على أبعاد الصورة الأصلية
-  const scale=Math.min(
-   size.w/img.naturalWidth,
-   size.h/img.naturalHeight
-  );
+  ctx.save();
 
-  const w=img.naturalWidth*scale;
-  const h=img.naturalHeight*scale;
+  // إيقاع ركض خفيف بلا اهتزاز للأعلى والأسفل
+  if(pose==="run"&&mode==="running"){
+   const phase=Math.sin(clock*17);
+   const angle=phase*.035;
+   ctx.translate(x+w/2,footY);
+   ctx.rotate(angle);
+   ctx.drawImage(
+    img,
+    bounds.x,bounds.y,bounds.w,bounds.h,
+    -w/2,-h,w,h
+   );
+  }else{
+   ctx.drawImage(
+    img,
+    bounds.x,bounds.y,bounds.w,bounds.h,
+    x,footY-h,w,h
+   );
+  }
 
-  // حركة بسيطة أثناء الركض
-  const bounce=pose==="run"&&mode==="running"
-   ?Math.abs(Math.sin(clock*13))*3
-   :0;
-
-  ctx.drawImage(
-   img,
-   runner.x+(size.w-w)/2,
-   GROUND-runner.y-h-bounce,
-   w,h
-  );
-
+  ctx.restore();
  }else{
   ctx.fillStyle="#28458f";
-  ctx.fillRect(
-   runner.x,
-   GROUND-runner.y-size.h,
-   size.w,size.h
-  );
+  ctx.fillRect(runner.x,GROUND-runner.y-size.h,size.w,size.h);
  }
 }
+
 
 
 function drawObstacle(o){
@@ -429,7 +465,11 @@ function draw(){
 
  $("distance").textContent=Math.floor(distance)+" م";
  $("stars").textContent=score+" ⭐";
- $("speed").textContent=(speed/235).toFixed(1)+"×";
+ $("speed").textContent="×"+(speed/235).toFixed(1);
+ const seconds=Math.floor(elapsed);
+ $("time").textContent=
+  String(Math.floor(seconds/60)).padStart(2,"0")+":"+
+  String(seconds%60).padStart(2,"0");
  $("record").textContent=Math.floor(saved.distance)+" م";
  $("starRecord").textContent=saved.starRecord+" ⭐";
  $("totalStars").textContent=saved.totalStars+" ⭐";
