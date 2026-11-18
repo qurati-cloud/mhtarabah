@@ -343,6 +343,7 @@ const RUN_FRAMES=8;
 const spriteBounds={};
 
 const runFrameBounds=[];
+let runUniformScale=1;
 
 function prepareRunningFrames(){
  if(!runningSheet.complete||!runningSheet.naturalWidth)return;
@@ -390,6 +391,15 @@ function prepareRunningFrames(){
    });
   }
  }
+
+ const maxW=Math.max(...runFrameBounds.map(b=>b.w));
+ const maxH=Math.max(...runFrameBounds.map(b=>b.h));
+
+ runUniformScale=Math.min(
+  CHARACTER.run.w/maxW,
+  CHARACTER.run.h/maxH
+ );
+
 }
 
 if(runningSheet.complete&&runningSheet.naturalWidth){
@@ -472,13 +482,8 @@ function drawMohammad(){
   const bounds=runFrameBounds[frame];
 
   if(bounds){
-   const scale=Math.min(
-    size.w/bounds.w,
-    size.h/bounds.h
-   );
-
-   const w=bounds.w*scale;
-   const h=bounds.h*scale;
+   const w=bounds.w*runUniformScale;
+   const h=bounds.h*runUniformScale;
 
    ctx.drawImage(
     runningSheet,
