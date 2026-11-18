@@ -32,11 +32,11 @@ button{border:0;border-radius:13px;padding:14px 22px;background:#ffad47;font-siz
 <main>
 <p><a href="index.html">↩ العودة إلى الألعاب</a></p>
 <section class="stats">
-<div class="stat"><small>المسافة الحالية</small><b id="distance">0 م</b></div>
+<div class="stat"><small>تقريب المسافة المقطوعة</small><b id="distance">0 م</b></div>
 <div class="stat"><small>الوقت</small><b id="time">00:00</b></div>
 <div class="stat"><small>السرعة</small><b id="speed">×1.0</b></div>
 <div class="stat"><small>رقمك القياسي</small><b id="personal">0 م</b></div>
-<div class="stat"><small>أفضل وقت لك</small><b id="personalTime">00:00</b></div>
+
 <div class="stat"><small>الرقم العالمي</small><b id="global">بانتظار الربط</b></div>
 </section>
 <canvas id="game" width="900" height="500"></canvas>
@@ -74,7 +74,7 @@ let plane={x:155,y:250,vy:0};
 let obstacles=[],stars=[],spawnDistance=0;
 let input={up:false,down:false};
 let last=0,seed=123456,crashReason="";
-const BASE_SPEED=65;
+const BASE_SPEED=180;
 const MAX_MULTIPLIER=10;
 
 function rand(){
@@ -97,7 +97,7 @@ function updateStats(){
  $("time").textContent=formatTime(elapsed);
  $("speed").textContent="×"+multiplier().toFixed(1);
  $("personal").textContent=Math.floor(record.distance)+" م";
- $("personalTime").textContent=formatTime(record.time);
+ 
 }
 function saveRecord(){
  if(distance>record.distance){
