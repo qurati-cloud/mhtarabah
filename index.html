@@ -10,7 +10,14 @@ const G={little:[
 ]};
 let age='little',g=null,lv=1,token=0,finished=false,task=null,chosenColor='#f6b544',media=null,recorder=null,chunks=[],audioCtx=null;
 const storageKey=(id)=>'mh_v2_'+age+'_'+id;function read(id){try{return JSON.parse(localStorage.getItem(storageKey(id)))||{unlocked:1,stars:{}}}catch{return {unlocked:1,stars:{}}}}function save(id,data){try{localStorage.setItem(storageKey(id),JSON.stringify(data))}catch{}}
-function show(id){['home','menu','play'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}function chooseAge(a){stopMedia();token++;age=a;$('ageTitle').textContent=a==='little'?'من 3 إلى 6 سنوات':'من 6 إلى 12 سنة';$('gameList').replaceChildren();G[a].forEach(item=>{let d=read(item[0]),b=document.createElement('button');b.className='game';b.innerHTML=`<span class="ico">${item[1]}</span><span>${item[2]}</span><small>وصلت إلى المرحلة ${d.unlocked} من 100</small>`;b.onclick=()=>start(item);$('gameList').append(b)});show('menu')}
+function show(id){['home','menu','play'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}function chooseAge(a){stopMedia();token++;age=a;$('ageTitle').textContent=a==='little'?'من 3 إلى 6 سنوات':'من 6 إلى 12 سنة';$('gameList').replaceChildren();G[a].forEach(item=>{let d=read(item[0]),b=document.createElement('button');b.className='game';b.innerHTML=`<span class="ico">${item[1]}</span><span>${item[2]}</span><small>وصلت إلى المرحلة ${d.unlocked} من 100</small>`;b.onclick=()=>start(item);$('gameList').append(b)});if(a==='older'){
+let f=document.createElement('a');
+f.href='flight.html';
+f.className='game';
+f.style.cssText='display:flex;flex-direction:column;align-items:center;justify-content:center;text-decoration:none;color:inherit;gap:8px';
+f.innerHTML='<span class="ico">✈️</span><span>الطيران</span><small>100 مرحلة تفاعلية</small>';
+$('gameList').append(f);
+}show('menu')}
 function start(item){stopMedia();token++;g=item;lv=Math.min(100,read(g[0]).unlocked);show('play');render()}function stopMedia(){if(recorder&&recorder.state==='recording')recorder.stop();recorder=null;if(media){media.getTracks().forEach(t=>t.stop());media=null}if(audioCtx){audioCtx.close().catch(()=>{});audioCtx=null}}
 function changeLevel(n){if(!g)return;let to=lv+n,d=read(g[0]);if(to<1||to>Math.min(100,d.unlocked))return;lv=to;token++;stopMedia();render()}function resetCurrent(){token++;stopMedia();render()}
 function win(){if(finished)return;finished=true;let d=read(g[0]);d.stars[lv]=Math.max(d.stars[lv]||0,3);d.unlocked=Math.max(d.unlocked,Math.min(100,lv+1));save(g[0],d);$('message').textContent=lv===100?'🏆 نعم! أنهيت 100 مرحلة!':'🌟 نعم! فتحت المرحلة التالية';$('nextBtn').disabled=lv===100; if(lv<100){let t=token;setTimeout(()=>{if(token===t&&g){lv++;token++;render()}},1200)}}
