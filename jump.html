@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>الحواجز | محمد وحبيبة</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#fff8ed;color:#493627;font-family:Tahoma,Arial,sans-serif}
+header{text-align:center;background:linear-gradient(120deg,#ffe4a5,#ffb76a);padding:14px}
+header img{display:block;max-height:105px;max-width:80%;margin:auto;object-fit:contain}
+header h1{margin:7px;font-size:28px}
+main{max-width:960px;margin:18px auto;padding:0 12px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+a,button{font:inherit;font-weight:bold;border:0;border-radius:13px;padding:12px 17px;background:#ffbd70;color:#493627;text-decoration:none;cursor:pointer}
+button:disabled{opacity:.5}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:12px 0}
+.stat{background:white;border-radius:14px;padding:12px;text-align:center;box-shadow:0 3px 10px #0001}
+.stat small{display:block;color:#7c6652;min-height:34px}
+.stat b{display:block;font-size:21px;margin-top:5px}
+canvas{display:block;width:100%;height:auto;background:#8edaff;border:4px solid white;border-radius:18px;touch-action:none}
+#message{text-align:center;font-weight:bold;font-size:19px;min-height:48px;padding:12px}
+.controls{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.control{min-width:130px;min-height:70px;background:white;touch-action:none}
+.note{text-align:center;color:#746453;font-size:14px;line-height:1.8}
+@media(max-width:520px){
+.stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+.stat b{font-size:17px}
+.stat small{font-size:12px}
+}
+</style>
+</head>
+<body>
+<header>
+<img src="mohammad-habiba.png" alt="محمد وحبيبة">
+<h1>الحواجز</h1>
+</header>
+<main>
+<div class="top">
+<a href="index.html">العودة إلى الألعاب</a>
+<strong>ساعد محمدًا على تجاوز الحواجز!</strong>
+</div>
+<section class="stats">
+<div class="stat"><small>المسافة الحالية</small><b id="distance">0 م</b></div>
+<div class="stat"><small>النجوم الحالية</small><b id="stars">0 ⭐</b></div>
+<div class="stat"><small>السرعة</small><b id="speed">1×</b></div>
+<div class="stat"><small>رقمك القياسي للمسافة</small><b id="record">0 م</b></div>
+<div class="stat"><small>رقمك القياسي للنجوم</small><b id="starRecord">0 ⭐</b></div>
+<div class="stat"><small>مجموع النجوم المحفوظة</small><b id="totalStars">0 ⭐</b></div>
+</section>
+
+<canvas id="game" width="900" height="500"></canvas>
+<div id="message" aria-live="polite">اضغط ابدأ، واقفز فوق الصناديق وانحنِ تحت الحواجز!</div>
+<div class="controls">
+<button id="up" class="control">⬆ قفز</button>
+<button id="down" class="control">⬇ انحناء</button>
+<button id="start">▶ ابدأ</button>
+<button id="pause">⏸ إيقاف</button>
+</div>
+<p class="note">
+الكمبيوتر: السهم ↑ للقفز، والسهم ↓ للانحناء.
+الهاتف: اسحب للأعلى للقفز، وللأسفل للانحناء.
+</p>
+</main>
+
+<script>
+"use strict";
+
+const $=id=>document.getElementById(id);
+const canvas=$("game"),ctx=canvas.getContext("2d");
+const W=900,H=500,GROUND=410;
+const KEY="mh_obstacles_v1";
+
+const mohammad=new Image();
+mohammad.src="mohammad-character.png";
+
+let mode="ready",last=0,clock=0;
+let distance=0,score=0,speed=235;
+let obstacles=[],stars=[];
+let obstacleTimer=2,starTimer=1;
+let runner={x:130,y:0,vy:0};
+let downHeld=false,duckUntil=0;
+let touchId=null,touchY=0,touchDirection="";
+let saved={distance:0,starRecord:0,totalStars:0};
+
+try{
+ const old=JSON.parse(localStorage.getItem(KEY));
+ if(old&&typeof old==="object"){
+  for(const k of Object.keys(saved)){
+   const n=Number(old[k]);
+   if(Number.isFinite(n)&&n>=0)saved[k]=n;
+  }
+ }
+}catch(e){}
+
+function save(){
+ try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(e){}
+}
+
+function rand(a,b){return a+Math.random()*(b-a)}
+function rect(x,y,w,h,color){
+ ctx.fillStyle=color;ctx.fillRect(x,y,w,h);
+}
+function round(x,y,w,h,r,color){
+ ctx.fillStyle=color;ctx.beginPath();
+ ctx.roundRect(x,y,w,h,r);ctx.fill();
+}
+function circle(x,y,r,color){
+ ctx.fillStyle=color;ctx.beginPath();
+ ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+}
+function starShape(x,y,r){
+ ctx.beginPath();
+ for(let i=0;i<10;i++){
+  let a=-Math.PI/2+i*Math.PI/5;
+  let rr=i%2?r*.47:r;
+  let px=x+Math.cos(a)*rr,py=y+Math.sin(a)*rr;
+  if(i===0)ctx.moveTo(px,py);
+  else ctx.lineTo(px,py);
+ }
+ ctx.closePath();
+ ctx.fillStyle="#ffdc35";ctx.fill();
+ ctx.strokeStyle="#c88b05";ctx.lineWidth=3;ctx.stroke();
+}
+
+function isDuck(){
+ return runner.y===0&&(downHeld||clock<duckUntil);
+}
+
+function playerBox(){
+ let duck=isDuck();
+ return {
+  x:runner.x+12,
+  y:GROUND-runner.y-(duck?38:86),
+  w:43,
+  h:duck?38:86
+ };
+}
+
+function reset(){
+ distance=0;score=0;speed=235;clock=0;
+ obstacles=[];stars=[];
+ obstacleTimer=2;starTimer=1;
+ runner.y=0;runner.vy=0;
+ downHeld=false;duckUntil=0;
+ touchId=null;touchDirection="";
+}
+
+function start(){
+ reset();
+ mode="running";
+ $("message").textContent="اجمع النجوم وتجاوز الحواجز!";
+}
+
+function jump(){
+ if(mode!=="running")return;
+ if(runner.y===0){
+  downHeld=false;
+  duckUntil=0;
+  runner.vy=780;
+ }
+}
+
+function duck(){
+ if(mode!=="running")return;
+ if(runner.y===0)duckUntil=clock+.75;
+}
+
+function crash(){
+ mode="crashed";
+ saved.distance=Math.max(saved.distance,Math.floor(distance));
+ saved.starRecord=Math.max(saved.starRecord,score);
+ saved.totalStars+=score;
+ save();
+ $("message").textContent=
+  "انتهت المحاولة! جمعت "+score+
+  " نجوم. اضغط ابدأ للمحاولة من جديد.";
+}
+
+function pause(){
+ if(mode==="running"){
+  mode="paused";
+  $("message").textContent="اللعبة متوقفة مؤقتًا";
+ }else if(mode==="paused"){
+  mode="running";
+  $("message").textContent="تابع المغامرة!";
+ }
+}
+
+function overlap(a,b){
+ return a.x<b.x+b.w&&a.x+a.w>b.x&&
+        a.y<b.y+b.h&&a.y+a.h>b.y;
+}
+
+function spawnObstacle(){
+ const high=Math.random()<.43;
+ if(high){
+  // حاجز معلّق: المرور من تحته يحتاج انحناء
+  obstacles.push({
+   type:"high",
+   x:W+20,y:GROUND-98,w:65,h:48
+  });
+ }else{
+  obstacles.push({
+   type:"ground",
+   x:W+20,y:GROUND-52,w:48,h:52
+  });
+ }
+}
+
+function spawnStar(){
+ stars.push({
+  x:W+20,
+  y:Math.random()<.55?GROUND-145:GROUND-95,
+  r:16
+ });
+}
+
+function update(dt){
+ if(mode!=="running")return;
+
+ clock+=dt;
+ distance+=speed*dt/15;
+ speed=Math.min(900,235+distance*.8);
+
+ runner.y+=runner.vy*dt;
+ runner.vy-=2000*dt;
+ if(runner.y<=0){
+  runner.y=0;
+  runner.vy=0;
+ }
+
+ obstacleTimer-=dt;
+ if(obstacleTimer<=0){
+  spawnObstacle();
+  // مسافات مناسبة للقفز والانحناء
+  obstacleTimer=Math.max(1.05,2.1-speed/950)+rand(.25,.65);
+ }
+
+ starTimer-=dt;
+ if(starTimer<=0){
+  spawnStar();
+  starTimer=rand(1.15,2.1);
+ }
+
+ for(const o of obstacles)o.x-=speed*dt;
+ for(const s of stars)s.x-=speed*dt;
+
+ const p=playerBox();
+
+ for(const o of obstacles){
+  const b={
+   x:o.x+6,y:o.y+5,
+   w:o.w-12,h:o.h-10
+  };
+  if(overlap(p,b)){
+   crash();
+   return;
+  }
+ }
+
+ for(const s of stars){
+  if(s.collected)continue;
+  if(overlap(p,{
+   x:s.x-12,y:s.y-12,w:24,h:24
+  })){
+   s.collected=true;
+   score++;
+  }
+ }
+
+ obstacles=obstacles.filter(o=>o.x+o.w>-30);
+ stars=stars.filter(s=>!s.collected&&s.x+s.r>-30);
+}
+
+function background(){
+ const sky=ctx.createLinearGradient(0,0,0,GROUND);
+ sky.addColorStop(0,"#7ccaff");
+ sky.addColorStop(1,"#e6faff");
+ rect(0,0,W,GROUND,sky);
+
+ circle(750,85,43,"#ffe17b");
+
+ for(let i=0;i<6;i++){
+  const x=((i*210-distance*1.4)%(W+250)+(W+250))%(W+250)-100;
+  const y=80+i%3*38;
+  circle(x,y,23,"#ffffffbb");
+  circle(x+28,y-9,30,"#ffffffbb");
+  circle(x+55,y,22,"#ffffffbb");
+ }
+
+ for(let i=0;i<9;i++){
+  const x=((i*160-distance*2)%(W+200)+(W+200))%(W+200)-80;
+  circle(x,GROUND-22,44,"#79c88d");
+  circle(x+20,GROUND-39,37,"#91dca0");
+ }
+
+ rect(0,GROUND,W,H-GROUND,"#c18e59");
+ rect(0,GROUND,W,12,"#66bb63");
+
+ for(let i=0;i<15;i++){
+  const x=((i*100-distance*8)%(W+100)+(W+100))%(W+100);
+  round(x,GROUND+45,55,8,4,"#e8c28d");
+ }
+}
+
+function drawMohammad(){
+ const ducked=isDuck();
+ const x=runner.x,y=GROUND-runner.y;
+ const h=ducked?42:95;
+ const w=ducked?82:70;
+
+ // ظل
+ ctx.save();
+ ctx.globalAlpha=.16;
+ ctx.fillStyle="#000";
+ ctx.beginPath();
+ ctx.ellipse(runner.x+34,GROUND+5,34,7,0,0,Math.PI*2);
+ ctx.fill();
+ ctx.restore();
+
+ if(mohammad.complete&&mohammad.naturalWidth>0){
+  ctx.save();
+
+  // رسم محمد بحجم مختلف عند الانحناء
+  ctx.drawImage(
+   mohammad,
+   0,0,mohammad.naturalWidth,mohammad.naturalHeight,
+   x,y-h,w,h
+  );
+
+  // حركة القدمين أثناء الركض
+  if(!ducked&&runner.y===0){
+   const step=Math.sin(clock*17)*9;
+   ctx.strokeStyle="#243a79";
+   ctx.lineWidth=9;
+   ctx.lineCap="round";
+   ctx.beginPath();
+   ctx.moveTo(x+24,y-16);
+   ctx.lineTo(x+22+step,y-3);
+   ctx.moveTo(x+45,y-16);
+   ctx.lineTo(x+45-step,y-3);
+   ctx.stroke();
+  }
+
+  ctx.restore();
+ }else{
+  // شكل احتياطي حتى تحميل الصورة
+  round(x,y-h,w,h,13,"#273b8e");
+  circle(x+w/2,y-h+23,17,"#f2bc8c");
+ }
+}
+
+function drawObstacle(o){
+ if(o.type==="ground"){
+  round(o.x,o.y,o.w,o.h,5,"#ae7045");
+  ctx.strokeStyle="#70462e";
+  ctx.lineWidth=4;
+  ctx.strokeRect(o.x+5,o.y+5,o.w-10,o.h-10);
+  ctx.beginPath();
+  ctx.moveTo(o.x+7,o.y+7);
+  ctx.lineTo(o.x+o.w-7,o.y+o.h-7);
+  ctx.moveTo(o.x+o.w-7,o.y+7);
+  ctx.lineTo(o.x+7,o.y+o.h-7);
+  ctx.stroke();
+ }else{
+  round(o.x,o.y,o.w,o.h,8,"#a66cdd");
+  round(o.x+5,o.y+5,o.w-10,12,5,"#e6c2ff");
+  ctx.fillStyle="white";
+  ctx.font="bold 27px Arial";
+  ctx.textAlign="center";
+  ctx.fillText("↓",o.x+o.w/2,o.y+36);
+ }
+}
+
+function draw(){
+ background();
+
+ for(const s of stars)starShape(s.x,s.y,s.r);
+ for(const o of obstacles)drawObstacle(o);
+ drawMohammad();
+
+ if(mode!=="running"){
+  ctx.fillStyle="#17283b88";
+  ctx.fillRect(0,0,W,GROUND);
+  ctx.textAlign="center";
+  ctx.fillStyle="white";
+  ctx.font="bold 40px Tahoma,Arial";
+  const labels={
+   ready:"جاهز للمغامرة؟",
+   paused:"اللعبة متوقفة",
+   crashed:"انتهت المحاولة!"
+  };
+  ctx.fillText(labels[mode]||"",W/2,105);
+ }
+
+ $("distance").textContent=Math.floor(distance)+" م";
+ $("stars").textContent=score+" ⭐";
+ $("speed").textContent=(speed/235).toFixed(1)+"×";
+ $("record").textContent=Math.floor(saved.distance)+" م";
+ $("starRecord").textContent=saved.starRecord+" ⭐";
+ $("totalStars").textContent=saved.totalStars+" ⭐";
+ $("pause").disabled=mode!=="running"&&mode!=="paused";
+ $("pause").textContent=mode==="paused"?"▶ متابعة":"⏸ إيقاف";
+}
+
+function loop(now){
+ const dt=last?Math.min(.04,(now-last)/1000):0;
+ last=now;
+ update(dt);
+ draw();
+ requestAnimationFrame(loop);
+}
+
+$("start").onclick=start;
+$("pause").onclick=pause;
+
+document.addEventListener("keydown",e=>{
+ if(["ArrowUp","ArrowDown","KeyW","KeyS","Space"].includes(e.code)){
+  e.preventDefault();
+ }
+ if((e.code==="ArrowUp"||e.code==="KeyW")&&!e.repeat){
+  jump();
+ }
+ if(e.code==="ArrowDown"||e.code==="KeyS"){
+  if(!downHeld)duck();
+  downHeld=true;
+ }
+ if(e.code==="Space"&&!e.repeat){
+  if(mode==="ready"||mode==="crashed")start();
+  else pause();
+ }
+});
+
+document.addEventListener("keyup",e=>{
+ if(e.code==="ArrowDown"||e.code==="KeyS"){
+  downHeld=false;
+ }
+});
+
+function bindButton(id,action){
+ const el=$(id);
+ let pointer=null;
+
+ el.addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  pointer=e.pointerId;
+  if(action==="jump")jump();
+  else{
+   downHeld=true;
+   duck();
+  }
+  try{el.setPointerCapture(e.pointerId)}catch(err){}
+ });
+
+ for(const event of ["pointerup","pointercancel","lostpointercapture"]){
+  el.addEventListener(event,e=>{
+   if(pointer!==e.pointerId)return;
+   pointer=null;
+   if(action==="duck")downHeld=false;
+  });
+ }
+}
+
+bindButton("up","jump");
+bindButton("down","duck");
+
+// التحكم بالسحب على شاشة الهاتف
+canvas.addEventListener("pointerdown",e=>{
+ if(e.pointerType!=="touch"&&e.pointerType!=="pen")return;
+ if(touchId!==null)return;
+ e.preventDefault();
+ touchId=e.pointerId;
+ touchY=e.clientY;
+ touchDirection="";
+ try{canvas.setPointerCapture(e.pointerId)}catch(err){}
+});
+
+canvas.addEventListener("pointermove",e=>{
+ if(e.pointerId!==touchId)return;
+ e.preventDefault();
+
+ const delta=e.clientY-touchY;
+
+ if(delta < -22){
+  if(touchDirection!=="up"){
+   downHeld=false;
+   jump();
+   touchDirection="up";
+  }
+ }else if(delta > 22){
+  if(touchDirection!=="down"){
+   downHeld=true;
+   duck();
+   touchDirection="down";
+  }
+ }
+});
+
+function endTouch(e){
+ if(e.pointerId!==touchId)return;
+ touchId=null;
+ touchDirection="";
+ downHeld=false;
+}
+
+for(const event of ["pointerup","pointercancel","lostpointercapture"]){
+ canvas.addEventListener(event,endTouch);
+}
+
+window.addEventListener("blur",()=>{
+ downHeld=false;
+ touchId=null;
+ if(mode==="running")pause();
+});
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
