@@ -32,12 +32,15 @@ button{border:0;border-radius:13px;padding:14px 22px;background:#ffad47;font-siz
 <main>
 <p><a href="index.html">↩ العودة إلى الألعاب</a></p>
 <section class="stats">
-<div class="stat"><small>تقريب المسافة المقطوعة</small><b id="distance">0 م</b></div>
+<div class="stat"><small>المسافة المقطوعة التقريبية</small><b id="distance">0 م</b></div>
+<div class="stat"><small>النجوم المجمّعة</small><b id="starCount">0 ⭐</b></div>
 <div class="stat"><small>الوقت</small><b id="time">00:00</b></div>
 <div class="stat"><small>السرعة</small><b id="speed">×1.0</b></div>
-<div class="stat"><small>رقمك القياسي</small><b id="personal">0 م</b></div>
+<div class="stat"><small>رقمك القياسي في المسافة المقطوعة التقريبية</small><b id="personal">0 م</b></div>
 
-<div class="stat"><small>الرقم العالمي</small><b id="global">بانتظار الربط</b></div>
+<div class="stat"><small>رقمك القياسي في النجوم</small><b id="starRecord">0 ⭐</b></div>
+<div class="stat"><small>الرقم القياسي الدولي لمجموع النجوم</small><b id="globalStars">بانتظار الربط</b></div>
+<div class="stat"><small>الرقم القياسي الدولي للمسافة المقطوعة التقريبية</small><b id="global">بانتظار الربط</b></div>
 </section>
 <canvas id="game" width="900" height="500"></canvas>
 <div id="message">اضغط ابدأ، وتجنّب الجدران والسقف والأرض!</div>
@@ -61,11 +64,12 @@ const $=id=>document.getElementById(id);
 const W=900,H=500;
 const STORAGE="mh_flight_endless_record_v1";
 
-let record={distance:0,time:0};
+let record={distance:0,time:0,stars:0};
 try{
  const stored=JSON.parse(localStorage.getItem(STORAGE)||"{}");
  record.distance=Math.max(0,Number(stored.distance)||0);
  record.time=Math.max(0,Number(stored.time)||0);
+ record.stars=Math.max(0,Number(stored.stars)||0);
 }catch(e){}
 
 let mode="ready",previousMode="flying";
@@ -97,16 +101,25 @@ function updateStats(){
  $("time").textContent=formatTime(elapsed);
  $("speed").textContent="×"+multiplier().toFixed(1);
  $("personal").textContent=Math.floor(record.distance)+" م";
+ $("starCount").textContent=score+" ⭐";
+ $("starRecord").textContent=record.stars+" ⭐";
  
 }
 function saveRecord(){
+ let improved=false;
  if(distance>record.distance){
   record.distance=distance;
   record.time=elapsed;
-  try{localStorage.setItem(STORAGE,JSON.stringify(record))}catch(e){}
-  return true;
+  improved=true;
  }
- return false;
+ if(score>record.stars){
+  record.stars=score;
+  improved=true;
+ }
+ if(improved){
+  try{localStorage.setItem(STORAGE,JSON.stringify(record))}catch(e){}
+ }
+ return improved;
 }
 function reset(){
  elapsed=0;distance=0;score=0;spawnDistance=0;
