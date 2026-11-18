@@ -161,6 +161,7 @@ let questions = [];
 let current = 1;
 let progress = {unlocked:1,stars:{}};
 let answered = false;
+let mathNextTimer = null;
 let autoNextTimer = null;
 function cancelAutoNext(){
  if(autoNextTimer !== null){
@@ -285,9 +286,24 @@ function answer(index){
    }
   },1000);
  }
+ if(current < TOTAL){
+  const questionNumber = current;
+  if(mathNextTimer !== null) clearTimeout(mathNextTimer);
+  mathNextTimer = setTimeout(()=>{
+   mathNextTimer = null;
+   if(current === questionNumber && answered){
+    move(1);
+   }
+  },1000);
+ }
+
 }
 
 function move(direction){
+ if(mathNextTimer !== null){
+  clearTimeout(mathNextTimer);
+  mathNextTimer = null;
+ }
  cancelAutoNext();
  const target = current+direction;
  if(target<1 || target>TOTAL)return;
