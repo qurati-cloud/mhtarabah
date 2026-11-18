@@ -48,6 +48,7 @@ button:disabled{opacity:.5}
 <div class="stat"><small>رقمك القياسي في النجوم</small><b id="starRecord">0 ⭐</b></div>
 <div class="stat"><small>الرقم القياسي الدولي لمجموع النجوم</small><b id="globalStars">بانتظار الربط</b></div>
 <div class="stat"><small>الرقم القياسي الدولي للمسافة المقطوعة التقريبية</small><b id="global">بانتظار الربط</b></div>
+<div class="stat"><small>totalStars</small><b id="totalStars">0</b></div>
 </section>
 
 <canvas id="game" width="900" height="500"></canvas>
@@ -177,7 +178,7 @@ function reset(){
 function start(){
  reset();
  mode="running";
- $("message").textContent="اجمع النجوم وتجاوز الحواجز!";
+ (($("message")) || {textContent:""}).textContent="اجمع النجوم وتجاوز الحواجز!";
 }
 
 function jump(){
@@ -200,7 +201,7 @@ function crash(){
  saved.starRecord=Math.max(saved.starRecord,score);
  saved.totalStars+=score;
  save();
- $("message").textContent=
+ (($("message")) || {textContent:""}).textContent=
   "انتهت المحاولة! جمعت "+score+
   " نجوم. اضغط ابدأ للمحاولة من جديد.";
 }
@@ -208,10 +209,10 @@ function crash(){
 function pause(){
  if(mode==="running"){
   mode="paused";
-  $("message").textContent="اللعبة متوقفة مؤقتًا";
+  (($("message")) || {textContent:""}).textContent="اللعبة متوقفة مؤقتًا";
  }else if(mode==="paused"){
   mode="running";
-  $("message").textContent="تابع المغامرة!";
+  (($("message")) || {textContent:""}).textContent="تابع المغامرة!";
  }
 }
 
@@ -410,23 +411,11 @@ function drawMohammad(){
   ctx.save();
 
   // إيقاع ركض خفيف بلا اهتزاز للأعلى والأسفل
-  if(pose==="run"&&mode==="running"){
-   const phase=Math.sin(clock*17);
-   const angle=phase*.035;
-   ctx.translate(x+w/2,footY);
-   ctx.rotate(angle);
-   ctx.drawImage(
-    img,
-    bounds.x,bounds.y,bounds.w,bounds.h,
-    -w/2,-h,w,h
-   );
-  }else{
-   ctx.drawImage(
-    img,
-    bounds.x,bounds.y,bounds.w,bounds.h,
-    x,footY-h,w,h
-   );
-  }
+  ctx.drawImage(
+   img,
+   bounds.x,bounds.y,bounds.w,bounds.h,
+   x,footY-h,w,h
+  );
 
   ctx.restore();
  }else{
@@ -480,18 +469,18 @@ function draw(){
   ctx.fillText(labels[mode]||"",W/2,105);
  }
 
- $("distance").textContent=Math.floor(distance)+" م";
- $("stars").textContent=score+" ⭐";
- $("speed").textContent="×"+(speed/235).toFixed(1);
+ (($("distance")) || {textContent:""}).textContent=Math.floor(distance)+" م";
+ (($("stars")) || {textContent:""}).textContent=score+" ⭐";
+ (($("speed")) || {textContent:""}).textContent="×"+(speed/235).toFixed(1);
  const seconds=Math.floor(elapsed);
- $("time").textContent=
+ (($("time")) || {textContent:""}).textContent=
   String(Math.floor(seconds/60)).padStart(2,"0")+":"+
   String(seconds%60).padStart(2,"0");
- $("record").textContent=Math.floor(saved.distance)+" م";
- $("starRecord").textContent=saved.starRecord+" ⭐";
- $("totalStars").textContent=saved.totalStars+" ⭐";
+ (($("record")) || {textContent:""}).textContent=Math.floor(saved.distance)+" م";
+ (($("starRecord")) || {textContent:""}).textContent=saved.starRecord+" ⭐";
+ (($("totalStars")) || {textContent:""}).textContent=saved.totalStars+" ⭐";
  $("pause").disabled=mode!=="running"&&mode!=="paused";
- $("pause").textContent=mode==="paused"?"▶ متابعة":"⏸ إيقاف";
+ (($("pause")) || {textContent:""}).textContent=mode==="paused"?"▶ متابعة":"⏸ إيقاف";
 }
 
 function loop(now){
