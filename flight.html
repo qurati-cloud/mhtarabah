@@ -1,368 +1,322 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>الطيران - محمد وحبيبة</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>تحدي الطيران | محمد وحبيبة</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#eaf6ff;color:#18364d}
-header{text-align:center;background:linear-gradient(110deg,#ffb35b,#ffe2a0);padding:15px}
-h1{margin:0;font-size:27px}
+body{margin:0;background:#eaf6ff;font-family:Tahoma,Arial,sans-serif;color:#17384d}
+header{text-align:center;padding:16px;background:linear-gradient(110deg,#ffad50,#ffe3a3)}
+h1{margin:0 0 7px;font-size:28px}
 main{max-width:1000px;margin:auto;padding:12px}
-nav,.controls,.stats{display:flex;justify-content:center;align-items:center;gap:9px;flex-wrap:wrap;margin:12px 0}
-button,select{font-family:inherit;border:0;border-radius:12px;background:#ffae48;padding:12px 15px;font-size:16px;font-weight:bold;cursor:pointer}
-button:disabled{opacity:.4;cursor:default}
-a{color:#19445f;font-weight:bold}
-.stats span{background:white;border-radius:10px;padding:9px 13px}
-canvas{display:block;width:100%;border:4px solid white;border-radius:18px;background:#8bd5ff;touch-action:none}
+a{color:#174a6b}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:15px 0}
+.stat{background:white;border-radius:13px;padding:12px;text-align:center;box-shadow:0 2px 8px #d7e6ef}
+.stat b{display:block;font-size:20px;margin-top:7px}
+.stat small{color:#597284}
+canvas{display:block;width:100%;background:#83d1ff;border:4px solid white;border-radius:18px;touch-action:none}
 #message{text-align:center;font-size:19px;font-weight:bold;min-height:48px;padding:12px}
-.control{min-width:120px;min-height:70px;background:#fff}
-small{display:block;text-align:center;color:#526b7c;margin:12px}
+.controls{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:12px 0}
+button{border:0;border-radius:13px;padding:14px 22px;background:#ffad47;font-size:18px;font-weight:bold;cursor:pointer;touch-action:none}
+.control{background:white;min-width:130px;min-height:75px}
+.note{text-align:center;color:#526d80;font-size:13px;line-height:1.8}
+@media(max-width:550px){.stats{grid-template-columns:repeat(2,1fr)}.stat b{font-size:17px}}
 </style>
 </head>
 <body>
-<header><h1>✈️ الطيران</h1><div>مغامرات محمد وحبيبة</div></header>
+<header>
+<h1>✈️ تحدي الطيران</h1>
+<div>محمد وحبيبة — إلى أي مسافة تستطيع الوصول؟</div>
+</header>
 <main>
-<nav>
-<a href="index.html">العودة إلى الألعاب</a>
-<button id="prev">المرحلة السابقة</button>
-<select id="levels"></select>
-<button id="next">المرحلة التالية</button>
-</nav>
-<div class="stats">
-<span id="levelText"></span>
-<span id="timer"></span>
-<span id="stars"></span>
-<span id="progress"></span>
-</div>
+<p><a href="index.html">↩ العودة إلى الألعاب</a></p>
+<section class="stats">
+<div class="stat"><small>المسافة الحالية</small><b id="distance">0 م</b></div>
+<div class="stat"><small>الوقت</small><b id="time">00:00</b></div>
+<div class="stat"><small>السرعة</small><b id="speed">×1.0</b></div>
+<div class="stat"><small>رقمك القياسي</small><b id="personal">0 م</b></div>
+<div class="stat"><small>أفضل وقت لك</small><b id="personalTime">00:00</b></div>
+<div class="stat"><small>الرقم العالمي</small><b id="global">بانتظار الربط</b></div>
+</section>
 <canvas id="game" width="900" height="500"></canvas>
-<div id="message">استعد للطيران!</div>
+<div id="message">اضغط ابدأ، وتجنّب الجدران والسقف والأرض!</div>
 <div class="controls">
-<button class="control" id="up">⬆ ارتفاع</button>
-<button class="control" id="down">⬇ انخفاض</button>
+<button id="up" class="control">⬆ ارتفاع</button>
+<button id="down" class="control">⬇ انخفاض</button>
 <button id="start">▶ ابدأ</button>
 <button id="pause">⏸ إيقاف</button>
-<button id="restart">↻ إعادة المرحلة</button>
 </div>
-<small>الكمبيوتر: الأسهم أو W و S. الهاتف: اضغط باستمرار على أزرار الارتفاع والانخفاض.</small>
+<p class="note">
+الكمبيوتر: الأسهم أو W و S — الهاتف: أزرار اللمس.
+<br>
+الرقم الشخصي محفوظ على هذا الجهاز. الرقم العالمي يحتاج إلى ربط قاعدة بيانات مشتركة.
+</p>
 </main>
 <script>
 "use strict";
-
-const c=document.getElementById("game");
-const x=c.getContext("2d");
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
 const $=id=>document.getElementById(id);
 const W=900,H=500;
-const SAVE="mh_flight_progress_v1";
-const DURATION=180;
-const APPROACH=14;
-const LANDING=9;
+const STORAGE="mh_flight_endless_record_v1";
 
-let unlocked=1;
+let record={distance:0,time:0};
 try{
- unlocked=Math.min(100,Math.max(1,Number(localStorage.getItem(SAVE))||1));
+ const stored=JSON.parse(localStorage.getItem(STORAGE)||"{}");
+ record.distance=Math.max(0,Number(stored.distance)||0);
+ record.time=Math.max(0,Number(stored.time)||0);
 }catch(e){}
 
-let level=1,mode="ready",elapsed=0,approachTime=0,landingTime=0;
-let plane={x:145,y:245,vy:0};
+let mode="ready",previousMode="flying";
+let elapsed=0,distance=0,score=0;
+let plane={x:155,y:250,vy:0};
+let obstacles=[],stars=[],spawnDistance=0;
 let input={up:false,down:false};
-let obstacles=[],stars=[],score=0;
-let distance=0,spawnDistance=0,seed=1;
-let lastTime=0,hitFlash=0;
-let runwayX=930;
+let last=0,seed=123456,crashReason="";
+const BASE_SPEED=65;
+const MAX_MULTIPLIER=10;
 
-function rng(){
+function rand(){
  seed=(Math.imul(seed,1664525)+1013904223)>>>0;
  return seed/4294967296;
 }
-function save(){
- try{localStorage.setItem(SAVE,String(unlocked));}catch(e){}
+function formatTime(seconds){
+ const s=Math.floor(seconds);
+ return String(Math.floor(s/60)).padStart(2,"0")+":"+
+ String(s%60).padStart(2,"0");
 }
-function message(s){$("message").textContent=s;}
-function reset(n){
- level=n;
- mode="ready";
- elapsed=0;approachTime=0;landingTime=0;
- plane={x:145,y:245,vy:0};
- obstacles=[];stars=[];score=0;
- distance=0;spawnDistance=0;
- seed=(20261118+level*7919)>>>0;
- runwayX=930;
+function multiplier(){
+ return 1+9*Math.min(1,elapsed/120);
+}
+function speed(){
+ return BASE_SPEED*multiplier();
+}
+function updateStats(){
+ $("distance").textContent=Math.floor(distance)+" م";
+ $("time").textContent=formatTime(elapsed);
+ $("speed").textContent="×"+multiplier().toFixed(1);
+ $("personal").textContent=Math.floor(record.distance)+" م";
+ $("personalTime").textContent=formatTime(record.time);
+}
+function saveRecord(){
+ if(distance>record.distance){
+  record.distance=distance;
+  record.time=elapsed;
+  try{localStorage.setItem(STORAGE,JSON.stringify(record))}catch(e){}
+  return true;
+ }
+ return false;
+}
+function reset(){
+ elapsed=0;distance=0;score=0;spawnDistance=0;
+ obstacles=[];stars=[];
+ plane={x:155,y:250,vy:0};
  input.up=false;input.down=false;
+ seed=(Date.now()>>>0)||123456;
+ crashReason="";
+ mode="ready";
  $("start").textContent="▶ ابدأ";
  $("pause").textContent="⏸ إيقاف";
- message("الهدف: حلّق 3 دقائق ثم اهبط في المطار.");
- refresh();
- draw();
-}
-function refresh(){
- $("levelText").textContent="المرحلة "+level+" / 100";
- const left=Math.max(0,Math.ceil(DURATION-elapsed));
- $("timer").textContent="الوقت المتبقي: "+Math.floor(left/60)+":"+String(left%60).padStart(2,"0");
- $("stars").textContent="⭐ "+score;
- $("progress").textContent="المراحل المفتوحة: "+unlocked;
- $("prev").disabled=level===1;
- $("next").disabled=level>=unlocked;
- const select=$("levels");
- if(select.options.length!==unlocked){
-  select.replaceChildren();
-  for(let i=1;i<=unlocked;i++){
-   const o=document.createElement("option");
-   o.value=i;o.textContent="المرحلة "+i;
-   select.append(o);
-  }
- }
- select.value=String(level);
+ $("message").textContent="استعد! السرعة ستصل إلى ×10 خلال دقيقتين.";
+ updateStats();
 }
 function begin(){
- if(mode==="won"||mode==="crashed")reset(level);
+ if(mode==="crashed")reset();
  if(mode==="ready"||mode==="paused"){
-  mode=elapsed>=DURATION?"approach":"flying";
+  mode="flying";
+  $("start").textContent="↻ لعبة جديدة";
   $("pause").textContent="⏸ إيقاف";
-  message("حلّق بحذر واجمع النجوم!");
+  $("message").textContent="حلّق بحذر وحاول تحطيم رقمك!";
+ }else if(mode==="flying"){
+  reset();
+  mode="flying";
+  $("start").textContent="↻ لعبة جديدة";
+  $("message").textContent="بدأ تحدٍّ جديد!";
  }
 }
+function end(reason){
+ if(mode!=="flying")return;
+ mode="crashed";
+ crashReason=reason;
+ const newRecord=saveRecord();
+ $("message").textContent=reason+" — قطعت "+
+ Math.floor(distance)+" مترًا خلال "+formatTime(elapsed)+
+ (newRecord?" — رقم قياسي شخصي جديد!":" — حاول مجددًا!");
+ $("start").textContent="↻ حاول مجددًا";
+ updateStats();
+}
 function spawn(){
- const difficulty=(level-1)/99;
- const gap=205-difficulty*55+rng()*25;
- const center=140+rng()*215;
+ // ارتفاع الفتحة يبقى قابلًا للعب حتى عند السرعة القصوى.
+ const difficulty=Math.min(1,elapsed/120);
+ const gap=235-30*difficulty+rand()*25;
+ const center=145+rand()*205;
  const top=Math.max(48,center-gap/2);
- const bottom=Math.min(450,center+gap/2);
- const width=42+difficulty*23;
- const obj={px:W+30,top,bottom,width};
- obstacles.push(obj);
- if(rng()>.15){
+ const bottom=Math.min(452,center+gap/2);
+ const width=40+rand()*18;
+ const o={x:W+35,top,bottom,width};
+ obstacles.push(o);
+ if(rand()>.3){
   stars.push({
-   px:W+width+65,
-   y:top+(bottom-top)*(.3+rng()*.4),
-   taken:false
+   x:o.x+width+45,
+   y:top+(bottom-top)*(.35+rand()*.3)
   });
  }
 }
-function crash(){
- mode="crashed";
- hitFlash=.5;
- message("اصطدمت الطائرة! أعد المحاولة.");
- $("start").textContent="↻ حاول مجددًا";
-}
-function win(){
- mode="won";
- if(level===unlocked&&unlocked<100){
-  unlocked++;
-  save();
- }
- message(level===100?
-  "نعم! أنهيت جميع مراحل الطيران!":
-  "نعم! هبطت الطائرة بسلام في المطار، وفتحت المرحلة التالية!");
- $("start").textContent="↻ العب مجددًا";
- refresh();
-}
 function update(dt){
- if(mode==="paused"||mode==="ready"||mode==="crashed"||mode==="won")return;
- const s=Math.min(.05,dt);
- const speed=155+(level-1)*1.1;
- hitFlash=Math.max(0,hitFlash-s);
+ if(mode!=="flying")return;
+ const s=Math.min(.04,dt);
+ elapsed+=s;
+ const v=speed();
+ const direction=(input.down?1:0)-(input.up?1:0);
+ const control=900;
+ plane.vy+=direction*control*s;
+ if(!direction)plane.vy*=Math.pow(.03,s);
+ plane.vy=Math.max(-380,Math.min(380,plane.vy));
+ plane.y+=plane.vy*s;
 
- if(mode==="flying"){
-  elapsed+=s;
-  const axis=(input.down?1:0)-(input.up?1:0);
-  plane.vy+=axis*800*s;
-  if(axis===0)plane.vy*=Math.pow(.055,s);
-  plane.vy=Math.max(-270,Math.min(270,plane.vy));
-  plane.y+=plane.vy*s;
-  plane.y=Math.max(36,Math.min(H-40,plane.y));
+ if(plane.y-16<=0){plane.y=16;end("اصطدمت بالسقف");return}
+ if(plane.y+16>=H){plane.y=H-16;end("اصطدمت بالأرض");return}
 
-  distance+=speed*s;
-  spawnDistance+=speed*s;
-
-  const spacing=Math.max(335,480-(level-1)*1.1);
-  if(spawnDistance>=spacing){
-   spawnDistance=0;
-   spawn();
-  }
-
-  for(const o of obstacles){
-   o.px-=speed*s;
-   if(plane.x+17>o.px&&plane.x-17<o.px+o.width &&
+ distance+=v*s/10;
+ spawnDistance+=v*s;
+ // المسافة بين الجدران متكيّفة مع السرعة،
+ // حتى لا تصبح اللعبة مستحيلة تلقائيًا.
+ const interval=380+v*.65;
+ if(spawnDistance>=interval){
+  spawnDistance=0;
+  spawn();
+ }
+ for(const o of obstacles){
+  o.x-=v*s;
+  if(plane.x+19>o.x&&plane.x-19<o.x+o.width&&
      (plane.y-14<o.top||plane.y+14>o.bottom)){
-    crash();return;
-   }
-  }
-  for(const star of stars){
-   star.px-=speed*s;
-   if(!star.taken&&Math.hypot(star.px-plane.x,star.y-plane.y)<29){
-    star.taken=true;score+=5;
-   }
-  }
-  obstacles=obstacles.filter(o=>o.px+o.width>-20);
-  stars=stars.filter(z=>z.px>-20&&!z.taken);
-
-  if(elapsed>=DURATION){
-   elapsed=DURATION;
-   mode="approach";
-   approachTime=0;
-   obstacles=[];
-   stars=[];
-   message("ظهر المطار! استعد للهبوط.");
+   end("اصطدمت بالحائط");return;
   }
  }
- else if(mode==="approach"){
-  approachTime+=s;
-  plane.vy*=Math.pow(.05,s);
-  const target=215;
-  plane.y+=(target-plane.y)*Math.min(1,s*.65);
-  if(approachTime>=APPROACH){
-   mode="landing";
-   landingTime=0;
-   message("الطائرة تقترب من المدرج...");
+ for(const star of stars){
+  star.x-=v*s;
+  if(Math.hypot(star.x-plane.x,star.y-plane.y)<30){
+   score+=1;
+   star.x=-100;
   }
  }
- else if(mode==="landing"){
-  landingTime+=s;
-  const p=Math.min(1,landingTime/LANDING);
-  const smooth=p*p*(3-2*p);
-  plane.y=215+(404-215)*smooth;
-  plane.x=145+(330-145)*smooth;
-  if(landingTime>=LANDING)win();
- }
- refresh();
+ obstacles=obstacles.filter(o=>o.x+o.width>-30);
+ stars=stars.filter(z=>z.x>-30);
+ updateStats();
 }
-function cloud(px,py,size){
- x.fillStyle="rgba(255,255,255,.78)";
- for(const [dx,dy,r] of [[0,0,22],[22,-10,28],[48,0,23]]){
-  x.beginPath();
-  x.arc(px+dx*size,py+dy*size,r*size,0,Math.PI*2);
-  x.fill();
+function cloud(x,y,size){
+ ctx.fillStyle="rgba(255,255,255,.75)";
+ for(const [dx,dy,r] of [[0,0,22],[22,-9,28],[48,0,22]]){
+  ctx.beginPath();
+  ctx.arc(x+dx*size,y+dy*size,r*size,0,Math.PI*2);
+  ctx.fill();
  }
 }
-function drawStar(px,py){
- x.save();x.translate(px,py);
- x.fillStyle="#ffbf25";x.strokeStyle="#d08b00";x.lineWidth=2;
- x.beginPath();
+function drawPlane(){
+ ctx.save();
+ ctx.translate(plane.x,plane.y);
+ ctx.rotate(Math.max(-.24,Math.min(.24,plane.vy/900)));
+ ctx.fillStyle="#e97936";
+ ctx.beginPath();
+ ctx.moveTo(32,0);ctx.lineTo(-30,-14);
+ ctx.lineTo(-30,14);ctx.closePath();ctx.fill();
+ ctx.fillStyle="#fff2db";
+ ctx.beginPath();ctx.ellipse(0,0,29,13,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle="#357eb8";
+ ctx.beginPath();ctx.moveTo(-7,-7);ctx.lineTo(-19,-30);
+ ctx.lineTo(9,-9);ctx.closePath();ctx.fill();
+ ctx.beginPath();ctx.moveTo(-7,7);ctx.lineTo(-19,29);
+ ctx.lineTo(9,10);ctx.closePath();ctx.fill();
+ ctx.fillStyle="#70c7ef";
+ ctx.beginPath();ctx.arc(12,-3,7,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle="#e97936";ctx.fillRect(-32,-21,8,22);
+ ctx.restore();
+}
+function drawStar(x,y){
+ ctx.fillStyle="#ffbc24";ctx.strokeStyle="#cc8709";
+ ctx.lineWidth=2;ctx.beginPath();
  for(let i=0;i<10;i++){
   const a=-Math.PI/2+i*Math.PI/5;
   const r=i%2?6:13;
-  if(i===0)x.moveTo(Math.cos(a)*r,Math.sin(a)*r);
-  else x.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+  if(i===0)ctx.moveTo(x+Math.cos(a)*r,y+Math.sin(a)*r);
+  else ctx.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r);
  }
- x.closePath();x.fill();x.stroke();x.restore();
-}
-function drawPlane(){
- x.save();
- x.translate(plane.x,plane.y);
- const angle=mode==="flying"?Math.max(-.2,Math.min(.2,plane.vy/850)):0;
- x.rotate(angle);
- x.fillStyle="#e97535";
- x.beginPath();
- x.moveTo(33,0);x.lineTo(-29,-14);x.lineTo(-29,14);
- x.closePath();x.fill();
- x.fillStyle="#fff5e0";
- x.beginPath();x.ellipse(0,0,29,13,0,0,Math.PI*2);x.fill();
- x.fillStyle="#327fbd";
- x.beginPath();
- x.moveTo(-7,-6);x.lineTo(-18,-30);x.lineTo(9,-9);
- x.closePath();x.fill();
- x.beginPath();
- x.moveTo(-7,7);x.lineTo(-19,29);x.lineTo(9,10);
- x.closePath();x.fill();
- x.fillStyle="#71c6f2";
- x.beginPath();x.arc(12,-3,7,0,Math.PI*2);x.fill();
- x.fillStyle="#e97535";x.fillRect(-32,-21,7,22);
- x.restore();
-}
-function airport(){
- const t=mode==="approach"?Math.min(1,approachTime/APPROACH):
-  mode==="landing"||mode==="won"?1:0;
- const offset=(1-t)*W;
- x.save();x.translate(offset,0);
- x.fillStyle="#76b987";x.fillRect(0,405,W,95);
- x.fillStyle="#434b56";x.fillRect(0,420,W,75);
- x.fillStyle="#fff9d6";
- for(let i=0;i<8;i++)x.fillRect(i*125+15,454,66,5);
- x.fillStyle="#f5f7fa";x.fillRect(620,300,225,107);
- x.fillStyle="#a5bdcb";x.fillRect(605,293,255,16);
- x.fillStyle="#75b6dc";
- for(let i=0;i<5;i++)x.fillRect(642+i*39,325,25,36);
- x.fillStyle="#f5f7fa";x.fillRect(775,250,34,60);
- x.fillStyle="#4c687c";x.fillRect(768,239,48,18);
- x.fillStyle="#ffce69";
- x.beginPath();x.arc(791,238,9,0,Math.PI*2);x.fill();
- x.fillStyle="#1b485b";x.font="bold 22px Tahoma";
- x.textAlign="center";x.fillText("المطار",730,390);
- x.restore();
+ ctx.closePath();ctx.fill();ctx.stroke();
 }
 function draw(){
- const sky=x.createLinearGradient(0,0,0,H);
- sky.addColorStop(0,"#76cbff");sky.addColorStop(1,"#def6ff");
- x.fillStyle=sky;x.fillRect(0,0,W,H);
+ const sky=ctx.createLinearGradient(0,0,0,H);
+ sky.addColorStop(0,"#72caff");
+ sky.addColorStop(1,"#e2f7ff");
+ ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+
  for(let i=0;i<9;i++){
-  const px=((i*165-distance*.2)%(W+240)+(W+240))%(W+240)-100;
-  cloud(px,60+(i*79)%270,.7+(i%3)*.17);
+  const x=((i*167-distance*1.7)%(W+250)+(W+250))%(W+250)-100;
+  cloud(x,65+(i*83)%300,.7+(i%3)*.2);
  }
- if(["approach","landing","won"].includes(mode)){
-  airport();
- }else{
-  x.fillStyle="#a1d5aa";
-  for(let i=0;i<12;i++){
-   const px=((i*125-distance*.3)%(W+150)+(W+150))%(W+150)-80;
-   x.beginPath();x.moveTo(px,H);
-   x.lineTo(px+65,H-80-(i%4)*18);
-   x.lineTo(px+135,H);x.fill();
-  }
-  x.fillStyle="#6dbb7b";x.fillRect(0,H-17,W,17);
+ ctx.fillStyle="#9bd2a4";
+ for(let i=0;i<12;i++){
+  const x=((i*125-distance*2.1)%(W+150)+(W+150))%(W+150)-80;
+  ctx.beginPath();ctx.moveTo(x,H);
+  ctx.lineTo(x+65,H-80-(i%4)*18);
+  ctx.lineTo(x+135,H);ctx.fill();
  }
+ ctx.fillStyle="#6dbb7b";
+ ctx.fillRect(0,H-17,W,17);
+
  for(const o of obstacles){
-  x.fillStyle="#8296a4";
-  x.fillRect(o.px,0,o.width,o.top);
-  x.fillRect(o.px,o.bottom,o.width,H-o.bottom);
-  x.fillStyle="#d6e0e8";
-  x.fillRect(o.px-5,o.top-12,o.width+10,12);
-  x.fillRect(o.px-5,o.bottom,o.width+10,12);
-  x.fillStyle="#eff8ff";
-  for(let yy=20;yy<o.top-15;yy+=36)
-   x.fillRect(o.px+8,yy,o.width-16,7);
-  for(let yy=o.bottom+25;yy<H;yy+=36)
-   x.fillRect(o.px+8,yy,o.width-16,7);
+  ctx.fillStyle="#8296a5";
+  ctx.fillRect(o.x,0,o.width,o.top);
+  ctx.fillRect(o.x,o.bottom,o.width,H-o.bottom);
+  ctx.fillStyle="#d4e0e8";
+  ctx.fillRect(o.x-5,o.top-12,o.width+10,12);
+  ctx.fillRect(o.x-5,o.bottom,o.width+10,12);
+  ctx.fillStyle="#eff8ff";
+  for(let y=20;y<o.top-15;y+=35)
+   ctx.fillRect(o.x+8,y,o.width-16,7);
+  for(let y=o.bottom+25;y<H;y+=35)
+   ctx.fillRect(o.x+8,y,o.width-16,7);
  }
- for(const z of stars)drawStar(z.px,z.y);
+ for(const star of stars)drawStar(star.x,star.y);
  drawPlane();
- x.fillStyle="rgba(255,255,255,.9)";
- x.fillRect(20,18,860,12);
- x.fillStyle="#ff9e32";
- x.fillRect(20,18,860*Math.min(1,elapsed/DURATION),12);
- x.strokeStyle="#44718b";x.strokeRect(20,18,860,12);
- if(mode==="ready"||mode==="paused"||mode==="crashed"||mode==="won"){
-  x.fillStyle="rgba(18,49,75,.16)";x.fillRect(0,0,W,H);
-  x.fillStyle="#fff";x.textAlign="center";x.font="bold 29px Tahoma";
-  const labels={
+
+ ctx.fillStyle="rgba(16,51,73,.75)";
+ ctx.fillRect(15,15,215,40);
+ ctx.fillStyle="white";
+ ctx.font="bold 20px Tahoma";
+ ctx.textAlign="left";
+ ctx.fillText("⭐ "+score+"   ×"+multiplier().toFixed(1),30,42);
+
+ if(mode!=="flying"){
+  ctx.fillStyle="rgba(16,46,69,.18)";
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="#fff";
+  ctx.font="bold 29px Tahoma";
+  ctx.textAlign="center";
+  const title={
    ready:"استعد للطيران!",
    paused:"اللعبة متوقفة مؤقتًا",
-   crashed:"حاول مرة ثانية",
-   won:"وصلت إلى المطار!"
-  };
-  x.fillText(labels[mode],W/2,85);
- }
- if(hitFlash>0){
-  x.fillStyle="rgba(255,90,60,"+(hitFlash*.3)+")";
-  x.fillRect(0,0,W,H);
+   crashed:"انتهت المحاولة!"
+  }[mode];
+  ctx.fillText(title||"",W/2,90);
  }
 }
 function loop(now){
- const dt=lastTime?Math.min(.05,(now-lastTime)/1000):0;
- lastTime=now;
+ const dt=last?Math.min(.04,(now-last)/1000):0;
+ last=now;
  update(dt);
  draw();
  requestAnimationFrame(loop);
 }
 function hold(id,direction){
- const b=$(id);
- b.addEventListener("pointerdown",e=>{
-  e.preventDefault();input[direction]=true;
-  try{b.setPointerCapture(e.pointerId)}catch(err){}
+ const el=$(id);
+ el.addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  input[direction]=true;
+  try{el.setPointerCapture(e.pointerId)}catch(err){}
  });
- for(const type of ["pointerup","pointercancel","lostpointercapture"]){
-  b.addEventListener(type,()=>input[direction]=false);
+ for(const event of ["pointerup","pointercancel","lostpointercapture"]){
+  el.addEventListener(event,()=>input[direction]=false);
  }
 }
 hold("up","up");
@@ -373,8 +327,9 @@ document.addEventListener("keydown",e=>{
  if(e.code==="ArrowUp"||e.code==="KeyW")input.up=true;
  if(e.code==="ArrowDown"||e.code==="KeyS")input.down=true;
  if(e.code==="Space"&&!e.repeat){
-  if(mode==="ready"||mode==="paused")begin();
-  else if(mode==="flying"||mode==="approach"||mode==="landing")pause();
+  if(mode==="flying")pause();
+  else if(mode==="paused")pause();
+  else begin();
  }
 });
 document.addEventListener("keyup",e=>{
@@ -383,29 +338,22 @@ document.addEventListener("keyup",e=>{
 });
 window.addEventListener("blur",()=>{
  input.up=false;input.down=false;
- if(["flying","approach","landing"].includes(mode))pause();
+ if(mode==="flying")pause();
 });
-let previousMode="flying";
 function pause(){
- if(mode==="paused"){
-  mode=previousMode;
-  $("pause").textContent="⏸ إيقاف";
-  message("تابع الطيران!");
- }else if(["flying","approach","landing"].includes(mode)){
-  previousMode=mode;
+ if(mode==="flying"){
   mode="paused";
   $("pause").textContent="▶ متابعة";
-  message("اللعبة متوقفة مؤقتًا.");
+  $("message").textContent="اللعبة متوقفة مؤقتًا.";
+ }else if(mode==="paused"){
+  mode="flying";
+  $("pause").textContent="⏸ إيقاف";
+  $("message").textContent="تابع الطيران!";
  }
 }
 $("start").onclick=begin;
 $("pause").onclick=pause;
-$("restart").onclick=()=>{reset(level);begin()};
-$("prev").onclick=()=>reset(Math.max(1,level-1));
-$("next").onclick=()=>reset(Math.min(unlocked,level+1));
-$("levels").onchange=e=>reset(Number(e.target.value));
-reset(1);
+reset();
 requestAnimationFrame(loop);
 </script>
-</body>
-</html>
+</body></html>
