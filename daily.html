@@ -1,52 +1,32 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>أعمال يومية - محمد وحبيبة</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#fff3d8"><title>أعمال يومية | محمد وحبيبة</title>
 <style>
-*{box-sizing:border-box}
-body{
-  margin:0;
-  min-height:100vh;
-  font-family:Tahoma,Arial,sans-serif;
-  background:#fff8ec;
-  color:#493727;
-  text-align:center;
-}
-header{
-  padding:30px 15px;
-  background:#ffe4ae;
-}
-main{
-  max-width:650px;
-  margin:40px auto;
-  padding:30px 20px;
-  background:white;
-  border-radius:22px;
-  box-shadow:0 5px 20px #00000010;
-}
-h1{font-size:30px}
-p{font-size:19px;line-height:1.9}
-a{
-  display:inline-block;
-  margin-top:20px;
-  padding:13px 25px;
-  background:#ffb347;
-  color:#493727;
-  text-decoration:none;
-  border-radius:15px;
-  font-weight:bold;
-}
+:root{font-family:Tahoma,Arial,sans-serif;color:#423525;background:#fff8eb}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(155deg,#fff5da,#fffdf8 55%,#eaf6f0)}.wrap{max-width:780px;margin:auto;padding:22px 16px 60px}header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}a.back{background:#fff;border:1px solid #eddcbf;color:#6d4b26;border-radius:14px;padding:12px 16px;text-decoration:none;font-weight:bold}.brand{font-size:15px;color:#886d4c;font-weight:bold}.hero{background:#fff;border:1px solid #f2e6cf;border-radius:26px;padding:27px 20px;text-align:center;box-shadow:0 8px 25px #67491b0b}.hero .symbol{font-size:45px}.hero h1{margin:8px 0;font-size:30px}.hero p{margin:5px;color:#7d6b56;line-height:1.8}.datebar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:19px 0;background:#fff;border-radius:18px;padding:10px;border:1px solid #f2e6cf}.datebar button,.today{border:0;border-radius:12px;background:#fff0d0;color:#67481f;font:inherit;font-weight:bold;padding:11px 13px;cursor:pointer}.datecenter{text-align:center;flex:1}.datecenter strong{display:block;font-size:15px}.datecenter span{font-size:12px;color:#877764}.today{background:#f1e5cb}.progress{background:#fff;border:1px solid #f2e6cf;border-radius:20px;padding:18px;margin-bottom:17px}.progressrow{display:flex;justify-content:space-between;gap:8px;align-items:center;font-weight:bold}.bar{height:13px;background:#f1ece1;border-radius:99px;margin-top:12px;overflow:hidden}.fill{height:100%;width:0;background:linear-gradient(90deg,#61b995,#9cce85);border-radius:99px;transition:width .2s}.panel{background:#fff;border:1px solid #f2e6cf;border-radius:23px;padding:20px 17px}.panel h2{margin:0 0 16px;font-size:27px;color:#805e37}.tasks{display:grid;gap:10px}.task{display:flex;gap:13px;align-items:center;border:1px solid #eee5d5;background:#fffdf8;border-radius:15px;padding:14px;min-height:65px;cursor:pointer;line-height:1.7}.task input{width:23px;height:23px;flex:0 0 auto;accent-color:#51a67d;cursor:pointer}.task span{font-size:16px}.task.done{background:#eaf8ed;border-color:#bce4c6}.task.done span{color:#426c50}.foot{margin-top:16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.foot button{border:1px solid #e8d7c0;background:#fff9ef;color:#805c38;border-radius:12px;padding:11px 14px;font:inherit;cursor:pointer}.note{font-size:13px;color:#7b6e5e;line-height:1.9;margin-top:19px;text-align:center}.status{font-size:13px;color:#47835c;font-weight:bold}button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #f0b74d;outline-offset:3px}@media(max-width:480px){.wrap{padding:13px 11px 38px}.hero h1{font-size:25px}.task span{font-size:15px}.datebar button{padding:10px}.panel{padding:17px 12px}}
 </style>
 </head>
-<body>
-<header><h2>محمد وحبيبة</h2></header>
-<main>
-<h1>أعمال يومية</h1>
-<p>متابعة الأعمال اليومية</p>
-<p>هذا القسم قيد التجهيز.</p>
-<a href="index.html">العودة إلى الرئيسية</a>
-</main>
-</body>
-</html>
+<body><div class="wrap">
+<header><div class="brand">🌟 محمد وحبيبة</div><a class="back" href="index.html">⌂ الرئيسية</a></header>
+<section class="hero"><div class="symbol">🌼</div><h1>أعمالي اليومية</h1><p>كل عمل طيّب خطوة جميلة. سجّل ما فعلته اليوم، وارجع إلى الأيام السابقة متى أردت.</p></section>
+<nav class="datebar" aria-label="التنقل بين الأيام"><button id="prev" aria-label="اليوم السابق">❯</button><div class="datecenter"><strong id="dateText"></strong><span id="dateIso"></span></div><button id="next" aria-label="اليوم التالي">❮</button><button class="today" id="today">اليوم</button></nav>
+<section class="progress" aria-label="مقدار الإنجاز"><div class="progressrow"><span>إنجازاتي في هذا اليوم</span><span id="count">٠ من ٩</span></div><div class="bar"><div class="fill" id="fill"></div></div></section>
+<main class="panel"><h2>هل...</h2><div class="tasks" id="tasks"></div><div class="foot"><span class="status" id="status" role="status"></span><button id="clear">إلغاء علامات هذا اليوم</button></div></main>
+<p class="note">تُحفظ العلامات تلقائيًا في متصفح هذا الجهاز فقط. لا تُزامن حاليًا بين الأجهزة، وقد تضيع إذا مُسحت بيانات المتصفح. سنضيف الحسابات الشخصية لاحقًا.</p>
+</div>
+<script>
+(()=>{'use strict';
+const items=['عملت أوراد الصباح؟','حضرت درسًا دينيًا؟','ساعدت أمي؟','ساعدت أبي؟','قلت السلام عليكم؟','عملت ورد الطريقة الرفاعية في الصباح؟','عملت ورد الطريقة الرفاعية في المساء؟','عملت أوراد المساء؟','عملت الورد قبيل النوم؟'];
+const el=id=>document.getElementById(id);
+const date=new Date();date.setHours(12,0,0,0);
+const fmt=new Intl.DateTimeFormat('ar-LB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+const digits=n=>String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[+d]);
+const iso=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+const key=()=>`mh-daily-v1:${iso(date)}`;
+function read(){try{const a=JSON.parse(localStorage.getItem(key())||'[]');return items.map((_,i)=>a[i]===true)}catch{return items.map(()=>false)}}
+function save(a){try{localStorage.setItem(key(),JSON.stringify(a));el('status').textContent='✓ حُفظت العلامات على هذا الجهاز'}catch{el('status').textContent='تعذّر الحفظ؛ تأكّد من إعدادات المتصفح'}}
+function render(){const a=read();el('dateText').textContent=fmt.format(date);el('dateIso').textContent=digits(iso(date));const container=el('tasks');container.replaceChildren();items.forEach((t,i)=>{const label=document.createElement('label');label.className='task'+(a[i]?' done':'');const box=document.createElement('input');box.type='checkbox';box.checked=a[i];box.setAttribute('aria-label',t);const text=document.createElement('span');text.textContent=t;label.append(box,text);box.addEventListener('change',()=>{const state=read();state[i]=box.checked;save(state);render()});container.append(label)});const n=a.filter(Boolean).length;el('count').textContent=`${digits(n)} من ${digits(items.length)}`;el('fill').style.width=(n/items.length*100)+'%';el('status').textContent=n===items.length?'أحسنت! أكملت جميع الأعمال المسجّلة 🌟':''}
+el('prev').addEventListener('click',()=>{date.setDate(date.getDate()-1);render()});el('next').addEventListener('click',()=>{date.setDate(date.getDate()+1);render()});el('today').addEventListener('click',()=>{const now=new Date();date.setFullYear(now.getFullYear(),now.getMonth(),now.getDate());render()});el('clear').addEventListener('click',()=>{if(confirm('هل تريد إلغاء جميع علامات هذا اليوم؟')){save(items.map(()=>false));render()}});render();
+})();
+</script></body></html>
