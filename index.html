@@ -212,11 +212,48 @@ header, .logo, .brand, .header-logo, .hero {
 }
 </style>
 
+
+<style id="mh-home-final">
+/* الشعار الجديد */
+header img:first-of-type {
+    display: block !important;
+    width: 180px !important;
+    height: auto !important;
+    max-height: 160px !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    margin: 0 auto !important;
+    clip-path: none !important;
+}
+
+/* منع قص الشعار */
+header {
+    overflow: visible !important;
+}
+
+/* إخفاء العنوان المكرر تحت صورة الشعار */
+header h1,
+header .brand-title,
+header .site-title {
+    display: none !important;
+}
+
+/* إخفاء وصف بطاقات الأقسام */
+.section-card small,
+.section-card p,
+.home-card small,
+.home-card p,
+.menu-card small,
+.menu-card p {
+    display: none !important;
+}
+</style>
+
 </head>
 <body>
 
 <header>
-<img src="mohammad-habiba.png" alt="محمد وحبيبة">
+<img src="mohammad-habiba-logo.png" alt="محمد وحبيبة">
 <h1>محمد وحبيبة</h1>
 </header>
 
@@ -249,7 +286,7 @@ header, .logo, .brand, .header-logo, .hero {
 <a href="https://youtube.com/playlist?list=PLkCuAwiQFTLtQFcvnKIToIsgLumY4cBD1" class="game benefits-main" target="_blank" rel="noopener noreferrer">
 <span class="icon">💡</span>
 <strong>فوائد</strong>
-<small>فوائد ومعلومات</small>
+
 </a>
 <a href="https://youtube.com/playlist?list=PLkCuAwiQFTLurs-QJjXw4sbUoJu5ahAZK" class="game memorize-main" target="_blank" rel="noopener noreferrer">
 <span class="icon">📖</span>
@@ -264,7 +301,7 @@ header, .logo, .brand, .header-logo, .hero {
 <a href="quran.html" class="game quran-main">
 <span class="icon">📗</span>
 <strong>قرءان</strong>
-<small>جزء عم والمصحف الشريف</small>
+
 </a>
 </div>
 </section>
