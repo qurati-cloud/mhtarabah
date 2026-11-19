@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#ffb45f">
+<title>محمد وحبيبة</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ font-family:Tahoma,Arial,sans-serif;
+ background:linear-gradient(180deg,#fff0cf,#fffaf0);
+ color:#463426;
+ min-height:100vh;
+}
+header{
+ background:linear-gradient(135deg,#ffac53,#ffe1a0);
+ text-align:center;
+ padding:18px 12px;
+ border-radius:0 0 32px 32px;
+ box-shadow:0 5px 15px #8a531a20;
+}
+header img{
+ display:block;
+ margin:auto;
+ max-width:85%;
+ max-height:180px;
+ object-fit:contain;
+}
+h1{
+ font-size:clamp(30px,6vw,45px);
+ margin:10px 0 2px;
+}
+main{
+ max-width:1000px;
+ margin:24px auto;
+ padding:0 15px;
+}
+.panel{
+ background:#fff;
+ padding:24px;
+ border-radius:25px;
+ box-shadow:0 8px 25px #71441515;
+}
+h2{text-align:center}
+.games{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:22px;
+ max-width:780px;
+ margin:28px auto;
+}
+.game{
+ min-height:240px;
+ display:flex;
+ flex-direction:column;
+ align-items:center;
+ justify-content:center;
+ gap:12px;
+ padding:18px 10px;
+ border-radius:28px;
+ border:3px solid #dca258;
+ border-bottom-width:9px;
+ box-shadow:0 9px 18px #5c3a1b20;
+ text-decoration:none;
+ color:#493627;
+ cursor:pointer;
+ font-family:inherit;
+ transition:transform .15s;
+}
+.game:hover{transform:translateY(-5px)}
+.game:active{transform:translateY(2px)}
+.plane{
+ background:linear-gradient(145deg,#e0f5ff,#70c6ff);
+}
+.capitals{
+ background:linear-gradient(145deg,#f5e8ff,#c7a0ff);
+}
+.game .icon{
+ font-size:clamp(65px,10vw,100px);
+ filter:drop-shadow(3px 6px 3px #0002);
+}
+.game strong{
+ font-size:clamp(24px,4vw,35px);
+}
+.game small{
+ font-size:clamp(14px,2.4vw,19px);
+ line-height:1.7;
+}
+.hidden{display:none!important}
+button{
+ font-family:inherit;
+ cursor:pointer;
+ border:0;
+ border-radius:15px;
+ padding:13px 18px;
+ background:#ffdfa9;
+ color:#463426;
+ font-weight:bold;
+ font-size:16px;
+}
+button:disabled{
+ opacity:.5;
+ cursor:default;
+}
+button:focus-visible,a:focus-visible{
+ outline:3px solid #2776c6;
+ outline-offset:3px;
+}
+.top{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ gap:10px;
+ flex-wrap:wrap;
+}
+.top h2{margin:5px}
+.badge{
+ background:#e2f0d8;
+ border-radius:12px;
+ padding:10px;
+ font-weight:bold;
+}
+.progress{
+ height:13px;
+ background:#eee1d0;
+ border-radius:20px;
+ overflow:hidden;
+ margin:20px 0;
+}
+#bar{
+ height:100%;
+ width:0%;
+ background:#e5a04d;
+ transition:width .25s;
+}
+#stats{
+ text-align:center;
+ color:#82634b;
+ margin:15px 0;
+}
+#question{
+ font-size:clamp(24px,4vw,34px);
+ text-align:center;
+ margin:30px 0;
+ line-height:1.7;
+}
+.choices{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:14px;
+ max-width:760px;
+ margin:20px auto;
+}
+.choice{
+ min-height:85px;
+ background:#fff1da;
+ border:2px solid #efcb9c;
+ font-size:clamp(18px,3vw,25px);
+}
+.choice.correct{
+ background:#ccefc9;
+ border-color:#429d49;
+}
+.choice.wrong{
+ background:#ffd4d4;
+ border-color:#d64c4c;
+}
+#message{
+ min-height:45px;
+ text-align:center;
+ font-size:20px;
+ font-weight:bold;
+}
+.actions{
+ display:flex;
+ justify-content:center;
+ gap:10px;
+ flex-wrap:wrap;
+ margin:18px 0;
+}
+.footer{
+ text-align:center;
+ padding:25px;
+ color:#8b715b;
+}
+@media(max-width:520px){
+ .panel{padding:15px}
+ .games{gap:12px}
+ .game{min-height:180px}
+ .choices{grid-template-columns:1fr}
+ .choice{min-height:65px}
+ .top{justify-content:center}
+}
+.math-game{
+ background:linear-gradient(145deg,#e1ffdf,#8ce6a1);
+}
+</style>
+</head>
+<body>
+
+<header>
+<img src="mohammad-habiba.png" alt="محمد وحبيبة">
+<h1>محمد وحبيبة</h1>
+</header>
+
+<main>
+
+<section id="home" class="panel">
+<h2>أسئلة وألعاب</h2>
+
+<div class="games">
+<a href="flight.html" class="game plane">
+<span class="icon">✈️</span>
+<strong>طائرة</strong>
+<small>تحدي الطائرة</small>
+</a>
+
+<a href="math.html" class="game math-game">
+<span class="icon">🧮</span>
+<strong>عمليات حسابية</strong>
+<small>٢٠٠ سؤال في العمليات الحسابية</small>
+</a>
+<a href="word-problems.html" class="game word-problems-game">
+<span class="icon">🧠</span>
+<strong>مسائل حسابية</strong>
+<small>٢٠٠ مسألة حسابية</small>
+</a>
+<a href="jump.html" class="game jump-game">
+<span class="icon"><img src="mohammad-run.png" alt="محمد" style="width:110px;height:110px;object-fit:contain;display:block;margin:auto"></span>
+<strong>الحواجز</strong>
+<small>اجمع النجوم</small>
+</a>
+
+<a href="submarine.html" class="game submarine-game">
+<span class="icon" style="display:flex;align-items:center;justify-content:center;height:150px;overflow:hidden">
+<img src="submarine-card-original-habiba.png" alt="حبيبة داخل الغواصة" style="width:220px;height:150px;max-width:100%;object-fit:contain;display:block">
+</span>
+<strong>غواصة</strong>
+<small>تحدي الغواصة</small>
+</a>
+<button class="game capitals" onclick="openCapitals()">
+<span class="icon">🏙️</span>
+<strong>عواصم</strong>
+<small>١٩٢ سؤالا عن عواصم دول</small>
+</button>
+</div>
+</section>
+
+<section id="play" class="panel hidden">
+<div class="top">
+<button onclick="goHome()">العودة إلى الألعاب</button>
+<h2>عواصم</h2>
+<span class="badge" id="level"></span>
+</div>
+
+<div class="progress"><div id="bar"></div></div>
+<div id="stats"></div>
+<h3 id="question"></h3>
+<div class="choices" id="choices"></div>
+<div id="message" aria-live="polite"></div>
+
+<div class="actions">
+<button id="previous" onclick="move(-1)">السؤال السابق</button>
+<button id="next" onclick="move(1)">السؤال التالي</button>
+<button onclick="retry()">إعادة المحاولة</button>
+</div>
+</section>
+
+</main>
+<div class="footer">محمد وحبيبة</div>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const KEY = "mh_capitals_v1";
+const TOTAL = 192;
+
+let questions = [];
+let current = 1;
+let progress = {unlocked:1,stars:{}};
+let answered = false;
+let autoNextTimer = null;
+function cancelAutoNext(){
+ if(autoNextTimer !== null){
+  clearTimeout(autoNextTimer);
+  autoNextTimer = null;
+ }
+}
+
+let loading = null;
+
+function loadProgress(){
+ try{
+  const saved = JSON.parse(localStorage.getItem(KEY));
+  if(saved && typeof saved === "object"){
+   progress.unlocked = Math.max(
+    1,Math.min(TOTAL,Number(saved.unlocked)||1)
+   );
+   progress.stars =
+    saved.stars && typeof saved.stars === "object"
+    ? saved.stars : {};
+  }
+ }catch(e){}
+}
+
+function saveProgress(){
+ try{
+  localStorage.setItem(KEY,JSON.stringify(progress));
+ }catch(e){}
+}
+
+async function openCapitals(){
+ $("home").classList.add("hidden");
+ $("play").classList.remove("hidden");
+ loadProgress();
+ current = progress.unlocked;
+
+ $("question").textContent = "جار تحميل الأسئلة...";
+ $("choices").replaceChildren();
+ $("message").textContent = "";
+ $("previous").disabled = true;
+ $("next").disabled = true;
+
+ try{
+  if(!loading){
+   loading = fetch("capitals-questions.json")
+    .then(response=>{
+     if(!response.ok) throw Error("Fetch failed");
+     return response.json();
+    })
+    .then(data=>{
+     if(!Array.isArray(data)||data.length!==TOTAL){
+      throw Error("Incomplete questions");
+     }
+     questions = data;
+    })
+    .catch(error=>{
+     loading = null;
+     throw error;
+    });
+  }
+  await loading;
+  if(!$("play").classList.contains("hidden")){
+   render();
+  }
+ }catch(error){
+  $("question").textContent = "تعذر تحميل الأسئلة";
+  $("message").textContent =
+   "تأكد من رفع ملف الأسئلة إلى الموقع";
+ }
+}
+
+function goHome(){
+ cancelAutoNext();
+ $("play").classList.add("hidden");
+ $("home").classList.remove("hidden");
+}
+
+function completedCount(){
+ return Object.values(progress.stars)
+  .filter(value=>value===1).length;
+}
+
+function render(){
+ cancelAutoNext();
+ const q = questions[current-1];
+ if(!q)return;
+
+ answered = progress.stars[current]===1;
+
+ $("level").textContent =
+  "السؤال "+current+" من "+TOTAL;
+
+ $("bar").style.width = (current/TOTAL*100)+"%";
+
+ $("stats").textContent =
+  "الأسئلة المنجزة: "+completedCount()+
+  " من "+TOTAL+
+  " | النجوم: "+completedCount();
+
+ $("question").textContent = q.question;
+ $("choices").replaceChildren();
+ $("message").textContent = "";
+
+ q.options.forEach((option,index)=>{
+  const button = document.createElement("button");
+  button.className = "choice";
+  button.textContent = "أبجد"[index]+") "+option;
+
+  if(answered){
+   button.disabled = true;
+   if(index===q.answer){
+    button.classList.add("correct");
+   }
+  }else{
+   button.onclick = ()=>answer(index);
+  }
+
+  $("choices").appendChild(button);
+ });
+
+ if(answered){
+  $("message").textContent = "أجبت عن هذا السؤال";
+ }
+
+ $("previous").disabled = current===1;
+ $("next").disabled =
+  current===TOTAL || current>=progress.unlocked;
+}
+
+function answer(index){
+ if(answered)return;
+
+ const q = questions[current-1];
+ const buttons = $("choices").querySelectorAll("button");
+
+ if(index!==q.answer){
+  buttons[index].classList.add("wrong");
+  $("message").textContent =
+   "الإجابة غير صحيحة، حاول مرة أخرى";
+  return;
+ }
+
+ answered = true;
+ progress.stars[current] = 1;
+ progress.unlocked = Math.max(
+  progress.unlocked,
+  Math.min(TOTAL,current+1)
+ );
+ saveProgress();
+
+ buttons.forEach((button,i)=>{
+  button.disabled = true;
+  button.classList.remove("wrong");
+  if(i===q.answer){
+   button.classList.add("correct");
+  }
+ });
+
+ $("message").textContent =
+  current===TOTAL
+  ? "أحسنت! أنهيت الأسئلة كلها!"
+  : "أحسنت! إجابة صحيحة";
+
+ $("stats").textContent =
+  "الأسئلة المنجزة: "+completedCount()+
+  " من "+TOTAL+
+  " | النجوم: "+completedCount();
+
+ $("next").disabled = current===TOTAL;
+
+ if(current < TOTAL){
+  const answeredQuestion = current;
+  autoNextTimer = setTimeout(()=>{
+   autoNextTimer = null;
+   if(current === answeredQuestion && answered){
+    move(1);
+   }
+  },1000);
+ }
+}
+
+function move(direction){
+ cancelAutoNext();
+ const target = current+direction;
+ if(target<1 || target>TOTAL)return;
+ if(target>progress.unlocked)return;
+ current = target;
+ render();
+}
+
+function retry(){
+ if(!questions.length)return;
+ if(progress.stars[current]===1){
+  $("message").textContent =
+   "لقد أجبت عن هذا السؤال بالفعل";
+  return;
+ }
+ render();
+}
+
+loadProgress();
+</script>
+</body>
+</html>
