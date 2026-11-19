@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>تحدي الغواصة | محمد وحبيبة</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#e7f9fc;font-family:Tahoma,Arial,sans-serif;color:#17384d}
+header{text-align:center;padding:16px;background:linear-gradient(110deg,#0876b6,#5ce2e9)}
+h1{margin:0 0 7px;font-size:28px}
+main{max-width:1000px;margin:auto;padding:12px}
+a{color:#174a6b}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:15px 0}
+.stat{background:white;border-radius:13px;padding:12px;text-align:center;box-shadow:0 2px 8px #d7e6ef}
+.stat b{display:block;font-size:20px;margin-top:7px}
+.stat small{color:#597284}
+canvas{display:block;width:100%;background:#0878b2;border:4px solid white;border-radius:18px;touch-action:none}
+#message{text-align:center;font-size:19px;font-weight:bold;min-height:48px;padding:12px}
+.controls{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:12px 0}
+button{border:0;border-radius:13px;padding:14px 22px;background:#ffca4e;font-size:18px;font-weight:bold;cursor:pointer;touch-action:none}
+.control{background:white;min-width:130px;min-height:75px}
+.note{text-align:center;color:#526d80;font-size:13px;line-height:1.8}
+@media(max-width:550px){.stats{grid-template-columns:repeat(2,1fr)}.stat b{font-size:17px}}
+</style>
+</head>
+<body>
+<header>
+<h1>🚢 تحدي الغواصة</h1>
+<div></div>
+</header>
+<main>
+<p><a href="index.html">↩ العودة إلى الألعاب</a></p>
+<section class="stats">
+<div class="stat"><small>المسافة المقطوعة التقريبية</small><b id="distance">0 م</b></div>
+<div class="stat"><small>النجوم المجمّعة</small><b id="starCount">0 ⭐</b></div>
+<div class="stat"><small>الوقت</small><b id="time">00:00</b></div>
+<div class="stat"><small>السرعة</small><b id="speed">×1.0</b></div>
+<div class="stat"><small>رقمك القياسي في المسافة المقطوعة التقريبية</small><b id="personal">0 م</b></div>
+
+<div class="stat"><small>رقمك القياسي في النجوم</small><b id="starRecord">0 ⭐</b></div>
+<div class="stat"><small>الرقم القياسي الدولي لمجموع النجوم</small><b id="globalStars">بانتظار الربط</b></div>
+<div class="stat"><small>الرقم القياسي الدولي للمسافة المقطوعة التقريبية</small><b id="global">بانتظار الربط</b></div>
+</section>
+<canvas id="game" width="900" height="500"></canvas>
+<div id="message">اضغط ابدأ، واجمع النجوم وتجنّب عوائق البحر!</div>
+<div class="controls">
+<button id="up" class="control">⬆ ارتفاع</button>
+<button id="down" class="control">⬇ انخفاض</button>
+<button id="start">▶ ابدأ</button>
+<button id="pause">⏸ إيقاف</button>
+</div>
+<p class="note">
+الكمبيوتر: الأسهم أو W و S — الهاتف: اسحب إصبعك للأعلى أو للأسفل على شاشة اللعبة.
+<br>
+الرقم الشخصي محفوظ على هذا الجهاز. الرقم العالمي يحتاج إلى ربط قاعدة بيانات مشتركة.
+</p>
+</main>
+<script>
+"use strict";
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const $=id=>document.getElementById(id);
+const W=900,H=500;
+const STORAGE="mh_submarine_endless_record_v1";
+const habibaPortrait=new Image();
+habibaPortrait.src="habiba-submarine.png";
+const seaFloor=H-24;
+
+let record={distance:0,time:0,stars:0};
+try{
+ const stored=JSON.parse(localStorage.getItem(STORAGE)||"{}");
+ record.distance=Math.max(0,Number(stored.distance)||0);
+ record.time=Math.max(0,Number(stored.time)||0);
+ record.stars=Math.max(0,Number(stored.stars)||0);
+}catch(e){}
+
+let mode="ready",previousMode="flying";
+let elapsed=0,distance=0,score=0;
+let plane={x:155,y:250,vy:0};
+let obstacles=[],stars=[],spawnDistance=0;
+let input={up:false,down:false};
+let last=0,seed=123456,crashReason="";
+const BASE_SPEED=180;
+const MAX_MULTIPLIER=10;
+
+function rand(){
+ seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+ return seed/4294967296;
+}
+function formatTime(seconds){
+ const s=Math.floor(seconds);
+ return String(Math.floor(s/60)).padStart(2,"0")+":"+
+ String(s%60).padStart(2,"0");
+}
+function multiplier(){
+ return 1+9*Math.min(1,elapsed/120);
+}
+function speed(){
+ return BASE_SPEED*multiplier();
+}
+function updateStats(){
+ $("distance").textContent=Math.floor(distance)+" م";
+ $("time").textContent=formatTime(elapsed);
+ $("speed").textContent="×"+multiplier().toFixed(1);
+ $("personal").textContent=Math.floor(record.distance)+" م";
+ $("starCount").textContent=score+" ⭐";
+ $("starRecord").textContent=record.stars+" ⭐";
+ 
+}
+function saveRecord(){
+ let improved=false;
+ if(distance>record.distance){
+  record.distance=distance;
+  record.time=elapsed;
+  improved=true;
+ }
+ if(score>record.stars){
+  record.stars=score;
+  improved=true;
+ }
+ if(improved){
+  try{localStorage.setItem(STORAGE,JSON.stringify(record))}catch(e){}
+ }
+ return improved;
+}
+function reset(){
+ elapsed=0;distance=0;score=0;spawnDistance=0;
+ obstacles=[];stars=[];
+ plane={x:155,y:250,vy:0};
+ input.up=false;input.down=false;
+ seed=(Date.now()>>>0)||123456;
+ crashReason="";
+ mode="ready";
+ $("start").textContent="▶ ابدأ";
+ $("pause").textContent="⏸ إيقاف";
+ $("message").textContent="استعد! السرعة ستصل إلى ×10 خلال دقيقتين.";
+ updateStats();
+}
+function begin(){
+ if(mode==="crashed")reset();
+ if(mode==="ready"||mode==="paused"){
+  mode="flying";
+  $("start").textContent="↻ لعبة جديدة";
+  $("pause").textContent="⏸ إيقاف";
+  $("message").textContent="ساعد حبيبة على جمع النجوم وتجنّب الحواجز!";
+ }else if(mode==="flying"){
+  reset();
+  mode="flying";
+  $("start").textContent="↻ لعبة جديدة";
+  $("message").textContent="بدأ تحدٍّ جديد!";
+ }
+}
+function end(reason){
+ if(mode!=="flying")return;
+ mode="crashed";
+ crashReason=reason;
+ const newRecord=saveRecord();
+ $("message").textContent=reason+" — قطعت "+
+ Math.floor(distance)+" مترًا خلال "+formatTime(elapsed)+
+ (newRecord?" — رقم قياسي شخصي جديد!":" — حاول مجددًا!");
+ $("start").textContent="↻ حاول مجددًا";
+ updateStats();
+}
+function spawn(){
+ // ارتفاع الفتحة يبقى قابلًا للعب حتى عند السرعة القصوى.
+ const difficulty=Math.min(1,elapsed/120);
+ const gap=255-25*difficulty+rand()*30;
+ const center=155+rand()*175;
+ const top=Math.max(60,center-gap/2);
+ const bottom=Math.min(430,center+gap/2);
+ const width=48+rand()*22;
+ const o={x:W+35,top,bottom,width,kind:Math.floor(rand()*4)};
+ obstacles.push(o);
+ if(rand()>.3){
+  stars.push({
+   x:o.x+width+45,
+   y:top+(bottom-top)*(.35+rand()*.3)
+  });
+ }
+}
+function update(dt){
+ if(mode!=="flying")return;
+ const s=Math.min(.04,dt);
+ elapsed+=s;
+ const v=speed();
+ const direction=(input.down?1:0)-(input.up?1:0);
+ const control=900;
+ plane.vy+=direction*control*s;
+ if(!direction)plane.vy*=Math.pow(.03,s);
+ plane.vy=Math.max(-380,Math.min(380,plane.vy));
+ plane.y+=plane.vy*s;
+
+ if(plane.y-24<=12){plane.y=36;end("اصطدمت بسطح الماء");return}
+ if(plane.y+24>=seaFloor){plane.y=seaFloor-24;end("اصطدمت بقاع البحر");return}
+
+ distance+=v*s/10;
+ spawnDistance+=v*s;
+ // المسافة بين الجدران متكيّفة مع السرعة،
+ // حتى لا تصبح اللعبة مستحيلة تلقائيًا.
+ const interval=380+v*.65;
+ if(spawnDistance>=interval){
+  spawnDistance=0;
+  spawn();
+ }
+ for(const o of obstacles){
+  o.x-=v*s;
+  if(plane.x+38>o.x&&plane.x-38<o.x+o.width&&
+     (plane.y-22<o.top||plane.y+22>o.bottom)){
+   end("اصطدمت بعائق بحري");return;
+  }
+ }
+ for(const star of stars){
+  star.x-=v*s;
+  if(Math.hypot(star.x-plane.x,star.y-plane.y)<48){
+   score+=1;
+   star.x=-100;
+  }
+ }
+ obstacles=obstacles.filter(o=>o.x+o.width>-30);
+ stars=stars.filter(z=>z.x>-30);
+ updateStats();
+}
+function circle(x,y,r,fill,stroke="",lw=1){
+ ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill();
+ if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke()}
+}
+function ellipse(x,y,rx,ry,fill,stroke="",lw=1){
+ ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill();
+ if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke()}
+}
+function poly(points,color){ctx.fillStyle=color;ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fill()}
+function wave(t){return Math.sin(t)}
+function drawCoral(x,y,scale,color){
+ ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);ctx.strokeStyle=color;ctx.lineWidth=11;ctx.lineCap="round";
+ const arms=[[0,0,0,-45],[-4,-25,-22,-52],[0,-35,18,-66],[17,-51,28,-79],[-22,-50,-34,-75]];
+ for(const [x1,y1,x2,y2] of arms){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+ ctx.restore();
+}
+function drawFish(x,y,sc,color){
+ ctx.save();ctx.translate(x,y);ctx.scale(sc,sc);
+ poly([[-14,0],[-28,-12],[-28,12]],color);
+ ellipse(0,0,19,10,color);circle(10,-3,2.4,"#15334a");
+ ctx.restore();
+}
+function drawBackground(){
+ const g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,"#1abbd9");g.addColorStop(.36,"#057fb4");g.addColorStop(1,"#043b78");
+ ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ ctx.save();ctx.globalAlpha=.12;
+ for(let i=0;i<10;i++){
+  const x=i*113-110+Math.sin(elapsed*.14+i)*14;
+  poly([[x,0],[x+28,0],[x+180,H],[x+80,H]],"#e8ffff");
+ }
+ ctx.restore();
+ for(let i=0;i<13;i++){
+  const x=((i*125-distance*.42)%(W+240)+(W+240))%(W+240)-120;
+  const y=300+(i*47)%155;
+  ellipse(x,y,75+(i%3)*24,55,"#125b84");
+  ellipse(x+28,y-20,38,35,"#1c7190");
+ }
+ for(let i=0;i<9;i++){
+  const x=((i*151-distance*.9)%(W+250)+(W+250))%(W+250)-100;
+  const y=95+(i*61)%280;
+  drawFish(x,y,.65+(i%3)*.15,["#f4a45e","#8be3e7","#a5a6ed"][i%3]);
+ }
+ const sand=ctx.createLinearGradient(0,H-50,0,H);
+ sand.addColorStop(0,"#edcf83");sand.addColorStop(1,"#b78b56");
+ ctx.fillStyle=sand;ctx.beginPath();ctx.moveTo(0,H-30);
+ for(let x=0;x<=W;x+=10)ctx.lineTo(x,H-30+5*Math.sin(x/36+distance*.014));
+ ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.fill();
+ for(let i=0;i<12;i++){
+  const x=((i*119-distance*1.35)%(W+210)+(W+210))%(W+210)-100;
+  drawCoral(x,H-25, .55+(i%4)*.15,["#fa777c","#ffa744","#c777d6","#6bd6a5"][i%4]);
+  ellipse(x+38,H-22,28,12,"#426c85");
+ }
+ for(let i=0;i<23;i++){
+  const x=((i*73-distance*1.8)%(W+100)+(W+100))%(W+100);
+  const y=((i*97+elapsed*(9+i%4*4))%(H-70))+25;
+  circle(x,y,3+(i%3)*2,"#ffffff15","#b6faff77",1.5);
+ }
+}
+function drawMine(x,y,r){
+ ctx.save();ctx.translate(x,y);
+ for(let i=0;i<9;i++){
+  const a=i*Math.PI*2/9;
+  ctx.save();ctx.rotate(a);
+  poly([[r-5,-6],[r+13,0],[r-5,6]],"#2a3344");ctx.restore();
+ }
+ const g=ctx.createRadialGradient(-r*.3,-r*.4,2,0,0,r);
+ g.addColorStop(0,"#7d899a");g.addColorStop(1,"#273447");
+ circle(0,0,r,g,"#101c2d",3);circle(-r*.15,-r*.16,r*.24,"#ed5046","#b72831",3);
+ ctx.restore();
+}
+function drawJelly(x,y,scale){
+ ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
+ for(let i=-2;i<=2;i++){
+  ctx.strokeStyle="#d9a5fa";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(i*9,0);
+  ctx.quadraticCurveTo(i*9+9,18,i*9,36);ctx.stroke();
+ }
+ ellipse(0,-8,32,25,"#c874e0","#f2c5ff",3);
+ ellipse(-9,-17,8,4,"#ffffff66");ctx.restore();
+}
+function drawRock(x,y,w,h){
+ const g=ctx.createLinearGradient(x,y,x+w,y+h);
+ g.addColorStop(0,"#a1ad9c");g.addColorStop(.5,"#596e73");g.addColorStop(1,"#344c5e");
+ poly([[x+5,y+4],[x+w*.75,y],[x+w,y+18],[x+w-3,y+h-5],[x+12,y+h],[x,y+h*.5]],g);
+ ctx.strokeStyle="#283f4d";ctx.lineWidth=3;ctx.stroke();
+ poly([[x+9,y+13],[x+w*.6,y+7],[x+w*.35,y+32]],"#b1c2ae88");
+}
+function drawObstacle(o){
+ const {x,width:w,top,bottom,kind}=o;
+ if(kind===0){
+  drawRock(x,-24,w,top+24);drawRock(x,bottom,w,H-bottom+26);
+  drawCoral(x+w/2,top+8,.65,"#f47b92");
+  drawCoral(x+w/2,H-17,.7,"#9b6bdb");
+ }else if(kind===1){
+  const rockColor="#566f7c";
+  ctx.fillStyle=rockColor;ctx.fillRect(x+8,0,w-16,top);
+  ctx.fillRect(x+8,bottom,w-16,H-bottom);
+  for(let y=14;y<top;y+=40)ellipse(x+w/2,y,w*.46,16,"#718b8d");
+  for(let y=bottom+10;y<H;y+=40)ellipse(x+w/2,y,w*.46,16,"#718b8d");
+  drawMine(x+w/2,Math.max(19,top-16),17);
+  drawMine(x+w/2,Math.min(H-19,bottom+16),17);
+ }else if(kind===2){
+  drawRock(x-4,-30,w+8,top+30);drawRock(x-4,bottom,w+8,H-bottom+30);
+  for(let i=0;i<3;i++){
+   drawJelly(x+w*(.25+i*.25),top-6, .3);
+   drawJelly(x+w*(.25+i*.25),bottom+20,.3);
+  }
+ }else{
+  drawRock(x,0,w,top);drawRock(x,bottom,w,H-bottom);
+  ctx.strokeStyle="#d1a35e";ctx.lineWidth=7;
+  for(let yy=0;yy<top;yy+=25){ctx.beginPath();ctx.moveTo(x+5,yy);ctx.lineTo(x+w-5,yy+18);ctx.stroke()}
+  for(let yy=bottom;yy<H;yy+=25){ctx.beginPath();ctx.moveTo(x+5,yy);ctx.lineTo(x+w-5,yy+18);ctx.stroke()}
+ }
+}
+function drawStar(x,y){
+ ctx.save();ctx.translate(x,y);ctx.rotate(Math.sin(elapsed*3+x)*.15);
+ ctx.shadowColor="#ffe99d";ctx.shadowBlur=18;
+ ctx.fillStyle="#ffcd37";ctx.strokeStyle="#e98b1e";ctx.lineWidth=3;
+ ctx.beginPath();for(let i=0;i<10;i++){
+  const a=-Math.PI/2+i*Math.PI/5,r=i%2?7:17;
+  if(!i)ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r);
+  else ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+ }ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+}
+function drawSubmarine(){
+ ctx.save();ctx.translate(plane.x,plane.y);
+ ctx.rotate(Math.max(-.17,Math.min(.17,plane.vy/1500)));
+ const tick=performance.now()/1000;
+ // propeller and bubbles
+ for(let i=0;i<3;i++){
+  circle(-73-(i*22+tick*24)%75,-3+Math.sin(tick*2+i)*8,3+i%2*2,"#d8ffff44","#c9ffff88");
+ }
+ ctx.save();ctx.translate(-65,0);ctx.rotate(tick*12);
+ ellipse(0,-13,5,17,"#f45a2b");ellipse(0,13,5,17,"#f45a2b");ctx.restore();
+ poly([[-54,-11],[-79,-34],[-80,23],[-52,11]],"#e95b28");
+ poly([[-28,22],[-48,38],[8,28]],"#eb6428");
+ poly([[-20,-20],[-38,-39],[4,-29]],"#ffce42");
+ const hull=ctx.createLinearGradient(0,-35,0,39);
+ hull.addColorStop(0,"#fff28a");hull.addColorStop(.36,"#ffcd3c");hull.addColorStop(.75,"#f69a17");hull.addColorStop(1,"#ce571e");
+ ellipse(0,8,72,33,hull,"#b65b13",3);
+ // cabin window: Habiba drawn inside
+ ctx.save();ctx.beginPath();ctx.ellipse(-1,-16,39,37,0,0,Math.PI*2);ctx.clip();
+ ctx.fillStyle="#7fd7ed";ctx.fillRect(-42,-55,85,80);
+ // Habiba looks forward along the submarine's direction.
+ if(habibaPortrait.complete&&habibaPortrait.naturalWidth){
+  // Her face is on the right of the portrait; place it inside the porthole.
+  ctx.drawImage(habibaPortrait,-37,-57,73,83);
+  // Subtle blink: eyelids close briefly every few seconds.
+  const blinkPhase=tick%4.9;
+  if(blinkPhase>4.67&&blinkPhase<4.82){
+   ctx.save();
+   ctx.strokeStyle="#805044";
+   ctx.lineWidth=1.9;
+   ctx.lineCap="round";
+   ctx.beginPath();
+   ctx.moveTo(5,-30);ctx.quadraticCurveTo(10,-27,15,-30);
+   ctx.moveTo(22,-31);ctx.quadraticCurveTo(27,-28,31,-32);
+   ctx.stroke();
+   ctx.restore();
+  }
+ }else{
+  ellipse(-1,23,28,28,"#ae63c7");
+  ellipse(-2,-13,24,30,"#b36bd1");
+  ellipse(0,-13,17,23,"#f5c5a2");
+  ellipse(5,-14,2.5,3.5,"#342d3b");
+  ellipse(18,-14,2.5,3.5,"#342d3b");
+ }
+
+ ctx.restore();
+ ellipse(-1,-16,39,37,"#ffffff14","#fff8dd",5);
+ ellipse(-15,-34,15,6,"#ffffff65");
+ for(const x of [-36,20,47]){
+  circle(x,19,7,"#2b99bd","#fff0a4",3);circle(x-2,17,2,"#dcffff");
+ }
+ ellipse(70,8,10,15,"#e67d20","#ffdc6a",4);
+ ctx.fillStyle="#fff6ac77";poly([[77,2],[117,-13],[117,29],[77,14]],"#e9ffff22");
+ ctx.restore();
+}
+function draw(){
+ drawBackground();
+ for(const o of obstacles)drawObstacle(o);
+ for(const star of stars)drawStar(star.x,star.y);
+ drawSubmarine();
+ ctx.fillStyle="rgba(4,49,83,.74)";ctx.beginPath();ctx.roundRect(15,15,220,43,13);ctx.fill();
+ ctx.fillStyle="white";ctx.font="bold 20px Tahoma";ctx.textAlign="left";
+ ctx.fillText("⭐ "+score+"   ×"+multiplier().toFixed(1),29,43);
+ if(mode!=="flying"){
+  ctx.fillStyle="rgba(4,31,60,.30)";ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="white";ctx.font="bold 31px Tahoma";ctx.textAlign="center";
+  ctx.shadowColor="#002e50";ctx.shadowBlur=8;
+  const title={ready:"استعد للغوص!",paused:"اللعبة متوقفة مؤقتًا",crashed:"انتهت المحاولة!"}[mode];
+  ctx.fillText(title||"",W/2,94);ctx.shadowBlur=0;
+ }
+}
+function loop(now){
+ const dt=last?Math.min(.04,(now-last)/1000):0;
+ last=now;
+ update(dt);
+ draw();
+ requestAnimationFrame(loop);
+}
+function hold(id,direction){
+ const el=$(id);
+ el.addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  input[direction]=true;
+  try{el.setPointerCapture(e.pointerId)}catch(err){}
+ });
+ for(const event of ["pointerup","pointercancel","lostpointercapture"]){
+  el.addEventListener(event,()=>input[direction]=false);
+ }
+}
+hold("up","up");
+hold("down","down");
+
+// التحكم بالغواصة بالسحب على شاشة الهاتف
+(function enableFlightTouch(){
+ const canvas = document.getElementById("game");
+ if(!canvas) return;
+
+ let activePointer = null;
+ let lastY = 0;
+
+ function stopTouch(){
+  activePointer = null;
+  input.up = false;
+  input.down = false;
+ }
+
+ canvas.addEventListener("pointerdown", e=>{
+  if(e.pointerType !== "touch" && e.pointerType !== "pen") return;
+  if(activePointer !== null) return;
+
+  e.preventDefault();
+  activePointer = e.pointerId;
+  lastY = e.clientY;
+
+  input.up = false;
+  input.down = false;
+
+  try{
+   canvas.setPointerCapture(e.pointerId);
+  }catch(err){}
+ });
+
+ canvas.addEventListener("pointermove", e=>{
+  if(e.pointerId !== activePointer) return;
+
+  e.preventDefault();
+
+  const delta = e.clientY - lastY;
+
+  if(delta < -2){
+   input.up = true;
+   input.down = false;
+  }else if(delta > 2){
+   input.up = false;
+   input.down = true;
+  }
+
+  lastY = e.clientY;
+ });
+
+ for(const event of [
+  "pointerup",
+  "pointercancel",
+  "lostpointercapture"
+ ]){
+  canvas.addEventListener(event,e=>{
+   if(e.pointerId === activePointer){
+    stopTouch();
+   }
+  });
+ }
+
+ window.addEventListener("blur",stopTouch);
+})();
+
+document.addEventListener("keydown",e=>{
+ if(["ArrowUp","ArrowDown","KeyW","KeyS","Space"].includes(e.code))
+  e.preventDefault();
+ if(e.code==="ArrowUp"||e.code==="KeyW")input.up=true;
+ if(e.code==="ArrowDown"||e.code==="KeyS")input.down=true;
+ if(e.code==="Space"&&!e.repeat){
+  if(mode==="flying")pause();
+  else if(mode==="paused")pause();
+  else begin();
+ }
+});
+document.addEventListener("keyup",e=>{
+ if(e.code==="ArrowUp"||e.code==="KeyW")input.up=false;
+ if(e.code==="ArrowDown"||e.code==="KeyS")input.down=false;
+});
+window.addEventListener("blur",()=>{
+ input.up=false;input.down=false;
+ if(mode==="flying")pause();
+});
+function pause(){
+ if(mode==="flying"){
+  mode="paused";
+  $("pause").textContent="▶ متابعة";
+  $("message").textContent="اللعبة متوقفة مؤقتًا.";
+ }else if(mode==="paused"){
+  mode="flying";
+  $("pause").textContent="⏸ إيقاف";
+  $("message").textContent="تابع الغوص!";
+ }
+}
+$("start").onclick=begin;
+$("pause").onclick=pause;
+reset();
+requestAnimationFrame(loop);
+</script>
+</body></html>
