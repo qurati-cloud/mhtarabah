@@ -213,75 +213,120 @@ header, .logo, .brand, .header-logo, .hero {
 </style>
 
 
-<style id="mh-home-final">
-/* الشعار الجديد */
-header img:first-of-type {
-    display: block !important;
-    width: 180px !important;
-    height: auto !important;
-    max-height: 160px !important;
-    object-fit: contain !important;
-    object-position: center !important;
-    margin: 0 auto !important;
-    clip-path: none !important;
-}
 
-/* منع قص الشعار */
-header {
+
+
+
+
+
+<style id="mh-home-design-v3">
+
+/* الترويسة والشعار */
+body > header {
+    padding: 18px 16px !important;
     overflow: visible !important;
+    border-radius: 0 0 22px 22px !important;
 }
 
-/* إخفاء العنوان المكرر تحت صورة الشعار */
-header h1,
-header .brand-title,
-header .site-title {
+body > header > img {
+    display: block !important;
+    width: 290px !important;
+    height: auto !important;
+    max-width: 85vw !important;
+    max-height: none !important;
+    object-fit: contain !important;
+    margin: 0 auto !important;
+}
+
+/* المساحة الرئيسية */
+body > main {
+    width: min(100%, 1000px) !important;
+    max-width: 1000px !important;
+    margin: 24px auto !important;
+    padding: 0 18px !important;
+}
+
+/* لوحة الأقسام */
+#home.panel {
+    width: 100% !important;
+    padding: 28px !important;
+    border-radius: 24px !important;
+}
+
+/* شبكة الأقسام */
+#home .games {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 20px !important;
+    width: 100% !important;
+    max-width: 900px !important;
+    margin: 0 auto !important;
+}
+
+/* كل بطاقة */
+#home .game {
+    min-height: 165px !important;
+    padding: 20px 12px !important;
+    border: 2px solid #e9a04a !important;
+    border-bottom-width: 5px !important;
+    border-radius: 20px !important;
+    background: #fff !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 12px !important;
+    text-decoration: none !important;
+    box-shadow: 0 5px 12px #6b431b18 !important;
+}
+
+#home .game .icon {
+    font-size: 55px !important;
+    line-height: 1.2 !important;
+}
+
+#home .game strong {
+    font-size: 23px !important;
+    line-height: 1.5 !important;
+    text-align: center !important;
+}
+
+/* إخفاء أي وصف متبقٍّ */
+#home .game small {
     display: none !important;
 }
 
-/* إخفاء وصف بطاقات الأقسام */
-.section-card small,
-.section-card p,
-.home-card small,
-.home-card p,
-.menu-card small,
-.menu-card p {
-    display: none !important;
-}
-</style>
+/* الهواتف */
+@media (max-width: 600px) {
+    body > header > img {
+        width: 230px !important;
+    }
 
+    body > main {
+        padding: 0 12px !important;
+        margin: 14px auto !important;
+    }
 
-<style id="mh-home-layout-repair">
-/* إلغاء قيود الشعار السابقة */
-header img:first-of-type {
-  width: 230px !important;
-  height: 190px !important;
-  max-width: 90vw !important;
-  max-height: none !important;
-  object-fit: contain !important;
-  display: block !important;
-  margin: 0 auto !important;
-}
-header {
-  overflow: visible !important;
-  padding: 12px 16px !important;
-}
+    #home.panel {
+        padding: 14px !important;
+    }
 
-/* تكبير مساحة بطاقات الأقسام */
-.section-card,
-.home-card,
-.menu-card {
-  min-height: 125px !important;
-  padding: 16px !important;
-}
+    #home .games {
+        gap: 12px !important;
+    }
 
-/* إخفاء العبارات الثانوية */
-.section-card small,
-.section-card p,
-.home-card small,
-.home-card p,
-.menu-card small,
-.menu-card p {
-  display: none !important;
+    #home .game {
+        min-height: 130px !important;
+        padding: 12px 6px !important;
+    }
+
+    #home .game .icon {
+        font-size: 43px !important;
+    }
+
+    #home .game strong {
+        font-size: 17px !important;
+    }
 }
 </style>
 
@@ -290,7 +335,6 @@ header {
 
 <header>
 <img src="mohammad-habiba-logo.png" alt="محمد وحبيبة">
-<h1>محمد وحبيبة</h1>
 </header>
 
 <main>
@@ -312,7 +356,7 @@ header {
 <a href="daily.html" class="game daily-main">
 <span class="icon">✅</span>
 <strong>أعمال يومية</strong>
-<small>إنجازاتي كل يوم</small>
+
 </a>
 <a href="https://youtube.com/playlist?list=PLkCuAwiQFTLuKbz4vAVWsGSlKTEiW3ibJ" class="game nasheed-main" target="_blank" rel="noopener noreferrer">
 <span class="icon">🎤</span>
@@ -327,12 +371,12 @@ header {
 <a href="https://youtube.com/playlist?list=PLkCuAwiQFTLurs-QJjXw4sbUoJu5ahAZK" class="game memorize-main" target="_blank" rel="noopener noreferrer">
 <span class="icon">📖</span>
 <strong>احفظ معي</strong>
-<small>نحفظ ونتعلّم</small>
+
 </a>
 <a href="awrad.html" class="game awrad-main">
 <span class="icon">🌙</span>
 <strong>أوراد</strong>
-<small>الصباح والمساء وقبيل النوم</small>
+
 </a>
 <a href="quran.html" class="game quran-main">
 <span class="icon">📗</span>
