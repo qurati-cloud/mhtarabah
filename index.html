@@ -249,6 +249,42 @@ header .site-title {
 }
 </style>
 
+
+<style id="mh-home-layout-repair">
+/* إلغاء قيود الشعار السابقة */
+header img:first-of-type {
+  width: 230px !important;
+  height: 190px !important;
+  max-width: 90vw !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  display: block !important;
+  margin: 0 auto !important;
+}
+header {
+  overflow: visible !important;
+  padding: 12px 16px !important;
+}
+
+/* تكبير مساحة بطاقات الأقسام */
+.section-card,
+.home-card,
+.menu-card {
+  min-height: 125px !important;
+  padding: 16px !important;
+}
+
+/* إخفاء العبارات الثانوية */
+.section-card small,
+.section-card p,
+.home-card small,
+.home-card p,
+.menu-card small,
+.menu-card p {
+  display: none !important;
+}
+</style>
+
 </head>
 <body>
 
