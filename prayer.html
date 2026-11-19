@@ -1,52 +1,39 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>برنامج الصلاة - محمد وحبيبة</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#fff4df"><title>برنامج الصلاة | محمد وحبيبة</title>
 <style>
-*{box-sizing:border-box}
-body{
-  margin:0;
-  min-height:100vh;
-  font-family:Tahoma,Arial,sans-serif;
-  background:#fff8ec;
-  color:#493727;
-  text-align:center;
-}
-header{
-  padding:30px 15px;
-  background:#ffe4ae;
-}
-main{
-  max-width:650px;
-  margin:40px auto;
-  padding:30px 20px;
-  background:white;
-  border-radius:22px;
-  box-shadow:0 5px 20px #00000010;
-}
-h1{font-size:30px}
-p{font-size:19px;line-height:1.9}
-a{
-  display:inline-block;
-  margin-top:20px;
-  padding:13px 25px;
-  background:#ffb347;
-  color:#493727;
-  text-decoration:none;
-  border-radius:15px;
-  font-weight:bold;
-}
+:root{font-family:Tahoma,Arial,sans-serif;color:#46352a;background:#fff8ed}*{box-sizing:border-box}body{margin:0}header{background:linear-gradient(125deg,#ffe4ad,#ffefd5);padding:24px 16px;text-align:center}h1{margin:6px 0;font-size:29px}header p{margin:5px 0;color:#795b40}.wrap{max-width:950px;margin:22px auto;padding:0 15px 40px}.back{display:inline-block;color:#6b4c2c;text-decoration:none;font-weight:bold;margin-bottom:15px}.tabs{display:flex;gap:10px;margin-bottom:18px}.tab{flex:1;border:0;border-radius:14px;padding:14px 8px;font-size:17px;font-weight:bold;background:#f1e6d5;color:#644f3b;cursor:pointer}.tab.active{background:#eebd6b;color:#3c291a}.panel{background:#fff;border-radius:20px;padding:20px;box-shadow:0 5px 20px #5d422211}.hidden{display:none}.datebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;margin-bottom:16px}.datebar input{border:1px solid #dbc9af;border-radius:10px;padding:10px;font:inherit;max-width:100%}.datebar button,.btn{border:0;border-radius:10px;background:#f5d89c;padding:10px 15px;font:inherit;cursor:pointer}.prayers{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px}.prayer{display:flex;align-items:center;gap:10px;border:2px solid #efe5d8;border-radius:15px;padding:18px 12px;cursor:pointer;font-size:19px;font-weight:bold}.prayer:has(input:checked){background:#e8f6e9;border-color:#9bcea0}.prayer input{width:23px;height:23px;accent-color:#3e9d62}.muted{color:#806f61;font-size:14px;line-height:1.8}.stats{margin-top:18px;padding:14px;border-radius:13px;background:#f7f5ee}.progress{height:12px;background:#e7e3dc;border-radius:20px;overflow:hidden;margin-top:9px}.progress>div{height:100%;width:0;background:#63ac7a;transition:width .2s}.monthbar{display:flex;align-items:center;justify-content:space-between;margin:22px 0 12px;gap:8px}.monthbar h3{margin:0;text-align:center}.calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}.dayname{text-align:center;font-size:12px;color:#8a7157}.day{min-height:59px;border:1px solid #eadcc9;background:#fff;border-radius:10px;cursor:pointer;padding:5px 2px;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}.day.selected{outline:3px solid #e4b65d}.day.today{background:#fff2d8}.day small{font-size:11px;color:#568466}.day.empty{visibility:hidden}.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:550px}th,td{padding:12px 8px;text-align:center;border-bottom:1px solid #eee4d6}th{background:#fff4df}td input{width:95px;max-width:100%;padding:9px;border:1px solid #d9c8b2;border-radius:8px;font:inherit;text-align:center}td.remaining{font-weight:bold;color:#276b48}.total{margin-top:16px;background:#e8f6e9;padding:15px;border-radius:12px;font-weight:bold}footer{text-align:center;color:#917d66;padding:18px;font-size:13px}@media(max-width:500px){.panel{padding:13px}.prayers{grid-template-columns:repeat(2,minmax(0,1fr))}.prayer{font-size:17px;padding:15px 8px}.day{min-height:49px}.dayname{font-size:10px}.tabs{gap:6px}.tab{font-size:15px}}
 </style>
 </head>
-<body>
-<header><h2>محمد وحبيبة</h2></header>
-<main>
-<h1>برنامج الصلاة</h1>
-<p>رزنامة الصلاة وبرنامج القضاء</p>
-<p>هذا القسم قيد التجهيز.</p>
-<a href="index.html">العودة إلى الرئيسية</a>
-</main>
-</body>
-</html>
+<body><header><h1>برنامج الصلاة</h1><p>صلواتي اليومية وبرنامج القضاء</p></header>
+<main class="wrap"><a class="back" href="index.html">↩ العودة إلى الرئيسية</a>
+<div class="tabs"><button class="tab active" data-tab="daily" type="button">صلواتي اليومية</button><button class="tab" data-tab="qada" type="button">برنامج القضاء</button></div>
+<section class="panel" id="daily"><div class="datebar"><h2>صلوات اليوم المختار</h2><label>التاريخ: <input id="date" type="date"></label><button id="today" type="button">اليوم</button></div>
+<div class="prayers" id="prayers"></div><div class="stats"><span id="count">0 من 5 صلوات</span><div class="progress"><div id="bar"></div></div></div>
+<p class="muted">ضع علامة صح أمام كل صلاة أديتها. يمكنك اختيار أي تاريخ سابق أو لاحق، وستبقى علاماته محفوظة على هذا الجهاز.</p>
+<div class="monthbar"><button class="btn" id="prev" type="button">الشهر السابق</button><h3 id="monthTitle"></h3><button class="btn" id="next" type="button">الشهر التالي</button></div>
+<div class="calendar" id="calendar"></div></section>
+<section class="panel hidden" id="qada"><h2>برنامج قضاء الصلاة</h2><p class="muted">أدخل عدد الصلوات المطلوب قضاؤها في خانة «المطلوب»، وكلما قضيت صلاة زِد عدد «ما قضيته». سيُحسب الباقي تلقائيًا. هذه الأرقام مستقلة عن علامات الصلوات اليومية.</p>
+<div class="scroll"><table><thead><tr><th>الصلاة</th><th>المطلوب</th><th>ما قضيته</th><th>الباقي</th></tr></thead><tbody id="qadaRows"></tbody></table></div><div class="total" id="qadaTotal">المجموع الباقي: 0</div><p class="muted">يمكن تعديل الأعداد في أي وقت. لا يُسمح بإدخال أعداد سالبة أو كسور.</p></section>
+<p class="muted">الخصوصية: تُحفظ البيانات محليًا في هذا المتصفح فقط، ولا تُرسل إلى خادم. حذف بيانات المتصفح أو تغيير الجهاز قد يؤدي إلى فقدانها. سنضيف حسابات مستقلة ومزامنة لاحقًا.</p></main><footer>محمد وحبيبة</footer>
+<script>
+(()=>{'use strict';
+const names=['الفجر','الظهر','العصر','المغرب','العشاء'];const key='mh-prayer-v1';let store={days:{},qada:{}};
+try{const v=JSON.parse(localStorage.getItem(key)||'{}');if(v&&typeof v==='object'){store.days=v.days&&typeof v.days==='object'?v.days:{};store.qada=v.qada&&typeof v.qada==='object'?v.qada:{}}}catch(e){}
+const save=()=>{try{localStorage.setItem(key,JSON.stringify(store))}catch(e){alert('تعذر حفظ البيانات على هذا الجهاز. تحقق من إعدادات المتصفح.')}};
+const localISO=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const today=localISO(new Date());const dateInput=document.getElementById('date');dateInput.value=today;let selected=today;let view=new Date(new Date().getFullYear(),new Date().getMonth(),1);
+function dayCount(date){return names.filter(n=>store.days[date]&&store.days[date][n]===true).length}
+function renderPrayers(){const area=document.getElementById('prayers');area.replaceChildren();names.forEach(n=>{const label=document.createElement('label');label.className='prayer';const cb=document.createElement('input');cb.type='checkbox';cb.checked=!!(store.days[selected]&&store.days[selected][n]);cb.addEventListener('change',()=>{if(!store.days[selected])store.days[selected]={};store.days[selected][n]=cb.checked;save();renderStats();renderCalendar()});const span=document.createElement('span');span.textContent=n;label.append(cb,span);area.append(label)});renderStats()}
+function renderStats(){const c=dayCount(selected);document.getElementById('count').textContent=`${c} من 5 صلوات`;document.getElementById('bar').style.width=`${c*20}%`}
+function chooseDate(iso){selected=iso;dateInput.value=iso;const parts=iso.split('-').map(Number);view=new Date(parts[0],parts[1]-1,1);renderPrayers();renderCalendar()}
+dateInput.addEventListener('change',()=>{if(/^\d{4}-\d{2}-\d{2}$/.test(dateInput.value))chooseDate(dateInput.value)});document.getElementById('today').onclick=()=>chooseDate(localISO(new Date()));
+const weekdays=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];function renderCalendar(){const area=document.getElementById('calendar');area.replaceChildren();document.getElementById('monthTitle').textContent=new Intl.DateTimeFormat('ar',{month:'long',year:'numeric'}).format(view);weekdays.forEach(w=>{const el=document.createElement('div');el.className='dayname';el.textContent=w;area.append(el)});const y=view.getFullYear(),m=view.getMonth(),first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();for(let i=0;i<first;i++){const el=document.createElement('div');el.className='day empty';area.append(el)}for(let d=1;d<=days;d++){const iso=localISO(new Date(y,m,d)),el=document.createElement('button');el.type='button';el.className='day'+(iso===selected?' selected':'')+(iso===today?' today':'');const number=document.createElement('span');number.textContent=d;const count=document.createElement('small');const c=dayCount(iso);count.textContent=c?`${c}/5`:'—';el.append(number,count);el.onclick=()=>chooseDate(iso);area.append(el)}}
+document.getElementById('prev').onclick=()=>{view=new Date(view.getFullYear(),view.getMonth()-1,1);renderCalendar()};document.getElementById('next').onclick=()=>{view=new Date(view.getFullYear(),view.getMonth()+1,1);renderCalendar()};
+const rows=document.getElementById('qadaRows');const inputs=[];function positive(v){const x=Number(v);return Number.isSafeInteger(x)&&x>=0?x:0}function renderQada(){rows.replaceChildren();inputs.length=0;names.forEach(n=>{const tr=document.createElement('tr');const name=document.createElement('td');name.textContent=n;tr.append(name);const data=store.qada[n]||{owed:0,done:0};const pair=[];['owed','done'].forEach(field=>{const td=document.createElement('td'),input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.value=positive(data[field]);input.setAttribute('aria-label',`${n} ${field==='owed'?'المطلوب':'ما قضيته'}`);input.addEventListener('change',()=>{const val=positive(input.value);input.value=val;if(!store.qada[n])store.qada[n]={owed:0,done:0};store.qada[n][field]=val;save();updateQada()});td.append(input);tr.append(td);pair.push(input)});const remaining=document.createElement('td');remaining.className='remaining';tr.append(remaining);rows.append(tr);inputs.push({pair,remaining})});updateQada()}
+function updateQada(){let total=0;inputs.forEach(({pair,remaining})=>{const a=positive(pair[0].value),b=positive(pair[1].value),left=Math.max(0,a-b);remaining.textContent=left;total+=left});document.getElementById('qadaTotal').textContent=`المجموع الباقي: ${total}`}
+document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b===btn));document.getElementById('daily').classList.toggle('hidden',btn.dataset.tab!=='daily');document.getElementById('qada').classList.toggle('hidden',btn.dataset.tab!=='qada')}));renderPrayers();renderCalendar();renderQada();
+})();
+</script></body></html>
