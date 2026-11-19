@@ -345,6 +345,8 @@ function drawStar(x,y){
   else ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
  }ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
 }
+const habibaBlink=new Image();
+habibaBlink.src="habiba-submarine-blink.png";
 function drawSubmarine(){
  ctx.save();ctx.translate(plane.x,plane.y);
  ctx.rotate(Math.max(-.17,Math.min(.17,plane.vy/1500)));
@@ -368,18 +370,10 @@ function drawSubmarine(){
  if(habibaPortrait.complete&&habibaPortrait.naturalWidth){
   // Her face is on the right of the portrait; place it inside the porthole.
   ctx.drawImage(habibaPortrait,-37,-57,73,83);
-  // Subtle blink: eyelids close briefly every few seconds.
+  // Blink using an alternate portrait, not lines drawn over open eyes.
   const blinkPhase=tick%4.9;
-  if(blinkPhase>4.67&&blinkPhase<4.82){
-   ctx.save();
-   ctx.strokeStyle="#805044";
-   ctx.lineWidth=1.9;
-   ctx.lineCap="round";
-   ctx.beginPath();
-   ctx.moveTo(5,-30);ctx.quadraticCurveTo(10,-27,15,-30);
-   ctx.moveTo(22,-31);ctx.quadraticCurveTo(27,-28,31,-32);
-   ctx.stroke();
-   ctx.restore();
+  if(blinkPhase>4.67&&blinkPhase<4.82&&habibaBlink.complete&&habibaBlink.naturalWidth){
+   ctx.drawImage(habibaBlink,-37,-57,73,83);
   }
  }else{
   ellipse(-1,23,28,28,"#ae63c7");
