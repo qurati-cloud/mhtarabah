@@ -219,114 +219,132 @@ header, .logo, .brand, .header-logo, .hero {
 
 
 
-<style id="mh-home-design-v3">
 
-/* الترويسة والشعار */
+
+
+<style id="mh-responsive-home">
+
+body {
+  background: linear-gradient(180deg,#fff0cf,#fff9ef) !important;
+}
+
 body > header {
-    padding: 18px 16px !important;
-    overflow: visible !important;
-    border-radius: 0 0 22px 22px !important;
+  background: linear-gradient(125deg,#ffac53,#ffe1a0) !important;
+  padding: 18px 12px 22px !important;
+  border-radius: 0 0 45% 45% / 0 0 12% 12% !important;
+  text-align: center !important;
+  overflow: visible !important;
 }
 
 body > header > img {
-    display: block !important;
-    width: 290px !important;
-    height: auto !important;
-    max-width: 85vw !important;
-    max-height: none !important;
-    object-fit: contain !important;
-    margin: 0 auto !important;
+  display: block !important;
+  width: min(330px,80vw) !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  margin: 0 auto !important;
 }
 
-/* المساحة الرئيسية */
 body > main {
-    width: min(100%, 1000px) !important;
-    max-width: 1000px !important;
-    margin: 24px auto !important;
-    padding: 0 18px !important;
+  width: min(100%,1050px) !important;
+  max-width: 1050px !important;
+  margin: 26px auto !important;
+  padding: 0 18px !important;
 }
 
-/* لوحة الأقسام */
 #home.panel {
-    width: 100% !important;
-    padding: 28px !important;
-    border-radius: 24px !important;
+  width: 100% !important;
+  padding: 26px !important;
+  background: rgba(255,255,255,.95) !important;
+  border-radius: 32px !important;
+  box-shadow: 0 10px 30px #9a5c1a20 !important;
 }
 
-/* شبكة الأقسام */
 #home .games {
-    display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 20px !important;
-    width: 100% !important;
-    max-width: 900px !important;
-    margin: 0 auto !important;
+  display: grid !important;
+  grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+  gap: 18px !important;
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
 }
 
-/* كل بطاقة */
 #home .game {
-    min-height: 165px !important;
-    padding: 20px 12px !important;
-    border: 2px solid #e9a04a !important;
-    border-bottom-width: 5px !important;
-    border-radius: 20px !important;
-    background: #fff !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 12px !important;
-    text-decoration: none !important;
-    box-shadow: 0 5px 12px #6b431b18 !important;
+  min-height: 120px !important;
+  padding: 18px 14px !important;
+  border: 3px solid #ffb24e !important;
+  border-bottom: 5px solid #f68a24 !important;
+  border-radius: 24px !important;
+  background: #fff !important;
+  box-shadow: 0 6px 12px #7b451b16 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 16px !important;
+  text-align: center !important;
+}
+
+#home .game:hover {
+  transform: translateY(-3px);
 }
 
 #home .game .icon {
-    font-size: 55px !important;
-    line-height: 1.2 !important;
+  font-size: 54px !important;
+  line-height: 1 !important;
+  flex-shrink: 0 !important;
 }
 
 #home .game strong {
-    font-size: 23px !important;
-    line-height: 1.5 !important;
-    text-align: center !important;
+  font-size: clamp(19px,2.5vw,28px) !important;
+  line-height: 1.5 !important;
 }
 
-/* إخفاء أي وصف متبقٍّ */
 #home .game small {
-    display: none !important;
+  display: none !important;
 }
 
-/* الهواتف */
 @media (max-width: 600px) {
-    body > header > img {
-        width: 230px !important;
-    }
+  body > header {
+    padding: 12px 8px 18px !important;
+  }
 
-    body > main {
-        padding: 0 12px !important;
-        margin: 14px auto !important;
-    }
+  body > header > img {
+    width: min(230px,70vw) !important;
+  }
 
-    #home.panel {
-        padding: 14px !important;
-    }
+  body > main {
+    margin: 14px auto !important;
+    padding: 0 10px !important;
+  }
 
-    #home .games {
-        gap: 12px !important;
-    }
+  #home.panel {
+    padding: 12px !important;
+    border-radius: 20px !important;
+  }
 
-    #home .game {
-        min-height: 130px !important;
-        padding: 12px 6px !important;
-    }
+  #home .games {
+    gap: 10px !important;
+  }
 
-    #home .game .icon {
-        font-size: 43px !important;
-    }
+  #home .game {
+    min-height: 115px !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding: 12px 5px !important;
+    border-radius: 17px !important;
+    border-width: 2px !important;
+    border-bottom-width: 4px !important;
+  }
 
-    #home .game strong {
-        font-size: 17px !important;
-    }
+  #home .game .icon {
+    font-size: 39px !important;
+  }
+
+  #home .game strong {
+    font-size: clamp(14px,3.8vw,18px) !important;
+  }
 }
 </style>
 
