@@ -198,19 +198,6 @@ button:focus-visible,a:focus-visible{
 }
 </style>
 
-<style id="mh-home-fixes">
-header img, .logo img, .brand img,
-.header-logo img, .hero img {
-    object-fit: contain !important;
-    object-position: center center !important;
-    max-width: 100% !important;
-    height: auto !important;
-    clip-path: none !important;
-}
-header, .logo, .brand, .header-logo, .hero {
-    overflow: visible !important;
-}
-</style>
 
 
 
@@ -222,128 +209,99 @@ header, .logo, .brand, .header-logo, .hero {
 
 
 
-<style id="mh-responsive-home">
 
+
+
+
+<style id="mh-home-v50">
 body {
-  background: linear-gradient(180deg,#fff0cf,#fff9ef) !important;
+  background: linear-gradient(#fff0cf,#fff9ef);
 }
-
 body > header {
-  background: linear-gradient(125deg,#ffac53,#ffe1a0) !important;
   padding: 18px 12px 22px !important;
-  border-radius: 0 0 45% 45% / 0 0 12% 12% !important;
-  text-align: center !important;
-  overflow: visible !important;
+  text-align: center;
 }
-
 body > header > img {
   display: block !important;
-  width: min(330px,80vw) !important;
+  width: min(320px,85vw) !important;
   height: auto !important;
-  max-width: 100% !important;
   max-height: none !important;
   object-fit: contain !important;
-  margin: 0 auto !important;
+  margin: auto !important;
 }
-
 body > main {
-  width: min(100%,1050px) !important;
-  max-width: 1050px !important;
-  margin: 26px auto !important;
-  padding: 0 18px !important;
+  max-width: 1000px !important;
+  margin: 20px auto !important;
+  padding: 0 15px !important;
 }
-
 #home.panel {
-  width: 100% !important;
-  padding: 26px !important;
-  background: rgba(255,255,255,.95) !important;
-  border-radius: 32px !important;
-  box-shadow: 0 10px 30px #9a5c1a20 !important;
+  max-width: 900px !important;
+  margin: auto !important;
+  padding: 22px !important;
+  border-radius: 25px !important;
 }
-
 #home .games {
   display: grid !important;
   grid-template-columns: repeat(2,minmax(0,1fr)) !important;
-  gap: 18px !important;
+  gap: 16px !important;
   max-width: none !important;
-  width: 100% !important;
   margin: 0 !important;
 }
-
 #home .game {
-  min-height: 120px !important;
-  padding: 18px 14px !important;
-  border: 3px solid #ffb24e !important;
-  border-bottom: 5px solid #f68a24 !important;
-  border-radius: 24px !important;
-  background: #fff !important;
-  box-shadow: 0 6px 12px #7b451b16 !important;
   display: flex !important;
-  flex-direction: row !important;
+  flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 16px !important;
+  min-height: 135px !important;
+  padding: 15px 8px !important;
+  gap: 8px !important;
+  background: white !important;
+  border: 2px solid #f4a144 !important;
+  border-bottom-width: 5px !important;
+  border-radius: 19px !important;
   text-align: center !important;
 }
-
-#home .game:hover {
-  transform: translateY(-3px);
-}
-
 #home .game .icon {
-  font-size: 54px !important;
-  line-height: 1 !important;
-  flex-shrink: 0 !important;
+  font-size: 45px !important;
+  line-height: 1.2 !important;
 }
-
 #home .game strong {
-  font-size: clamp(19px,2.5vw,28px) !important;
-  line-height: 1.5 !important;
+  font-size: 22px !important;
 }
-
 #home .game small {
   display: none !important;
 }
-
-@media (max-width: 600px) {
-  body > header {
-    padding: 12px 8px 18px !important;
-  }
-
+#home .quran-picture {
+  width: 55px !important;
+  height: 55px !important;
+  object-fit: contain !important;
+}
+@media(max-width:600px) {
   body > header > img {
-    width: min(230px,70vw) !important;
+    width: min(230px,80vw) !important;
   }
-
   body > main {
-    margin: 14px auto !important;
-    padding: 0 10px !important;
+    padding: 0 9px !important;
   }
-
   #home.panel {
-    padding: 12px !important;
-    border-radius: 20px !important;
+    padding: 11px !important;
   }
-
   #home .games {
-    gap: 10px !important;
+    gap: 9px !important;
   }
-
   #home .game {
-    min-height: 115px !important;
-    flex-direction: column !important;
-    gap: 8px !important;
-    padding: 12px 5px !important;
-    border-radius: 17px !important;
-    border-width: 2px !important;
-    border-bottom-width: 4px !important;
+    min-height: 112px !important;
+    padding: 10px 5px !important;
   }
-
   #home .game .icon {
-    font-size: 39px !important;
+    font-size: 36px !important;
   }
-
   #home .game strong {
-    font-size: clamp(14px,3.8vw,18px) !important;
+    font-size: 16px !important;
+  }
+  #home .quran-picture {
+    width: 43px !important;
+    height: 43px !important;
   }
 }
 </style>
@@ -352,7 +310,7 @@ body > main {
 <body>
 
 <header>
-<img src="mohammad-habiba-logo.png" alt="محمد وحبيبة">
+<img src="mohammad-habiba-logo.png?v=50" alt="محمد وحبيبة">
 </header>
 
 <main>
@@ -397,7 +355,7 @@ body > main {
 
 </a>
 <a href="quran.html" class="game quran-main">
-<span class="icon">📗</span>
+<span class="icon"><img src="quran-icon.png?v=50" alt="" class="quran-picture"></span>
 <strong>قرءان</strong>
 
 </a>
