@@ -197,6 +197,21 @@ button:focus-visible,a:focus-visible{
  background:linear-gradient(145deg,#e1ffdf,#8ce6a1);
 }
 </style>
+
+<style id="mh-home-fixes">
+header img, .logo img, .brand img,
+.header-logo img, .hero img {
+    object-fit: contain !important;
+    object-position: center center !important;
+    max-width: 100% !important;
+    height: auto !important;
+    clip-path: none !important;
+}
+header, .logo, .brand, .header-logo, .hero {
+    overflow: visible !important;
+}
+</style>
+
 </head>
 <body>
 
@@ -208,18 +223,18 @@ button:focus-visible,a:focus-visible{
 <main>
 
 <section id="home" class="panel">
-<h2>أقسام محمد وحبيبة</h2>
+
 
 <div class="games">
 <a href="games.html" class="game games-main">
 <span class="icon">🎮</span>
 <strong>أسئلة وألعاب</strong>
-<small>تحديات وألعاب ممتعة</small>
+
 </a>
 <a href="prayer.html" class="game prayer-main">
 <span class="icon">🗓️</span>
 <strong>برنامج الصلاة</strong>
-<small>صلواتي وبرنامج القضاء</small>
+
 </a>
 <a href="daily.html" class="game daily-main">
 <span class="icon">✅</span>
@@ -229,7 +244,7 @@ button:focus-visible,a:focus-visible{
 <a href="https://youtube.com/playlist?list=PLkCuAwiQFTLuKbz4vAVWsGSlKTEiW3ibJ" class="game nasheed-main" target="_blank" rel="noopener noreferrer">
 <span class="icon">🎤</span>
 <strong>أناشيد</strong>
-<small>استمع إلى الأناشيد</small>
+
 </a>
 <a href="https://youtube.com/playlist?list=PLkCuAwiQFTLtQFcvnKIToIsgLumY4cBD1" class="game benefits-main" target="_blank" rel="noopener noreferrer">
 <span class="icon">💡</span>
