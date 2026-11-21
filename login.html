@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>تسجيل الدخول | محمد وحبيبة</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;
+  display:grid;place-items:center;
+  font-family:Tahoma,Arial,sans-serif;
+  background:linear-gradient(#fff0cf,#fff9ef);
+  color:#463426;padding:18px
+}
+.card{
+  width:min(100%,420px);background:white;
+  padding:28px;border-radius:24px;
+  border:2px solid #f4a144;
+  box-shadow:0 8px 25px #71441520
+}
+.logo{display:block;width:180px;max-width:80%;margin:0 auto}
+h1{text-align:center;font-size:25px}
+label{display:block;margin:18px 0 7px;font-weight:bold}
+input{
+  width:100%;padding:14px;border:1px solid #ddc8ad;
+  border-radius:12px;font:inherit;direction:ltr;
+  text-align:left
+}
+button{
+  width:100%;margin-top:22px;padding:14px;
+  border:0;border-radius:13px;background:#f5a449;
+  font:inherit;font-weight:bold;cursor:pointer
+}
+button:disabled{opacity:.6}
+#message{text-align:center;min-height:25px;margin-top:15px}
+a{display:block;text-align:center;margin-top:16px;color:#77522f}
+</style>
+</head>
+<body>
+<div class="card">
+<img class="logo" src="mohammad-habiba-logo.png" alt="محمد وحبيبة">
+<h1>تسجيل الدخول</h1>
+<form id="loginForm">
+<label for="username">اسم المستخدم</label>
+<input id="username" autocomplete="username" required>
+<label for="password">كلمة المرور</label>
+<input id="password" type="password"
+ autocomplete="current-password" required>
+<button id="submit" type="submit">دخول</button>
+</form>
+<p id="message" role="status"></p>
+<a href="index.html">العودة إلى الصفحة الرئيسية</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="auth/config.js"></script>
+<script>
+"use strict";
+const db=window.supabase.createClient(
+  window.MH_SUPABASE_URL,
+  window.MH_SUPABASE_KEY
+);
+const form=document.getElementById("loginForm");
+const message=document.getElementById("message");
+const button=document.getElementById("submit");
+
+form.addEventListener("submit",async event=>{
+  event.preventDefault();
+  button.disabled=true;
+  message.textContent="جار تسجيل الدخول...";
+
+  const username=document.getElementById("username")
+    .value.trim().toLowerCase();
+  const password=document.getElementById("password").value;
+
+  try{
+    // First administrator account uses its existing Auth email.
+    // Other usernames will be supported by a server-side
+    // registration/login mechanism in a later step.
+    if(username!=="admin-alaa"){
+      message.textContent="هذا الحساب غير مفعّل بعد";
+      return;
+    }
+
+    const {data,error}=await db.auth.signInWithPassword({
+      email:"quraaty@gmail.com",
+      password
+    });
+    if(error)throw error;
+
+    const {data:profile,error:profileError}=await db
+      .from("profiles")
+      .select("username,role")
+      .eq("id",data.user.id)
+      .single();
+
+    if(profileError || profile?.username!=="admin-alaa"){
+      await db.auth.signOut();
+      throw Error("تعذر التحقق من الحساب");
+    }
+
+    message.textContent="تم تسجيل الدخول بنجاح";
+    window.location.href="index.html";
+  }catch(error){
+    message.textContent="اسم المستخدم أو كلمة المرور غير صحيحة";
+  }finally{
+    button.disabled=false;
+  }
+});
+</script>
+</body>
+</html>
