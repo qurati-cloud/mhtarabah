@@ -22,6 +22,23 @@ service cloud.firestore {
       allow read: if true;
       allow write: if (admin() || hasRole('editor')) && key == 'awrad';
     }
+    function verified() { return request.auth != null && request.auth.token.email_verified == true; }
+    function ownerAdmin() { return verified() && request.auth.token.email == 'quraaty@gmail.com'; }
+    function roleIs(role) { return verified() && exists(/databases/$(database)/documents/roles/$(request.auth.uid)) && get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.role == role; }
+    function admin() { return ownerAdmin() || roleIs('admin'); }
+    match /roles/{uid} {
+      allow read: if ownsFamily(uid) || admin();
+      allow create, update: if admin() && request.resource.data.keys().hasOnly(['role']) && request.resource.data.role in ['admin','editor','user'];
+      allow delete: if admin();
+    }
+    match /families/{uid} {
+      allow read: if ownsFamily(uid) || admin();
+      allow create, update: if ownsFamily(uid) && request.resource.data.keys().hasOnly(['email']) && request.resource.data.email == request.auth.token.email;
+    }
+    match /siteContent/{key} {
+      allow read: if true;
+      allow write: if admin() || roleIs('editor');
+    }
     match /families/{uid}/profiles/{profileId} {
       allow read: if ownsFamily(uid) || admin();
       allow create, update: if ownsFamily(uid)
