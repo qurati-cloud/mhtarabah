@@ -308,6 +308,9 @@ body > main {
 }
 </style>
 
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 </head>
 <body>
 
@@ -385,7 +388,7 @@ body > main {
 </section>
 
 </main>
-<div class="footer">محمد وحبيبة</div>
+<div class="footer"><button id="mh-install" hidden>تثبيت التطبيق</button><p id="mh-install-help" hidden aria-live="polite"></p>محمد وحبيبة</div>
 
 <script>
 "use strict";
@@ -599,6 +602,22 @@ function retry(){
 }
 
 loadProgress();
+</script>
+<script>
+(() => {
+ const button = document.getElementById('mh-install');
+ const help = document.getElementById('mh-install-help');
+ let promptEvent;
+ const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+ if (!standalone()) button.hidden = false;
+ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); promptEvent=e; button.hidden=false; });
+ window.addEventListener('appinstalled', () => { button.hidden=true; help.hidden=true; promptEvent=null; });
+ button.addEventListener('click', async () => {
+ if(promptEvent){ const p=promptEvent; promptEvent=null; await p.prompt(); const choice=await p.userChoice; if(choice.outcome==='accepted') button.hidden=true; }
+ else { help.textContent=/iPhone|iPad|iPod/.test(navigator.userAgent) ? 'افتح الموقع في Safari، ثم اضغط مشاركة واختر إضافة إلى الشاشة الرئيسية.' : 'افتح قائمة المتصفح واختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية.'; help.hidden=false; }
+ });
+ if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(console.warn);
+})();
 </script>
 </body>
 </html>
