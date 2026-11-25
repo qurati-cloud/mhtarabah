@@ -38,25 +38,39 @@ if (profileId && /^[a-zA-Z0-9_-]+$/.test(profileId)) {
   try {
     const connection = await connect();
     const user = connection?.auth.currentUser;
-    if (!user?.emailVerified) throw new Error('Family session unavailable');
+    if (!user?.emailVerified || localStorage.getItem('mh-selected-owner') !== user.uid) throw new Error('Family session unavailable');
     const {auth, data, db} = connection;
     const collection = data.collection(db, 'families', user.uid, 'profiles', profileId, 'progress');
+    const profile = await data.getDoc(data.doc(db, 'families', user.uid, 'profiles', profileId));
+    if (!profile.exists()) throw new Error('Unknown profile');
+    const link = document.getElementById('mh-family-link');
+    if (link) link.textContent = profile.data().name + ' — تبديل المستخدم';
+    const valid = () => auth.currentUser?.uid === user.uid &&
+      localStorage.getItem('mh-selected-owner') === user.uid &&
+      localStorage.getItem('mh-selected-profile') === profileId;
+    auth.onAuthStateChanged(current => { if (current?.uid !== user.uid) location.replace('login.html'); });
+    window.addEventListener('storage', event => {
+      if (['mh-selected-owner','mh-selected-profile'].includes(event.key) && !valid()) location.replace('login.html');
+    });
     const snapshot = await data.getDocs(collection);
+    let pending = 0, failed = false;
     const values = new Map(snapshot.docs.map(doc => [doc.id, doc.data().value]));
     progress = {
       getItem(key) {
+        if (!valid()) return null;
         return values.has(key) ? JSON.stringify(values.get(key)) : null;
       },
       setItem(key, raw) {
-        if (auth.currentUser?.uid !== user.uid) throw new Error('Family session changed');
+        if (!valid()) throw new Error('Family session changed');
         const value = JSON.parse(raw);
         const patch = changes(values.get(key), value, data);
         if (patch === undefined) return;
         values.set(key, value);
+        pending++;
         status('بانتظار تأكيد المزامنة…');
         data.setDoc(data.doc(collection, key), {value: patch}, {merge: true}).then(
-          () => status('تمت المزامنة'),
-          () => status('تعذّرت المزامنة')
+          () => { pending--; status(failed ? 'تعذّرت مزامنة بعض التغييرات' : pending ? 'بانتظار تأكيد المزامنة…' : 'تمت المزامنة'); },
+          () => { pending--; failed = true; status('تعذّرت المزامنة؛ لا تغلق الصفحة قبل مراجعة الاتصال'); }
         );
       }
     };
