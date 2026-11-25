@@ -1,6 +1,8 @@
 import { firebaseConfig } from './firebase-config.js';
 
-export async function connect() {
+let connection;
+export function connect(){return connection ??= initialize().catch(error=>{connection=undefined;throw error});}
+async function initialize() {
   if (!firebaseConfig.apiKey) return null;
   const sdk = 'https://www.gstatic.com/firebasejs/11.10.0';
   const [appApi, authApi, data] = await Promise.all([
