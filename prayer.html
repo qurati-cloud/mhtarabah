@@ -18,11 +18,12 @@
 <section class="panel hidden" id="qada"><h2>برنامج قضاء الصلاة</h2><p class="muted">أدخل عدد الصلوات المطلوب قضاؤها في خانة «المطلوب»، وكلما قضيت صلاة زِد عدد «ما قضيته». سيُحسب الباقي تلقائيًا. هذه الأرقام مستقلة عن علامات الصلوات اليومية.</p>
 <div class="scroll"><table><thead><tr><th>الصلاة</th><th>المطلوب</th><th>ما قضيته</th><th>الباقي</th></tr></thead><tbody id="qadaRows"></tbody></table></div><div class="total" id="qadaTotal">المجموع الباقي: 0</div><p class="muted">يمكن تعديل الأعداد في أي وقت. لا يُسمح بإدخال أعداد سالبة أو كسور.</p></section>
 <p class="muted">الخصوصية: تُحفظ البيانات محليًا في هذا المتصفح فقط، ولا تُرسل إلى خادم. حذف بيانات المتصفح أو تغيير الجهاز قد يؤدي إلى فقدانها. سنضيف حسابات مستقلة ومزامنة لاحقًا.</p></main><footer>محمد وحبيبة</footer>
-<script>
+<script type="module">
+import { progress as progressStorage } from "./auth/progress.js";
 (()=>{'use strict';
 const names=['الفجر','الظهر','العصر','المغرب','العشاء'];const key='mh-prayer-v1';let store={days:{},qada:{}};
-try{const v=JSON.parse(localStorage.getItem(key)||'{}');if(v&&typeof v==='object'){store.days=v.days&&typeof v.days==='object'?v.days:{};store.qada=v.qada&&typeof v.qada==='object'?v.qada:{}}}catch(e){}
-const save=()=>{try{localStorage.setItem(key,JSON.stringify(store))}catch(e){alert('تعذر حفظ البيانات على هذا الجهاز. تحقق من إعدادات المتصفح.')}};
+try{const v=JSON.parse(progressStorage.getItem(key)||'{}');if(v&&typeof v==='object'){store.days=v.days&&typeof v.days==='object'?v.days:{};store.qada=v.qada&&typeof v.qada==='object'?v.qada:{}}}catch(e){}
+const save=()=>{try{progressStorage.setItem(key,JSON.stringify(store))}catch(e){alert('تعذر حفظ البيانات على هذا الجهاز. تحقق من إعدادات المتصفح.')}};
 const localISO=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const today=localISO(new Date());const dateInput=document.getElementById('date');dateInput.value=today;let selected=today;let view=new Date(new Date().getFullYear(),new Date().getMonth(),1);
 function dayCount(date){return names.filter(n=>store.days[date]&&store.days[date][n]===true).length}
