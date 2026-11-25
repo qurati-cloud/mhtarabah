@@ -41,73 +41,31 @@ a{display:block;text-align:center;margin-top:16px;color:#77522f}
 <div class="card">
 <img class="logo" src="mohammad-habiba-logo.png" alt="محمد وحبيبة">
 <h1>تسجيل الدخول</h1>
-<form id="loginForm">
-<label for="username">اسم المستخدم</label>
-<input id="username" autocomplete="username" required>
+<form id="loginForm" hidden>
+<label for="email">البريد الإلكتروني للعائلة</label>
+<input id="email" type="email" autocomplete="username" required>
 <label for="password">كلمة المرور</label>
-<input id="password" type="password"
- autocomplete="current-password" required>
-<button id="submit" type="submit">دخول</button>
+<input id="password" type="password" autocomplete="current-password" required>
+<button type="submit" value="signin">دخول</button>
+<button type="submit" value="register">إنشاء حساب عائلي</button>
 </form>
+<div id="family" hidden>
+<h2>ملفات الأولاد</h2>
+<div id="profiles"></div>
+<form id="profileForm">
+<label for="childName">اسم الملف</label>
+<input id="childName" maxlength="40" dir="rtl" required>
+<button type="submit">إضافة ملف</button>
+</form>
+</div>
+<div id="verify" hidden>
+<button id="checkEmail">تحقّقت من بريدي</button>
+<button id="sendEmail">إرسال رابط التحقّق</button>
+</div>
+<button id="signOut" hidden>تسجيل الخروج</button>
 <p id="message" role="status"></p>
 <a href="index.html">العودة إلى الصفحة الرئيسية</a>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="auth/config.js"></script>
-<script>
-"use strict";
-const db=window.supabase.createClient(
-  window.MH_SUPABASE_URL,
-  window.MH_SUPABASE_KEY
-);
-const form=document.getElementById("loginForm");
-const message=document.getElementById("message");
-const button=document.getElementById("submit");
-
-form.addEventListener("submit",async event=>{
-  event.preventDefault();
-  button.disabled=true;
-  message.textContent="جار تسجيل الدخول...";
-
-  const username=document.getElementById("username")
-    .value.trim().toLowerCase();
-  const password=document.getElementById("password").value;
-
-  try{
-    // First administrator account uses its existing Auth email.
-    // Other usernames will be supported by a server-side
-    // registration/login mechanism in a later step.
-    if(username!=="admin-alaa"){
-      message.textContent="هذا الحساب غير مفعّل بعد";
-      return;
-    }
-
-    const {data,error}=await db.auth.signInWithPassword({
-      email:"quraaty@gmail.com",
-      password
-    });
-    if(error)throw error;
-
-    const {data:profile,error:profileError}=await db
-      .from("profiles")
-      .select("username,role")
-      .eq("id",data.user.id)
-      .single();
-
-    if(profileError || profile?.username!=="admin-alaa"){
-      await db.auth.signOut();
-      throw Error("تعذر التحقق من الحساب");
-    }
-
-    message.textContent="تم تسجيل الدخول بنجاح";
-    window.location.href="index.html";
-  }catch(error){
-    message.textContent="اسم المستخدم أو كلمة المرور غير صحيحة";
-  }finally{
-    button.disabled=false;
-  }
-});
-</script>
+<script type="module" src="auth/family.js"></script>
 </body>
 </html>
