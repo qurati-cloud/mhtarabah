@@ -269,12 +269,18 @@ button:focus-visible,a:focus-visible{
 <div class="footer">محمد وحبيبة</div>
 
 <script type="module">
+import {connect} from './auth/firebase.js';
+async function loadQuestionResponse(file){
+ try{const {data,db}=await connect();const snap=await data.getDoc(data.doc(db,'siteContent','capitals'));const v=snap.data()?.value;if(Array.isArray(v)&&v.length&&v.every(q=>typeof q.question==='string'&&Array.isArray(q.options)&&q.options.length>=2&&Number.isInteger(q.answer)&&q.answer>=0&&q.answer<q.options.length))return {ok:true,json:async()=>v};}catch(e){console.warn('Content fallback',e)}
+ return fetch(file);
+}
+
 import { progress as progressStorage } from "./auth/progress.js";
 "use strict";
 
 const $ = id => document.getElementById(id);
 const KEY = "mh_capitals_v1";
-const TOTAL = 192;
+let TOTAL = 192;
 
 let questions = [];
 let current = 1;
@@ -324,16 +330,16 @@ async function openCapitals(){
 
  try{
   if(!loading){
-   loading = fetch("capitals-questions.json")
+   loading = loadQuestionResponse("capitals-questions.json")
     .then(response=>{
      if(!response.ok) throw Error("Fetch failed");
      return response.json();
     })
     .then(data=>{
-     if(!Array.isArray(data)||data.length!==TOTAL){
+     if(!Array.isArray(data)||!data.length){
       throw Error("Incomplete questions");
      }
-     questions = data;
+     questions = data; TOTAL=questions.length; current=Math.max(1,Math.min(current,TOTAL)); progress.unlocked=Math.max(1,Math.min(progress.unlocked,TOTAL));
     })
     .catch(error=>{
      loading = null;
