@@ -24,7 +24,7 @@ service cloud.firestore {
     }
     match /siteContent/{key} {
       allow read: if true;
-      allow write: if (admin() || roleIs('editor')) && key in ['awrad','math','word-problems','capitals','texts'];
+      allow write: if (admin() || roleIs('editor')) && key in ['awrad','math','word-problems','capitals','texts','daily'];
     }
     match /families/{uid}/profiles/{profileId} {
       allow delete: if ownsFamily(uid);
