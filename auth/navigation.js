@@ -4,7 +4,8 @@ const nav=document.createElement('nav');nav.dir='rtl';nav.style.cssText='display
 function button(label,fn){const b=document.createElement('button');b.type='button';b.textContent=label;b.style.cssText='width:auto;min-height:42px;margin:0;padding:10px 16px;border:1px solid #e6ad65;border-radius:12px;background:#ffdfa9;color:#463426;font:inherit;cursor:pointer';b.onclick=fn;return b}
 const isHome=location.pathname===home.pathname||location.pathname===home.pathname.replace('index.html','');
 if(!isHome)nav.append(button('الصفحة الرئيسية',()=>location.href=home.href));
-if(!isHome)nav.append(button('→ رجوع',()=>{try{const prev=new URL(document.referrer);if(prev.origin===home.origin&&prev.pathname.startsWith(home.pathname.replace('index.html',''))&&prev.pathname!==location.pathname){history.back();return}}catch{}location.href=home.href}));
+const back=button('→',()=>{try{const prev=new URL(document.referrer);if(prev.origin===home.origin&&prev.pathname.startsWith(home.pathname.replace('index.html',''))&&prev.pathname!==location.pathname){history.back();return}}catch{}location.href=home.href});
+back.setAttribute('aria-label','الرجوع إلى الصفحة السابقة');
 const account=button('تسجيل الدخول',()=>location.href=login.href);nav.append(account);
 const family=button('العائلة',()=>{panel.hidden=!panel.hidden});family.hidden=true;nav.append(family);
 const panel=document.createElement('div');panel.hidden=true;panel.style.cssText='flex-basis:100%;max-width:650px;text-align:center';nav.append(panel);
@@ -24,6 +25,8 @@ const brand=document.createElement('header');brand.id='mh-brand-header';
 const link=document.createElement('a');link.href=home.href;link.setAttribute('aria-label','الصفحة الرئيسية');
 const logo=document.createElement('img');logo.src=new URL('../mohammad-habiba-logo.png?v=50',import.meta.url).href;logo.alt='محمد وحبيبة';link.append(logo);brand.append(link);
 document.body.prepend(brand,nav);
+if(!isHome){const row=document.createElement('div');row.id='mh-back-row';row.dir='rtl';row.append(back);document.body.insertBefore(row,nav.nextSibling);}
+style.textContent+=' #mh-back-row{box-sizing:border-box;width:min(920px,100%);margin:0 auto;padding:12px 16px 0;flex-shrink:0;text-align:right} #mh-back-row button{background:none!important;border:0!important;box-shadow:none!important;color:#463426!important;font:bold 24px Tahoma,Arial!important;padding:0 8px!important;min-height:32px!important;width:auto!important;cursor:pointer}';
 nav.id='mh-shared-nav';
 style.textContent+=' #mh-shared-nav{box-sizing:border-box!important;width:100%!important;max-width:none!important;margin:0!important;flex-shrink:0!important} #mh-shared-nav button{font:bold 15px Tahoma,Arial!important;min-height:42px!important;width:auto!important;margin:0!important;padding:10px 16px!important;border:1px solid #e6ad65!important;border-radius:12px!important;background:#ffdfa9!important;color:#463426!important}';
 if(location.pathname===login.pathname){document.body.style.flexDirection='column';document.body.style.justifyContent='flex-start';}
