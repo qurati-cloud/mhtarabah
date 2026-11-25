@@ -56,7 +56,8 @@ button{border:0;border-radius:13px;padding:14px 22px;background:#ffca4e;font-siz
 الرقم الشخصي محفوظ على هذا الجهاز. الرقم العالمي يحتاج إلى ربط قاعدة بيانات مشتركة.
 </p>
 </main>
-<script>
+<script type="module">
+import { progress as progressStorage } from "./auth/progress.js";
 "use strict";
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
@@ -69,7 +70,7 @@ const seaFloor=H-24;
 
 let record={distance:0,time:0,stars:0};
 try{
- const stored=JSON.parse(localStorage.getItem(STORAGE)||"{}");
+ const stored=JSON.parse(progressStorage.getItem(STORAGE)||"{}");
  record.distance=Math.max(0,Number(stored.distance)||0);
  record.time=Math.max(0,Number(stored.time)||0);
  record.stars=Math.max(0,Number(stored.stars)||0);
@@ -120,7 +121,7 @@ function saveRecord(){
   improved=true;
  }
  if(improved){
-  try{localStorage.setItem(STORAGE,JSON.stringify(record))}catch(e){}
+  try{progressStorage.setItem(STORAGE,JSON.stringify(record))}catch(e){}
  }
  return improved;
 }
