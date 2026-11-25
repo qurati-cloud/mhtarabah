@@ -19,9 +19,7 @@ if(/^(rifai|qadiri)_/.test(tab)){const group=tab.split('_')[0];const periods=doc
 function getNum(id){const d=window.selectedDate||localDate();return Math.max(0,Number(state[d]?.[tab]?.[id]||0))}
 function setNum(id,value){const d=window.selectedDate||localDate();if(!state[d])state[d]={};if(!state[d][tab])state[d][tab]={};state[d][tab][id]=value;try{progressStorage.setItem(storeKey,JSON.stringify(state))}catch(e){alert('تعذر حفظ الإنجازات')};render()}
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{tab=['rifai','qadiri'].includes(b.dataset.tab)?b.dataset.tab+'_am':b.dataset.tab;render()}));document.addEventListener('click',e=>{const btn=e.target.closest('button[data-act]');if(!btn)return;const it=DATA[tab]?.find(i=>i.id===btn.dataset.id);if(!it)return;setNum(it.id,btn.dataset.act==='reset'?0:Math.min(it.count,getNum(it.id)+1))});render();
-</script><script type="module" src="auth/navigation.js?v=20261125b"></script>
 
-<script type="module">
 import {connect} from './auth/firebase.js';
 const {auth,authApi,data,db}=await connect();
 const ref=data.doc(db,'siteContent','awrad');
@@ -34,4 +32,4 @@ async function persist(section,change){await data.runTransaction(db,async tx=>{c
 function decorate(){if(!editable||!ready||!Array.isArray(DATA[tab]))return;const cards=document.getElementById('cards');if(!cards||cards.querySelector('.editor-tools'))return;const bar=document.createElement('div');bar.className='editor-tools';bar.append(button('+ إضافة ورد',()=>edit()));cards.prepend(bar);for(const card of cards.querySelectorAll('article.card')){const id=card.querySelector('[data-id]')?.dataset.id;if(!id)continue;const section=tab;card.append(button('تعديل',()=>edit(id)),button('حذف',async()=>{if(confirm('حذف هذا الورد؟'))try{await persist(section,a=>a.filter(i=>i.id!==id))}catch(e){alert(e.message)}}))}}
 new MutationObserver(decorate).observe(document.getElementById('mainContent'),{childList:true,subtree:true});
 authApi.onAuthStateChanged(auth,async u=>{editable=false;try{if(u?.emailVerified){const role=u.email==='quraaty@gmail.com'?'admin':(await data.getDoc(data.doc(db,'roles',u.uid))).data()?.role;editable=['admin','editor'].includes(role)}}catch(e){console.error(e)}render();decorate()});
-</script></body></html>
+</script><script type="module" src="auth/navigation.js?v=20261125b"></script></body></html>
