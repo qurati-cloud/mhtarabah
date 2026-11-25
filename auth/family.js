@@ -28,7 +28,10 @@ try {
 
 function configure({auth, authApi, data, db}) {
   const collection = uid => data.collection(db, 'families', uid, 'profiles');
-  let unsubscribe;
+  let unsubscribe, count = 0, firstId = null;
+  const ordinals = ["الأول","الثاني","الثالث","الرابع","الخامس","السادس","السابع","الثامن","التاسع","العاشر","الحادي عشر","الثاني عشر","الثالث عشر","الرابع عشر","الخامس عشر","السادس عشر","السابع عشر","الثامن عشر","التاسع عشر","العشرون"];
+  el("birthDate").max = new Date().toISOString().slice(0,10);
+  el("finish").onclick = () => { if (!firstId || !auth.currentUser) return; localStorage.setItem(ownerKey,auth.currentUser.uid); if(!localStorage.getItem(selectedKey)) localStorage.setItem(selectedKey,firstId); location.href="index.html"; };
   function show(user) {
     unsubscribe?.();
     el('loginForm').hidden = Boolean(user);
@@ -43,10 +46,11 @@ function configure({auth, authApi, data, db}) {
     if (!user?.emailVerified) return;
 
     unsubscribe = data.onSnapshot(collection(user.uid), snapshot => {
+      count = snapshot.size; firstId = snapshot.docs[0]?.id; el("finish").hidden = !count; el("profileForm").hidden = count >= 20; el("childTitle").textContent = "ملف الولد " + (ordinals[count] || ""); el("addChild").textContent = "إضافة الولد " + (ordinals[count] || "");
       const buttons = snapshot.docs.map(doc => {
         const button = document.createElement('button');
         button.type = 'button';
-        button.textContent = doc.data().name;
+        button.textContent = (doc.data().gender === "female" ? "👧 " : doc.data().gender === "male" ? "👦 " : "👤 ") + doc.data().name;
         if (doc.id === localStorage.getItem(selectedKey)) {
           button.setAttribute('aria-current', 'true');
         }
@@ -105,7 +109,10 @@ function configure({auth, authApi, data, db}) {
         message('اكتب اسم الملف.');
         return;
       }
-      await data.addDoc(collection(auth.currentUser.uid), {name});
+      if(count >= 20) return;
+      const lastName = el("lastName").value.trim(), gender = el("gender").value, birthDate = el("birthDate").value;
+      if(!lastName || !["male","female"].includes(gender) || !birthDate || birthDate > el("birthDate").max) {message("أكمل بيانات الولد.");return;}
+      await data.addDoc(collection(auth.currentUser.uid), {name: name+" "+lastName,firstName:name,lastName,gender,birthDate});
       el('profileForm').reset();
     });
   });
