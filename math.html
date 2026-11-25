@@ -150,7 +150,8 @@ footer{text-align:center;padding:25px;color:#8b715b}
 
 <footer>محمد وحبيبة</footer>
 
-<script>
+<script type="module">
+import { progress as progressStorage } from "./auth/progress.js";
 "use strict";
 
 const $ = id => document.getElementById(id);
@@ -173,7 +174,7 @@ function cancelAutoNext(){
 
 function loadProgress(){
  try{
-  const saved = JSON.parse(localStorage.getItem(KEY));
+  const saved = JSON.parse(progressStorage.getItem(KEY));
   if(saved && typeof saved==="object"){
    progress.unlocked = Math.max(
     1,Math.min(TOTAL,Number(saved.unlocked)||1)
@@ -187,7 +188,7 @@ function loadProgress(){
 
 function saveProgress(){
  try{
-  localStorage.setItem(KEY,JSON.stringify(progress));
+  progressStorage.setItem(KEY,JSON.stringify(progress));
  }catch(e){}
 }
 
@@ -347,6 +348,7 @@ async function init(){
 }
 
 init();
+Object.assign(window, {move, retry});
 </script>
 </body>
 </html>
