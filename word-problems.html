@@ -86,7 +86,8 @@ button:disabled{opacity:.5;cursor:default}
 </main>
 <div class="footer">محمد وحبيبة</div>
 
-<script>
+<script type="module">
+import { progress as progressStorage } from "./auth/progress.js";
 "use strict";
 const $=id=>document.getElementById(id);
 const TOTAL=200;
@@ -100,7 +101,7 @@ let progress={unlocked:1,stars:{}};
 
 function loadProgress(){
  try{
-  const saved=JSON.parse(localStorage.getItem(KEY));
+  const saved=JSON.parse(progressStorage.getItem(KEY));
   if(saved && typeof saved==="object"){
    progress.unlocked=Math.max(
     1,Math.min(TOTAL,Number(saved.unlocked)||1)
@@ -112,7 +113,7 @@ function loadProgress(){
 }
 
 function saveProgress(){
- try{localStorage.setItem(KEY,JSON.stringify(progress))}
+ try{progressStorage.setItem(KEY,JSON.stringify(progress))}
  catch(e){}
 }
 

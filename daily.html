@@ -13,9 +13,10 @@
 <nav class="datebar" aria-label="التنقل بين الأيام"><button id="prev" aria-label="اليوم السابق">❯</button><div class="datecenter"><strong id="dateText"></strong><span id="dateIso"></span></div><button id="next" aria-label="اليوم التالي">❮</button><button class="today" id="today">اليوم</button></nav>
 <section class="progress" aria-label="مقدار الإنجاز"><div class="progressrow"><span>إنجازاتي في هذا اليوم</span><span id="count">٠ من ٩</span></div><div class="bar"><div class="fill" id="fill"></div></div></section>
 <main class="panel"><h2>هل...</h2><div class="tasks" id="tasks"></div><div class="foot"><span class="status" id="status" role="status"></span><button id="clear">إلغاء علامات هذا اليوم</button></div></main>
-<p class="note">تُحفظ العلامات تلقائيًا في متصفح هذا الجهاز فقط. لا تُزامن حاليًا بين الأجهزة، وقد تضيع إذا مُسحت بيانات المتصفح. سنضيف الحسابات الشخصية لاحقًا.</p>
+<p class="note">تُزامن العلامات عند اختيار ملف عائلي والاتصال بالإنترنت. أما الاستخدام دون حساب فيُحفظ على هذا الجهاز فقط.</p>
 </div>
-<script>
+<script type="module">
+import { progress as progressStorage } from "./auth/progress.js";
 (()=>{'use strict';
 const items=['عملت أوراد الصباح؟','حضرت درسًا دينيًا؟','ساعدت أمي؟','ساعدت أبي؟','قلت السلام عليكم؟','عملت ورد الطريقة الرفاعية في الصباح؟','عملت ورد الطريقة الرفاعية في المساء؟','عملت أوراد المساء؟','عملت الورد قبيل النوم؟'];
 const el=id=>document.getElementById(id);
@@ -24,8 +25,8 @@ const fmt=new Intl.DateTimeFormat('ar-LB',{weekday:'long',day:'numeric',month:'l
 const digits=n=>String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[+d]);
 const iso=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
 const key=()=>`mh-daily-v1:${iso(date)}`;
-function read(){try{const a=JSON.parse(localStorage.getItem(key())||'[]');return items.map((_,i)=>a[i]===true)}catch{return items.map(()=>false)}}
-function save(a){try{localStorage.setItem(key(),JSON.stringify(a));el('status').textContent='✓ حُفظت العلامات على هذا الجهاز'}catch{el('status').textContent='تعذّر الحفظ؛ تأكّد من إعدادات المتصفح'}}
+function read(){try{const a=JSON.parse(progressStorage.getItem(key())||'[]');return items.map((_,i)=>a[i]===true)}catch{return items.map(()=>false)}}
+function save(a){try{progressStorage.setItem(key(),JSON.stringify(a));el('status').textContent='سُجّلت العلامات في الصفحة؛ راجع حالة المزامنة'}catch{el('status').textContent='تعذّر الحفظ؛ تأكّد من إعدادات المتصفح'}}
 function render(){const a=read();el('dateText').textContent=fmt.format(date);el('dateIso').textContent=digits(iso(date));const container=el('tasks');container.replaceChildren();items.forEach((t,i)=>{const label=document.createElement('label');label.className='task'+(a[i]?' done':'');const box=document.createElement('input');box.type='checkbox';box.checked=a[i];box.setAttribute('aria-label',t);const text=document.createElement('span');text.textContent=t;label.append(box,text);box.addEventListener('change',()=>{const state=read();state[i]=box.checked;save(state);render()});container.append(label)});const n=a.filter(Boolean).length;el('count').textContent=`${digits(n)} من ${digits(items.length)}`;el('fill').style.width=(n/items.length*100)+'%';el('status').textContent=n===items.length?'أحسنت! أكملت جميع الأعمال المسجّلة 🌟':''}
 el('prev').addEventListener('click',()=>{date.setDate(date.getDate()-1);render()});el('next').addEventListener('click',()=>{date.setDate(date.getDate()+1);render()});el('today').addEventListener('click',()=>{const now=new Date();date.setFullYear(now.getFullYear(),now.getMonth(),now.getDate());render()});el('clear').addEventListener('click',()=>{if(confirm('هل تريد إلغاء جميع علامات هذا اليوم؟')){save(items.map(()=>false));render()}});render();
 })();

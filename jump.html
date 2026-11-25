@@ -65,7 +65,8 @@ button:disabled{opacity:.5}
 </p>
 </main>
 
-<script>
+<script type="module">
+import { progress as progressStorage } from "./auth/progress.js";
 "use strict";
 
 const $=id=>document.getElementById(id);
@@ -93,7 +94,7 @@ let touchId=null,touchY=0,touchDirection="";
 let saved={distance:0,starRecord:0,totalStars:0};
 
 try{
- const old=JSON.parse(localStorage.getItem(KEY));
+ const old=JSON.parse(progressStorage.getItem(KEY));
  if(old&&typeof old==="object"){
   for(const k of Object.keys(saved)){
    const n=Number(old[k]);
@@ -103,7 +104,7 @@ try{
 }catch(e){}
 
 function save(){
- try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(e){}
+ try{progressStorage.setItem(KEY,JSON.stringify(saved))}catch(e){}
 }
 
 function rand(a,b){return a+Math.random()*(b-a)}
