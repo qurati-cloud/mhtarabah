@@ -11,12 +11,21 @@ const panel=document.createElement('div');panel.hidden=true;panel.style.cssText=
 const style=document.createElement('style');
 style.textContent=`body > #mh-brand-header{box-sizing:border-box!important;display:block!important;position:relative!important;width:100%!important;max-width:none!important;margin:0!important;padding:18px 12px 22px!important;background:linear-gradient(135deg,#ffac53,#ffe1a0)!important;text-align:center!important;border:0!important;border-radius:0 0 32px 32px!important;box-shadow:0 5px 15px #8a531a20!important;flex-shrink:0!important}#mh-brand-header > a{display:block!important;margin:auto!important;padding:0!important;background:none!important;border:0!important;width:fit-content!important}#mh-brand-header > a > img{display:block!important;width:min(320px,85vw)!important;height:auto!important;max-width:none!important;max-height:none!important;object-fit:contain!important;margin:auto!important}@media(max-width:600px){#mh-brand-header > a > img{width:min(230px,80vw)!important}}`;
 document.head.append(style);
-const old=document.querySelector('body > header');
+const oldHeaders=[...document.querySelectorAll('header')];
+for(const old of oldHeaders){
+ const title=old.querySelector('h1');const desc=old.querySelector('p');
+ if(!isHome && title && !/^محمد وحبيبة$/.test(title.textContent.trim())){
+ const section=document.createElement('section');section.style.cssText='text-align:center;padding:12px;color:inherit';section.append(title);if(desc)section.append(desc);old.replaceWith(section);
+ }else old.remove();
+}
+for(const a of document.querySelectorAll('a[href="index.html"],a[href="./index.html"]')){if(/الرئيسية|العودة إلى الألعاب/.test(a.textContent))a.remove()}
+document.querySelectorAll('img[src*="mohammad-habiba.png"],img[src*="mohammad-habiba-logo"]').forEach(img=>{const p=img.parentElement;if(p?.tagName==='A'&&p.children.length===1)p.remove();else img.remove()});
 const brand=document.createElement('header');brand.id='mh-brand-header';
 const link=document.createElement('a');link.href=home.href;link.setAttribute('aria-label','الصفحة الرئيسية');
 const logo=document.createElement('img');logo.src=new URL('../mohammad-habiba-logo.png?v=50',import.meta.url).href;logo.alt='محمد وحبيبة';link.append(logo);brand.append(link);
-if(old && old.querySelector('img[src*="mohammad-habiba-logo"]') && old.children.length===1){old.remove();}
-document.querySelectorAll('img[src*="mohammad-habiba-logo"]').forEach(img=>{const parent=img.parentElement;if(parent?.tagName==='A' && parent.children.length===1 && !parent.textContent.trim())parent.remove();else img.remove()});
 document.body.prepend(brand,nav);
+nav.id='mh-shared-nav';
+style.textContent+=' #mh-shared-nav{box-sizing:border-box!important;width:100%!important;max-width:none!important;margin:0!important;flex-shrink:0!important} #mh-shared-nav button{font:bold 15px Tahoma,Arial!important;min-height:42px!important;width:auto!important;margin:0!important;padding:10px 16px!important;border:1px solid #e6ad65!important;border-radius:12px!important;background:#ffdfa9!important;color:#463426!important}';
+if(location.pathname===login.pathname){document.body.style.flexDirection='column';document.body.style.justifyContent='flex-start';}
 document.querySelectorAll('img').forEach(img=>{if(/mohammad-habiba-logo/i.test(img.getAttribute('src')||'')){img.style.cursor='pointer';img.tabIndex=0;img.setAttribute('role','link');img.onclick=()=>location.href=home.href;img.onkeydown=e=>{if(e.key==='Enter')location.href=home.href}}});
 try{const {auth,authApi,data,db}=await connect();authApi.onAuthStateChanged(auth,async user=>{account.textContent=user?'تسجيل الخروج':'تسجيل الدخول';account.onclick=async()=>{if(!user){location.href=login.href;return}try{await authApi.signOut(auth);localStorage.removeItem('mh-selected-owner');localStorage.removeItem('mh-selected-profile');location.href=home.href}catch{alert('تعذر تسجيل الخروج')}};family.hidden=!user?.emailVerified;panel.hidden=true;panel.replaceChildren();if(!user?.emailVerified)return;try{const snap=await data.getDocs(data.collection(db,'families',user.uid,'profiles'));for(const doc of snap.docs){const p=doc.data();const b=button((p.gender==='female'?'👧 ':p.gender==='male'?'👦 ':'👤 ')+p.name,()=>{localStorage.setItem('mh-selected-owner',user.uid);localStorage.setItem('mh-selected-profile',doc.id);location.reload()});b.style.margin='5px';if(doc.id===localStorage.getItem('mh-selected-profile')){b.style.outline='2px solid #77522f';family.textContent='العائلة · '+p.name}panel.append(b)}panel.append(button('إدارة ملفات الأولاد',()=>location.href=login.href))}catch{panel.textContent='تعذر تحميل العائلة'}})}catch{account.title='تعذر الاتصال بخدمة الحسابات'}
