@@ -16,4 +16,5 @@ const input=document.getElementById('date');input.value=window.selectedDate||loc
 function getNum(id){const d=window.selectedDate||localDate();return Math.max(0,Number(state[d]?.[tab]?.[id]||0))}
 function setNum(id,value){const d=window.selectedDate||localDate();if(!state[d])state[d]={};if(!state[d][tab])state[d][tab]={};state[d][tab][id]=value;try{progressStorage.setItem(storeKey,JSON.stringify(state))}catch(e){alert('تعذر حفظ الإنجازات')};render()}
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{tab=b.dataset.tab;render()}));document.addEventListener('click',e=>{const btn=e.target.closest('button[data-act]');if(!btn)return;const it=DATA[tab]?.find(i=>i.id===btn.dataset.id);if(!it)return;setNum(it.id,btn.dataset.act==='reset'?0:Math.min(it.count,getNum(it.id)+1))});render();
-</script></body></html>
+</script><script type="module" src="auth/navigation.js"></script>
+</body></html>
