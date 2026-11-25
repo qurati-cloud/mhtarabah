@@ -5,22 +5,9 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid
         && request.auth.token.email_verified == true;
     }
-    function verified() { return request.auth != null && request.auth.token.email_verified == true; }
-    function ownerAdmin() { return verified() && request.auth.token.email == 'quraaty@gmail.com'; }
-    function hasRole(role) { return verified() && exists(/databases/$(database)/documents/roles/$(request.auth.uid)) && get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.role == role; }
-    function admin() { return ownerAdmin() || hasRole('admin'); }
-    match /roles/{uid} {
-      allow read: if admin() || ownsFamily(uid);
-      allow create, update: if admin() && request.resource.data.keys().hasOnly(['role']) && request.resource.data.role in ['admin','editor','user'];
-      allow delete: if admin();
-    }
     match /directory/{uid} {
       allow read: if admin() || ownsFamily(uid);
       allow create, update: if ownsFamily(uid) && request.resource.data.keys().hasOnly(['email']) && request.resource.data.email == request.auth.token.email;
-    }
-    match /siteContent/{key} {
-      allow read: if true;
-      allow write: if (admin() || hasRole('editor')) && key == 'awrad';
     }
     function verified() { return request.auth != null && request.auth.token.email_verified == true; }
     function ownerAdmin() { return verified() && request.auth.token.email == 'quraaty@gmail.com'; }
@@ -37,7 +24,7 @@ service cloud.firestore {
     }
     match /siteContent/{key} {
       allow read: if true;
-      allow write: if admin() || roleIs('editor');
+      allow write: if (admin() || roleIs('editor')) && key in ['awrad','math','word-problems','capitals','texts'];
     }
     match /families/{uid}/profiles/{profileId} {
       allow read: if ownsFamily(uid) || admin();
