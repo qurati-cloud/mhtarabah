@@ -37,4 +37,5 @@ const rows=document.getElementById('qadaRows');const inputs=[];function positive
 function updateQada(){let total=0;inputs.forEach(({pair,remaining})=>{const a=positive(pair[0].value),b=positive(pair[1].value),left=Math.max(0,a-b);remaining.textContent=left;total+=left});document.getElementById('qadaTotal').textContent=`المجموع الباقي: ${total}`}
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b===btn));document.getElementById('daily').classList.toggle('hidden',btn.dataset.tab!=='daily');document.getElementById('qada').classList.toggle('hidden',btn.dataset.tab!=='qada')}));renderPrayers();renderCalendar();renderQada();
 })();
-</script></body></html>
+</script><script type="module" src="auth/navigation.js"></script>
+</body></html>
