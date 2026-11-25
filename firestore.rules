@@ -27,6 +27,7 @@ service cloud.firestore {
       allow write: if (admin() || roleIs('editor')) && key in ['awrad','math','word-problems','capitals','texts'];
     }
     match /families/{uid}/profiles/{profileId} {
+      allow delete: if ownsFamily(uid);
       allow read: if ownsFamily(uid) || admin();
       allow create, update: if ownsFamily(uid)
         && request.resource.data.keys().hasOnly(['name','firstName','lastName','gender','birthDate'])
@@ -35,6 +36,7 @@ service cloud.firestore {
         && request.resource.data.name.size() <= 80
         && (!request.resource.data.keys().hasAny(['firstName','lastName','gender','birthDate']) || (request.resource.data.keys().hasAll(['firstName','lastName','gender','birthDate']) && request.resource.data.firstName is string && request.resource.data.firstName.size() > 0 && request.resource.data.firstName.size() <= 40 && request.resource.data.lastName is string && request.resource.data.lastName.size() > 0 && request.resource.data.lastName.size() <= 40 && request.resource.data.gender in ['male','female'] && request.resource.data.birthDate is string && request.resource.data.birthDate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')));
       match /progress/{key} {
+        allow delete: if ownsFamily(uid);
         allow read: if ownsFamily(uid);
         allow create, update: if ownsFamily(uid)
           && exists(/databases/$(database)/documents/families/$(uid)/profiles/$(profileId))
