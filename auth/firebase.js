@@ -11,7 +11,7 @@ export async function connect() {
   const app = appApi.initializeApp(firebaseConfig);
   const auth = authApi.getAuth(app);
   const db = data.initializeFirestore(app, {
-    localCache: data.persistentLocalCache({tabManager: data.persistentMultipleTabManager()})
+    localCache: data.memoryLocalCache()
   });
   await auth.authStateReady();
   return { auth, authApi, data, db };
