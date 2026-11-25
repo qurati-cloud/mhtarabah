@@ -36,11 +36,12 @@ button:disabled{opacity:.6}
 button[aria-current=true]{outline:3px solid #77522f}
 #message{text-align:center;min-height:25px;margin-top:15px}
 a{display:block;text-align:center;margin-top:16px;color:#77522f}
+select{width:100%;padding:14px;border:1px solid #ddc8ad;border-radius:12px;font:inherit}input:not([type=email]):not([type=password]):not([type=date]){direction:rtl;text-align:right}[hidden]{display:none!important}
 </style>
 </head>
 <body>
 <div class="card">
-<img class="logo" src="mohammad-habiba-logo.png" alt="محمد وحبيبة">
+<a href="index.html"><img class="logo" src="mohammad-habiba-logo.png" alt="محمد وحبيبة"></a>
 <h1>تسجيل الدخول</h1>
 <form id="loginForm" hidden>
 <label for="email">البريد الإلكتروني للعائلة</label>
@@ -48,16 +49,13 @@ a{display:block;text-align:center;margin-top:16px;color:#77522f}
 <label for="password">كلمة المرور</label>
 <input id="password" type="password" autocomplete="current-password" required>
 <button type="submit" value="signin">دخول</button>
-<button type="submit" value="register">إنشاء حساب عائلي</button>
+<button type="submit" value="register">مستخدم جديد؟ إنشاء حساب</button>
 </form>
 <div id="family" hidden>
 <h2>من يستخدم التطبيق؟</h2>
 <div id="profiles"></div>
 <form id="profileForm">
-<label for="childName">اسم الملف</label>
-<input id="childName" maxlength="40" dir="rtl" required>
-<button type="submit">إضافة ملف</button>
-</form>
+<h3 id="childTitle">ملف الولد الأول</h3><label for="childName">الاسم</label><input id="childName" maxlength="40" required><label for="lastName">اسم العائلة</label><input id="lastName" maxlength="40" required><label for="gender">الجنس</label><select id="gender" required><option value="">اختر</option><option value="male">ذكر</option><option value="female">أنثى</option></select><label for="birthDate">تاريخ الميلاد</label><input id="birthDate" type="date" required><button type="submit" id="addChild">إضافة الولد</button></form><button id="finish" hidden type="button">أنهيت</button>
 </div>
 <div id="verify" hidden>
 <button id="checkEmail">تحقّقت من بريدي</button>
