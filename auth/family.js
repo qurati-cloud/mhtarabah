@@ -2,6 +2,7 @@ import { connect } from './firebase.js';
 
 const el = id => document.getElementById(id);
 const selectedKey = 'mh-selected-profile';
+const ownerKey = 'mh-selected-owner';
 const message = text => { el('message').textContent = text; };
 const busy = async (button, action) => {
   button.disabled = true;
@@ -35,6 +36,10 @@ function configure({auth, authApi, data, db}) {
     el('verify').hidden = !user || user.emailVerified;
     el('family').hidden = !user?.emailVerified;
     el('profiles').replaceChildren();
+    if (!user || localStorage.getItem(ownerKey) !== user.uid) {
+      localStorage.removeItem(selectedKey);
+      localStorage.removeItem(ownerKey);
+    }
     if (!user?.emailVerified) return;
 
     unsubscribe = data.onSnapshot(collection(user.uid), snapshot => {
@@ -46,6 +51,7 @@ function configure({auth, authApi, data, db}) {
           button.setAttribute('aria-current', 'true');
         }
         button.addEventListener('click', () => {
+          localStorage.setItem(ownerKey, user.uid);
           localStorage.setItem(selectedKey, doc.id);
           location.href = 'index.html';
         });
@@ -88,6 +94,7 @@ function configure({auth, authApi, data, db}) {
   el('signOut').onclick = event => busy(event.currentTarget, async () => {
     await authApi.signOut(auth);
     localStorage.removeItem(selectedKey);
+    localStorage.removeItem(ownerKey);
   });
   el('profileForm').addEventListener('submit', event => {
     event.preventDefault();
