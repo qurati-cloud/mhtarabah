@@ -1,0 +1,20 @@
+{
+  "id": "./",
+  "name": "محمد وحبيبة",
+  "short_name": "محمد وحبيبة",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fff0cf",
+  "theme_color": "#ffb45f",
+  "icons": [
+    {
+      "src": "app-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
