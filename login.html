@@ -8,13 +8,13 @@
 *{box-sizing:border-box}
 body{
   margin:0;min-height:100vh;
-  display:grid;place-items:center;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
   font-family:Tahoma,Arial,sans-serif;
   background:linear-gradient(#fff0cf,#fff9ef);
-  color:#463426;padding:18px
+  color:#463426;padding:0
 }
 .card{
-  width:min(100%,420px);background:white;
+  width:min(calc(100% - 32px),420px);margin:24px auto 32px;flex-shrink:0;background:white;
   padding:28px;border-radius:24px;
   border:2px solid #f4a144;
   box-shadow:0 8px 25px #71441520
