@@ -44,6 +44,7 @@ function configure({auth, authApi, data, db}) {
       localStorage.removeItem(ownerKey);
     }
     if (!user?.emailVerified) return;
+    data.setDoc(data.doc(db,'directory',user.uid),{email:user.email}).catch(e=>console.warn('Directory registration',e));
 
     unsubscribe = data.onSnapshot(collection(user.uid), snapshot => {
       count = snapshot.size; firstId = snapshot.docs[0]?.id; el("finish").hidden = !count; el("profileForm").hidden = count >= 20; el("childTitle").textContent = "ملف الولد " + (ordinals[count] || ""); el("addChild").textContent = "إضافة الولد " + (ordinals[count] || "");
@@ -59,7 +60,9 @@ function configure({auth, authApi, data, db}) {
           localStorage.setItem(selectedKey, doc.id);
           location.href = 'index.html';
         });
-        return button;
+        const row=document.createElement('div');row.append(button);
+        const edit=document.createElement('button');edit.type='button';edit.textContent='تعديل البيانات';
+        edit.onclick=()=>{const p=doc.data();const d=document.createElement('dialog');d.dir='rtl';const f=document.createElement('form');const fields={};for(const [k,label] of [['firstName','الاسم'],['lastName','اسم العائلة'],['gender','الجنس'],['birthDate','تاريخ الميلاد']]){const l=document.createElement('label');l.textContent=label;const x=document.createElement(k==='gender'?'select':'input');if(k==='gender'){x.add(new Option('ذكر','male'));x.add(new Option('أنثى','female'))}else{x.type=k==='birthDate'?'date':'text';x.maxLength=40;if(k==='birthDate')x.max=el('birthDate').max}x.required=true;x.value=p[k]|| (k==='firstName'?p.name:'');fields[k]=x;l.append(x);f.append(l)}const save=document.createElement('button');save.textContent='حفظ';const cancel=document.createElement('button');cancel.type='button';cancel.textContent='إلغاء';cancel.onclick=()=>d.close();f.append(save,cancel);d.append(f);document.body.append(d);d.onclose=()=>d.remove();f.onsubmit=e=>{e.preventDefault();busy(save,async()=>{const v=Object.fromEntries(Object.entries(fields).map(([k,x])=>[k,x.value.trim()]));await data.updateDoc(doc.ref,{...v,name:v.firstName+' '+v.lastName});d.close()})};d.showModal()};row.append(edit);return row;
       });
       el('profiles').replaceChildren(...buttons);
     }, () => message('تعذّر تحميل ملفات العائلة.'));
