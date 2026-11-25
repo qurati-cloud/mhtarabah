@@ -390,7 +390,9 @@ body > main {
 </main>
 <div class="footer"><button id="mh-install" hidden>تثبيت التطبيق</button><p id="mh-install-help" hidden aria-live="polite"></p>محمد وحبيبة</div>
 
-<script>
+<a href="login.html" style="display:block;text-align:center;margin:12px">حساب العائلة وتبديل الملف</a>
+<script type="module">
+import { progress as progressStorage } from "./auth/progress.js";
 "use strict";
 
 const $ = id => document.getElementById(id);
@@ -413,7 +415,7 @@ let loading = null;
 
 function loadProgress(){
  try{
-  const saved = JSON.parse(localStorage.getItem(KEY));
+  const saved = JSON.parse(progressStorage.getItem(KEY));
   if(saved && typeof saved === "object"){
    progress.unlocked = Math.max(
     1,Math.min(TOTAL,Number(saved.unlocked)||1)
@@ -427,7 +429,7 @@ function loadProgress(){
 
 function saveProgress(){
  try{
-  localStorage.setItem(KEY,JSON.stringify(progress));
+  progressStorage.setItem(KEY,JSON.stringify(progress));
  }catch(e){}
 }
 
@@ -602,6 +604,7 @@ function retry(){
 }
 
 loadProgress();
+Object.assign(window, {goHome, move, retry});
 </script>
 <script>
 (() => {
