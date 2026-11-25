@@ -271,7 +271,8 @@ button:focus-visible,a:focus-visible{
 </main>
 <div class="footer">محمد وحبيبة</div>
 
-<script>
+<script type="module">
+import { progress as progressStorage } from "./auth/progress.js";
 "use strict";
 
 const $ = id => document.getElementById(id);
@@ -294,7 +295,7 @@ let loading = null;
 
 function loadProgress(){
  try{
-  const saved = JSON.parse(localStorage.getItem(KEY));
+  const saved = JSON.parse(progressStorage.getItem(KEY));
   if(saved && typeof saved === "object"){
    progress.unlocked = Math.max(
     1,Math.min(TOTAL,Number(saved.unlocked)||1)
@@ -308,7 +309,7 @@ function loadProgress(){
 
 function saveProgress(){
  try{
-  localStorage.setItem(KEY,JSON.stringify(progress));
+  progressStorage.setItem(KEY,JSON.stringify(progress));
  }catch(e){}
 }
 
@@ -483,6 +484,7 @@ function retry(){
 }
 
 loadProgress();
+Object.assign(window, {goHome, move, retry, openCapitals});
 </script>
 </body>
 </html>
