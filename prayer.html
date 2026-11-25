@@ -12,12 +12,12 @@
 <div class="tabs"><button class="tab active" data-tab="daily" type="button">صلواتي اليومية</button><button class="tab" data-tab="qada" type="button">برنامج القضاء</button></div>
 <section class="panel" id="daily"><div class="datebar"><h2>صلوات اليوم المختار</h2><label>التاريخ: <input id="date" type="date"></label><button id="today" type="button">اليوم</button></div>
 <div class="prayers" id="prayers"></div><div class="stats"><span id="count">0 من 5 صلوات</span><div class="progress"><div id="bar"></div></div></div>
-<p class="muted">ضع علامة صح أمام كل صلاة أديتها. يمكنك اختيار أي تاريخ سابق أو لاحق، وستبقى علاماته محفوظة على هذا الجهاز.</p>
+<p class="muted">ضع علامة صح أمام كل صلاة أديتها. يمكنك اختيار أي تاريخ سابق أو لاحق، وستُحفظ علاماته في الملف المختار.</p>
 <div class="monthbar"><button class="btn" id="prev" type="button">الشهر السابق</button><h3 id="monthTitle"></h3><button class="btn" id="next" type="button">الشهر التالي</button></div>
 <div class="calendar" id="calendar"></div></section>
 <section class="panel hidden" id="qada"><h2>برنامج قضاء الصلاة</h2><p class="muted">أدخل عدد الصلوات المطلوب قضاؤها في خانة «المطلوب»، وكلما قضيت صلاة زِد عدد «ما قضيته». سيُحسب الباقي تلقائيًا. هذه الأرقام مستقلة عن علامات الصلوات اليومية.</p>
 <div class="scroll"><table><thead><tr><th>الصلاة</th><th>المطلوب</th><th>ما قضيته</th><th>الباقي</th></tr></thead><tbody id="qadaRows"></tbody></table></div><div class="total" id="qadaTotal">المجموع الباقي: 0</div><p class="muted">يمكن تعديل الأعداد في أي وقت. لا يُسمح بإدخال أعداد سالبة أو كسور.</p></section>
-<p class="muted">الخصوصية: تُحفظ البيانات محليًا في هذا المتصفح فقط، ولا تُرسل إلى خادم. حذف بيانات المتصفح أو تغيير الجهاز قد يؤدي إلى فقدانها. سنضيف حسابات مستقلة ومزامنة لاحقًا.</p></main><footer>محمد وحبيبة</footer>
+<p class="muted">الخصوصية: تُزامن البيانات مع حساب العائلة عند اختيار ملف. أما الاستخدام دون حساب فيُحفظ محليًا فقط.</p></main><footer>محمد وحبيبة</footer>
 <script type="module">
 import { progress as progressStorage } from "./auth/progress.js";
 (()=>{'use strict';
