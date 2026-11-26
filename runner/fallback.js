@@ -1,11 +1,11 @@
-import {laneWidth, obstacles, firstTunnel, tunnelLength, tunnelSpacing} from './simulation.js';
+import {laneWidth, obstacles, firstTunnel, tunnelLength, tunnelSpacing, powerups, attractedPlayer} from './simulation.js';
 
 // Perspective canvas renderer for devices that cannot open a WebGL context.
 export function createCanvasWorld(canvas) {
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas 2D unavailable');
   let width, height, horizon, focal, sky, cameraX = 0;
-  const eye = 4.3, cameraBack = 8;
+  let lift = 0;
   function resize() {
     width = canvas.clientWidth;
     height = canvas.clientHeight;
@@ -21,8 +21,8 @@ export function createCanvasWorld(canvas) {
     sky.addColorStop(1, '#ffe8b3');
   }
   function project(x, y, z) {
-    const ratio = focal / (z + cameraBack);
-    return [width/2 + (x-cameraX)*ratio, horizon + (eye-y)*ratio, ratio];
+    const ratio = focal / (z + 8 + lift * .57);
+    return [width/2 + (x-cameraX)*ratio, horizon + (4.3 + lift*.65-y)*ratio, ratio];
   }
   function polygon(color, ...points) {
     ctx.fillStyle = color;
@@ -70,6 +70,15 @@ export function createCanvasWorld(canvas) {
     });
     polygon('#ffcf54',...points);
     polygon('#fff3a7',[px,py],points[0],points[1],points[2]);
+  }
+  function pickup(object,z,time) {
+    const [x,y,s]=project(object.lane*laneWidth,object.y+Math.sin(time*4)*.18,z);
+    const {color,symbol}=powerups[object.kind];
+    ellipse('#143c50',x,y,s*.54,s*.54);
+    ellipse('#'+color.toString(16),x,y,s*.45,s*.45);
+    ctx.font='bold '+Math.max(6,s*.62)+'px sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#143c50';
+    ctx.fillText(symbol,x,y);
   }
   function vehicle(kind,x,z) {
     const {length,height,halfWidth}=obstacles[kind];
@@ -123,6 +132,8 @@ export function createCanvasWorld(canvas) {
     const scale=player.slide ? .44 : 1;
     const gait=Math.sin(time*14+index*1.6);
     ellipse('#18313e43',gx,gy,s*.45,s*.13);
+    if (player.glide) ellipse('#54d7ed',px,py+s*.03,s*.22,s*.29);
+    if (player.shield) ellipse('#8ff4ba88',px,py-s*.88,s*.56,s*1.06);
     ctx.save();
     ctx.translate(px,py);
     ctx.scale(s,s*scale);
@@ -152,6 +163,7 @@ export function createCanvasWorld(canvas) {
     const visible=run.players.filter(player=>!player.out);
     const aim=visible.length?visible.reduce((sum,player)=>sum+player.x,0)/visible.length:cameraX;
     cameraX+=(aim*.37-cameraX)*.11;
+    lift+=(Math.max(0,...visible.map(player=>player.glide ? player.y : 0))-lift)*.1;
     ctx.fillStyle=sky;ctx.fillRect(0,0,width,height);
     ellipse('#fff1c2',width*.22,height*.15,Math.min(width,height)*.063,Math.min(width,height)*.063);
     for (const [x,y,w,h,c] of [[.14,.30,.37,.12,'#8fb4a1'],[.47,.32,.31,.08,'#79a297'],[.87,.31,.28,.10,'#90b5a5']]) {
@@ -196,7 +208,15 @@ export function createCanvasWorld(canvas) {
       if(z < -5 || z>113)continue;
       const x=obj.lane*laneWidth;
       if(obj.kind==='star') {
-        if(obj.taken!==(1<<run.players.length)-1) items.push({z,draw:()=>star(x,obj.y,z,time)});
+        if(obj.taken!==(1<<run.players.length)-1) {
+          const target=attractedPlayer(run,obj);
+          const pull=target ? Math.max(0,1-Math.abs(z)/11) : 0;
+          const offsetX=target ? (target.x-x)*pull : 0;
+          const offsetY=target ? (target.y+1-obj.y)*pull : 0;
+          items.push({z,draw:()=>star(x+offsetX,obj.y+offsetY,z,time)});
+        }
+      } else if (Object.hasOwn(powerups,obj.kind)) {
+        if(obj.taken!==(1<<run.players.length)-1) items.push({z,draw:()=>pickup(obj,z,time)});
       } else items.push({z,draw:()=>vehicle(obj.kind,x,z)});
     }
     run.players.forEach((player,index)=>{
@@ -205,5 +225,5 @@ export function createCanvasWorld(canvas) {
     items.sort((a,b)=>b.z-a.z).forEach(item=>item.draw());
   }
   resize();
-  return {resize,reset(){cameraX=0;},draw};
+  return {resize,reset(){cameraX=lift=0;},draw};
 }

@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
-import { laneWidth, obstacles, firstTunnel, tunnelLength, tunnelSpacing } from './simulation.js';
+import { laneWidth, obstacles, firstTunnel, tunnelLength, tunnelSpacing, powerups, attractedPlayer } from './simulation.js';
 
 const box = new THREE.BoxGeometry(1, 1, 1);
 const sphere = new THREE.SphereGeometry(1, 18, 12);
@@ -121,11 +121,35 @@ function makeAvatar(avatar) {
     oval(leg, 0xe9e1d2, 0, -.66, -.07, .115, .084, .18);
     legs.push(leg);
   }
-  return {group, body, torso, legs, arms, ground};
+  const trail = oval(body, 0x56d9f5, 0, .33, .33, .22, .32, .16);
+  const aura = part(body, ringGeo, new THREE.MeshBasicMaterial({color:0x84e8af}), 0, .84, 0, 1.62, 1.96, 1);
+  return {group, body, torso, legs, arms, ground, trail, aura};
 }
 
 function makeHazard(kind) {
   const group = new THREE.Group();
+  if (Object.hasOwn(powerups, kind)) {
+    const {color} = powerups[kind];
+    const rim = new THREE.MeshBasicMaterial({color});
+    part(group, ringGeo, rim, 0, 0, 0, 1.45, 1.45, 1.45);
+    if (kind === 'flight') {
+      for (const side of [-1,1]) {
+        const fin = block(group, color, side*.21, -.05, 0, .44, .13, .18);
+        fin.rotation.z = side*.52;
+      }
+      oval(group, 0xf7fcff, 0, .08, 0, .12, .33, .13);
+    } else if (kind === 'magnet') {
+      for (const side of [-1,1]) {
+        block(group, color, side*.18, .035, 0, .14, .41, .15);
+        block(group, 0xf7fcff, side*.18, .26, 0, .14, .11, .15);
+      }
+      block(group, color, 0, -.20, 0, .43, .14, .15);
+    } else {
+      const emblem = block(group, color, 0, 0, 0, .47, .47, .12);
+      emblem.rotation.z = Math.PI/4;
+    }
+    return {group};
+  }
   if (kind === 'star') {
     part(group, starGeo, starMat, 0, 0, -.06, 1, 1, 1);
     part(group, ringGeo, ringMat, 0, 0, 0, 1, 1, 1);
@@ -204,7 +228,7 @@ export function createWorld(canvas, context) {
   const renderObjects = new Map();
   const pool = new Map();
   let racers = [];
-  let cameraX = 0;
+  let cameraX = 0, lift = 0;
   const resize = () => {
     const {clientWidth: width, clientHeight: height} = canvas;
     if (!width || !height) return;
@@ -222,7 +246,7 @@ export function createWorld(canvas, context) {
       scene.add(model.group);
       return model;
     });
-    cameraX = 0;
+    cameraX = lift = 0;
   }
   function recycle(object, model) {
     scene.remove(model.group);
@@ -249,7 +273,13 @@ export function createWorld(canvas, context) {
       }
       const {group} = renderObjects.get(object);
       group.position.set(object.lane * laneWidth, object.y || 0, run.distance - object.distance);
-      if (object.kind === 'star') {
+      if (object.kind === 'star' || Object.hasOwn(powerups, object.kind)) {
+        const target = attractedPlayer(run, object);
+        if (target) {
+          const pull = Math.max(0, 1 - Math.abs(group.position.z) / 11);
+          group.position.x += (target.x - group.position.x) * pull;
+          group.position.y += (target.y + 1 - group.position.y) * pull;
+        }
         group.visible = object.taken !== (1 << racers.length) - 1;
         group.rotation.y = time * 2.9 + object.distance;
         group.position.y += Math.sin(time * 3 + object.distance) * .11;
@@ -258,8 +288,9 @@ export function createWorld(canvas, context) {
     const active = run.players.filter(player => !player.out);
     const center = active.length ? active.reduce((sum, p) => sum + p.x, 0) / active.length : cameraX;
     cameraX += (center * .38 - cameraX) * .09;
-    camera.position.x = cameraX;
-    camera.lookAt(cameraX * .72, 1.78, -10);
+    lift += (Math.max(0, ...active.map(player => player.glide ? player.y : 0)) - lift) * .09;
+    camera.position.set(cameraX, 4.65 + lift*.94, 8.2 + lift*.43);
+    camera.lookAt(cameraX * .72, 1.78 + lift*.52, -10);
     run.players.forEach((player,index) => {
       const model = racers[index];
       model.group.visible = !player.out;
@@ -269,6 +300,8 @@ export function createWorld(canvas, context) {
       const phase = run.time * (12 + Math.min(9, run.time*.06)) + index * 1.8;
       const gait = Math.sin(phase);
       const slide = player.slide > 0;
+      model.trail.visible = player.glide;
+      model.aura.visible = player.shield;
       const grounded = player.y === 0 || player.support;
       model.ground.position.y = (player.support ? player.y : 0) + .018;
       model.body.scale.y = slide ? .43 : 1;

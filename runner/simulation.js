@@ -14,6 +14,24 @@ export const obstacles = {
 export const tunnelLength = 64;
 export const tunnelSpacing = 240;
 export const firstTunnel = 132;
+export const powerDuration = 15;
+export const flightHeight = 9;
+export const powerups = {
+  flight: {color: 0x5bdaef, symbol: '✈'},
+  magnet: {color: 0xf57183, symbol: '🧲'},
+  shield: {color: 0x84e8af, symbol: '⬡'}
+};
+const powerKinds = Object.keys(powerups);
+const overTunnel = distance => distance >= firstTunnel &&
+  (distance - firstTunnel) % tunnelSpacing < tunnelLength;
+
+export function attractedPlayer(run, star) {
+  if (star.kind !== 'star') return null;
+  return run.players.find((player, index) => !player.out && player.magnet > 0 &&
+    !(star.taken & (1 << index)) &&
+    Math.abs(star.distance - run.distance) < 11 &&
+    Math.abs(star.y - (player.y + 1)) < 3.8);
+}
 export const runningSpeed = time => 12 + 24 * -Math.expm1(-time / 85);
 
 export function makeRun(avatars, random = Math.random) {
@@ -21,9 +39,10 @@ export function makeRun(avatars, random = Math.random) {
     distance: 0, time: 0, players: avatars.map((avatar, index) => {
       const lane = avatars.length === 1 ? 0 : index * 2 - 1;
       return {avatar, lane, x: lane * laneWidth, y: 0, vy: 0, slide: 0,
-        support: null, diving: false, stars: 0, distance: 0, out: false};
+        support: null, flight: 0, magnet: 0, shield: false, glide: false, protection: 0, ignored: null, diving: false, stars: 0, distance: 0, out: false};
     }),
-    objects: [], nextWave: 26, wave: 0, random
+    objects: (avatars.length === 1 ? [0] : [-1,1]).map(lane =>
+      ({kind:'flight', lane, distance:18, y:1.05, taken:0})), nextWave: 26, wave: 0, random
   };
 }
 
@@ -31,6 +50,8 @@ export function move(player, command) {
   if (!player || player.out) return;
   if (command === 'left' || command === 'right') {
     player.lane = Math.max(-1, Math.min(1, player.lane + (command === 'left' ? -1 : 1)));
+  } else if (player.flight || player.glide) {
+    return;
   } else if (command === 'jump' && (player.y === 0 || player.support)) {
     player.slide = 0;
     player.vy = jumpSpeed;
@@ -65,6 +86,15 @@ function spawn(run) {
   } else if (kind === 'car') {
     run.objects.push({kind: 'star', lane: first, distance: run.nextWave, y: obstacles.car.height + 1, taken: 0});
   }
+  if (run.wave > 0 && run.wave % 3 === 0) {
+    const power = powerKinds[(run.wave / 3) % powerKinds.length];
+    run.objects.push({kind: power, lane: route, distance: run.nextWave - 8, y: 1.05, taken: 0});
+  }
+  const airLane = run.wave % 3 - 1;
+  for (const offset of [-5,-2,1,4]) {
+    run.objects.push({kind: 'star', lane: airLane, distance: run.nextWave + offset,
+      y: flightHeight + .85, taken: 0});
+  }
   run.wave++;
   run.nextWave += 17 + Math.min(10, run.time / 10) + run.random() * 5;
 }
@@ -79,11 +109,24 @@ export function step(run, dt) {
     player.distance = run.distance;
     player.x += (player.lane * laneWidth - player.x) * (1 - Math.exp(-15 * dt));
     player.slide = Math.max(0, player.slide - dt);
+    player.flight = Math.max(0, player.flight - dt);
+    player.magnet = Math.max(0, player.magnet - dt);
+    player.protection = Math.max(0, player.protection - dt);
+    if (player.flight > 0 || (player.glide && overTunnel(run.distance + 3) && player.y > 6.9)) {
+      player.y = Math.min(flightHeight, player.y + 22 * dt);
+      player.vy = 0;
+    } else if (player.glide) {
+      player.y = Math.max(0, player.y - 9 * dt);
+      if (!player.y) {
+        player.glide = false;
+        player.protection = .8;
+      }
+    }
     const onRoof = object => Math.abs(run.distance - object.distance) <= obstacles[object.kind].length / 2 + .31 &&
       Math.abs(player.x - object.lane * laneWidth) <= obstacles[object.kind].halfWidth + .23;
     if (player.support && !onRoof(player.support)) player.support = null;
     const previousY = player.y;
-    if (!player.support && player.y > 0) {
+    if (!player.glide && !player.support && player.y > 0) {
       player.vy -= gravity * dt;
       player.y += player.vy * dt;
       if (player.y <= 0) {
@@ -93,7 +136,7 @@ export function step(run, dt) {
         player.diving = false;
       }
     }
-    if (!player.support && player.vy <= 0) {
+    if (!player.glide && !player.support && player.vy <= 0) {
       const roof = run.objects.find(object => obstacles[object.kind]?.roof && onRoof(object) &&
         previousY >= obstacles[object.kind].height && player.y <= obstacles[object.kind].height);
       if (roof) {
@@ -108,18 +151,38 @@ export function step(run, dt) {
     for (const object of run.objects) {
       const depth = Math.abs(run.distance - object.distance);
       const side = Math.abs(player.x - object.lane * laneWidth);
-      if (object.kind === 'star') {
-        if (!(object.taken & (1 << index)) && depth < 1.1 && side < 0.85 &&
-            object.y >= player.y - 0.25 && object.y <= player.y + height + 0.45) {
+      if (object.kind === 'star' || Object.hasOwn(powerups, object.kind)) {
+        const touch = depth < 1.1 && side < .85 &&
+          object.y >= player.y - .25 && object.y <= player.y + height + .45;
+        const pull = object.kind === 'star' && player.magnet > 0 && depth < 2.4 &&
+          Math.abs(object.y - (player.y + 1)) < 3.8;
+        if (!(object.taken & (1 << index)) && (touch || pull)) {
           object.taken |= 1 << index;
-          player.stars++;
+          if (object.kind === 'star') player.stars++;
+          if (object.kind === 'magnet') player.magnet = powerDuration;
+          if (object.kind === 'shield') player.shield = true;
+          if (object.kind === 'flight') {
+            player.flight = powerDuration;
+            player.glide = true;
+            player.support = null;
+            player.diving = false;
+            player.slide = 0;
+            player.vy = 0;
+          }
         }
         continue;
       }
+      if (player.glide || player.protection || player.ignored === object) continue;
       const hazard = obstacles[object.kind];
       if (depth > hazard.length / 2 + 0.31 || side > hazard.halfWidth + 0.23) continue;
       const clears = player.y >= hazard.height ||
         (hazard.opening && player.y + height < hazard.opening);
+      if (!clears && player.shield) {
+        player.shield = false;
+        player.ignored = object;
+        player.protection = .65;
+        continue;
+      }
       if (!clears) {
         player.out = true;
         break;

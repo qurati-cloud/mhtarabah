@@ -125,6 +125,17 @@ function paintHud() {
     el('p' + id + 'Distance').textContent = number.format(Math.floor(player.distance));
     el('p' + id + 'Stars').textContent = number.format(player.stars);
     el('p' + id + 'Out').hidden = !player.out;
+    const powers = el('p' + id + 'Powers');
+    powers.hidden = player.out || !(player.flight || player.magnet || player.shield);
+    for (const badge of powers.children) {
+      const remaining = player[badge.dataset.power];
+      badge.hidden = !remaining;
+      const count = badge.querySelector('b');
+      if (count && remaining) {
+        const seconds = number.format(Math.ceil(remaining));
+        if (count.textContent !== seconds) count.textContent = seconds;
+      }
+    }
   });
 }
 function begin() {

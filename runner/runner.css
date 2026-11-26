@@ -41,3 +41,6 @@
 @media(max-width:520px){#track{height:clamp(405px,61svh,560px);border-radius:16px}.runner{width:calc(100% - 14px);margin-top:10px}.pad small{display:none}.pad button{min-height:42px}}
 
 @media(orientation:landscape) and (max-height:550px){#track{height:calc(100svh - 24px);min-height:340px}}
+
+.powers{display:flex;flex-wrap:wrap;gap:3px;grid-column:span 2;direction:rtl;font-size:11px}
+.powers>span{border-radius:7px;padding:3px 5px;background:#256079;color:white}
