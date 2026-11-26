@@ -6,9 +6,24 @@
  <div class="town-heading"><a href="games.html" data-text-key="town:back">كل الألعاب</a><h1 data-text-key="town:buildTitle">بناء</h1></div>
  <section class="workbench">
   <div class="viewport">
+   <canvas id="town-3d" hidden aria-label="منظور اللاعب داخل الحارة"></canvas>
+   <div id="town-aim" hidden aria-hidden="true">+</div>
+   <div id="motion" hidden>
+    <div class="move-pad" dir="ltr">
+     <button type="button" data-motion="forward" aria-label="إلى الأمام">↑</button>
+     <button type="button" data-motion="left" aria-label="يسار">←</button>
+     <button type="button" data-motion="back" aria-label="إلى الخلف">↓</button>
+     <button type="button" data-motion="right" aria-label="يمين">→</button>
+    </div>
+    <div class="move-actions">
+     <button type="button" data-motion="run" data-text-key="town:run">ركض</button>
+     <button type="button" data-motion="jump" data-text-key="town:jump">قفز</button>
+     <button type="button" id="use-aim" data-text-key="town:useAim">استخدم الأداة</button>
+    </div>
+   </div>
    <canvas id="town-view" aria-label="خريطة الحارة"></canvas>
    <div class="view-controls">
-    <button type="button" id="zoom-in" aria-label="تكبير">＋</button><button type="button" id="zoom-out" aria-label="تصغير">−</button>
+    <button type="button" id="perspective" data-text-key="town:viewMode">تبديل المنظور</button><button type="button" id="zoom-in" aria-label="تكبير">＋</button><button type="button" id="zoom-out" aria-label="تصغير">−</button>
     <button type="button" id="center" aria-label="العودة إلى الشخصية">◎</button>
    </div>
   </div>
@@ -47,7 +62,8 @@
     <button type="button" id="redo" disabled data-text-key="town:redo">إعادة</button>
     <button type="button" id="reset" data-text-key="town:reset">حارة جديدة</button>
    </div>
-   <p data-text-key="town:help">اضغط على الخريطة لاستخدام الأداة المحددة، واسحبها لتحريك المشهد. استخدم الأسهم للمشي.</p>
+   <p data-text-key="town:help">اسحب لتلتفت، واضغط لاستخدام الأداة عند علامة التصويب. تحرّك بالأسهم أو WASD، واركض بـ Shift واقفز بالمسافة.</p>
+   <p id="view-message" role="status" hidden data-text-key="town:mapFallback">عرض الخريطة متاح على هذا الجهاز.</p>
    <p id="status" role="status"></p>
   </aside>
  </section>

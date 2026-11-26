@@ -1,3 +1,4 @@
+import {createImmersive} from './immersive.js';
 import {size,levels,pieces,key,water,start,dock,garden,square,loadBoard,height,surface,path,bridgeReady,gardenReady,squareReady,scenery,pier,pierReady,islandStart,islandGround,islandTreasure,households,marketRoute,market} from './model.js';
 
 const el=id=>document.getElementById(id);
@@ -20,6 +21,7 @@ for(const [id,choice] of Object.entries(saved.rooms||{})){
  if(['rug','plant','lamp'].includes(choice))rooms[id]=choice;
 }
 let homes=[], activeHome, residents=[], lastResidentFrame=0;
+let immersive, firstPerson=false;
 const roomIcons={rug:'▰',plant:'🪴',lamp:'🏮'};
 const undo=[], redo=[];
 let route=[], nextStep=0, hover, pointer, panX=0,panY=0, zoom=1,width=0,heightPx=0,unit=23, hits=[];
@@ -54,10 +56,12 @@ function persist(){
 }
 const missionIds=['bridge','garden','square','done'];
 function syncHomes(){
+ immersive?.invalidate();
  homes=households(board);
  residents=homes.slice(0,16).map((home,index)=>({...home,index,route:marketRoute(board,home.entrance)}));
 }
 function refresh(){
+ immersive?.invalidate();
  const id=missionIds[mission];
  el('mission-card').hidden=mode==='free'||island;
  el('village-card').hidden=island;
@@ -144,17 +148,17 @@ el('undo').onclick=()=>{const edit=undo.pop();if(edit){redo.push(edit);apply(edi
 el('redo').onclick=()=>{const edit=redo.pop();if(edit){undo.push(edit);apply(edit,false);}};
 el('reset').onclick=()=>{
  if(!confirm(copy('confirm')))return;
- board.clear();for(const id of Object.keys(rooms))delete rooms[id];syncHomes();mission=0;island=false;found.clear();player=[...start];undo.length=redo.length=0;route=[];panX=panY=0;update();
+ board.clear();for(const id of Object.keys(rooms))delete rooms[id];syncHomes();mission=0;island=false;found.clear();player=[...start];undo.length=redo.length=0;route=[];panX=panY=0;immersive?.reset();update();
 };
 function returnHome(){
  island=false;route=[];panX=panY=0;
- center();update();
+ immersive?.reset();center();update();
 }
 el('return-home').onclick=returnHome;
 el('sail').onclick=()=>{
  if(mission<1||!same(player,dock)||!pierReady(board))return;
  island=true;route=[];found.clear();islandPosition=[...islandStart];
- setTool('walk');center();update();
+ setTool('walk');immersive?.reset();center();update();
 };
 function walk(to){
  const here=island?islandPosition:player;
@@ -286,6 +290,7 @@ function drawResident({x,z,index,moving}){
  dot(px,py-unit*.41+bob,unit*.095,unit*.10,'#bd865f');
 }
 function draw(){
+ if(firstPerson)return;
  if(!width||!ctx)return;
  ctx.fillStyle='#bdddd0';ctx.fillRect(0,0,width,heightPx);hits=[];
  if(island){drawIsland();return;}
@@ -361,10 +366,67 @@ for(const [id,scale] of [['zoom-in',1.18],['zoom-out',1/1.18]])el(id).onclick=()
 };
 window.addEventListener('keydown',e=>{
  if(document.querySelector('dialog[open]')||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
+ if(firstPerson){
+  if(commands[e.code]){
+   e.preventDefault();if(e.code!=='Space'||!e.repeat)immersive.keys.add(commands[e.code]);
+  } else if(e.code==='KeyE') {e.preventDefault();immersive.action();}
+  else if(e.code==='KeyQ')immersive.turn(-24,0);
+  else if(e.code==='KeyR')immersive.turn(24,0);
+  return;
+ }
  const direction={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,1],ArrowRight:[0,-1]}[e.key];
  if(direction){e.preventDefault();const p=island?islandPosition:player;walk([p[0]+direction[0],p[1]+direction[1]]);}
 });
+function enterCell(point){
+ if(island){
+  islandPosition=point;
+  const treasure=islandTreasure.find(t=>same(t.at,point));
+  if(treasure)found.add(treasure.id);
+ } else player=point;
+ const won=checkMission();
+ persist();if(won)el('status').textContent=copy('complete');
+ refresh();
+}
+function setPerspective(enabled){
+ firstPerson=Boolean(enabled&&immersive);
+ route=[];
+ for(const id of ['town-3d','town-aim','motion'])el(id).hidden=!firstPerson;
+ for(const id of ['town-view','zoom-in','zoom-out','center'])el(id).hidden=firstPerson;
+ el('perspective').setAttribute('aria-pressed',String(firstPerson));
+ if(firstPerson)immersive.reset();
+ else {immersive?.keys.clear();resize();center();}
+}
+function startImmersive(){
+ try {
+  immersive=createImmersive(el('town-3d'),()=>({
+   board,island,found,hasPier:pierReady(board),residents:[...residentPositions().values()].flat(),point:island?islandPosition:player,ground:island?islandGround:(x,z)=>surface(board,x,z),
+   paused:Boolean(document.querySelector('dialog[open]')),
+   targets:island?[]:[
+    ...(mode==='missions'?[[[7,8],[8,8],[9,8]],garden,square,[]][mission]:[]),
+    ...(mission>=1&&!pierReady(board)?pier:[])
+   ]
+  }),enterCell,cell=>{
+   if(tool==='walk'||island){
+    if(!island)visit(homes.find(home=>same(home.at,cell)&&same(home.entrance,player)));
+   } else interact(cell);
+  });
+ } catch {el('view-message').hidden=false;el('perspective').disabled=true;return;}
+ el('perspective').onclick=()=>setPerspective(!firstPerson);
+ el('use-aim').onclick=()=>immersive.action();
+ for(const button of document.querySelectorAll('[data-motion]')){
+  const command=button.dataset.motion;
+  button.onpointerdown=e=>{e.preventDefault();button.setPointerCapture(e.pointerId);immersive.keys.add(command);};
+  const release=()=>{if(command!=='jump')immersive.keys.delete(command);};
+  button.onpointerup=button.onpointercancel=button.onlostpointercapture=release;
+  button.onclick=e=>{if(e.detail===0&&command==='jump'&&e.pointerType===undefined)immersive.keys.add(command);};
+ }
+ setPerspective(true);
+}
+const commands={KeyW:'forward',ArrowUp:'forward',KeyS:'back',ArrowDown:'back',KeyA:'left',ArrowLeft:'left',KeyD:'right',ArrowRight:'right',ShiftLeft:'run',ShiftRight:'run',Space:'jump'};
+window.addEventListener('keyup',e=>immersive?.keys.delete(commands[e.code]));
+window.addEventListener('blur',()=>immersive?.keys.clear());
 function frame(time){
+ if(firstPerson){lastResidentFrame=time;immersive.frame(time);requestAnimationFrame(frame);return;}
  if(!island&&residents.some(resident=>resident.route.length)&&time-lastResidentFrame>=45){
   lastResidentFrame=time;draw();
  }
@@ -383,4 +445,4 @@ function frame(time){
 }
 new MutationObserver(refresh).observe(el('town-copy'),{subtree:true,childList:true,characterData:true});
 new ResizeObserver(resize).observe(canvas);
-syncHomes();resize();center();setTool(tool);refresh();requestAnimationFrame(frame);
+syncHomes();resize();center();setTool(tool);refresh();startImmersive();requestAnimationFrame(frame);

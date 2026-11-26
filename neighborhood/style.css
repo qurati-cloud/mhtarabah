@@ -8,3 +8,10 @@
 #home-room::backdrop{background:#163d3a9e}
 #room-preview{height:160px;display:grid;place-items:end center;padding:24px;background:linear-gradient(#f5e0b4 63%,#b88764 63%);border:5px solid #a97b55;border-radius:12px}
 #room-furniture{font-size:54px;line-height:1}
+#town-aim{pointer-events:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font:700 25px monospace;color:white;text-shadow:0 1px 4px #172a24}
+#motion{position:absolute;inset:auto 10px 57px;display:flex;justify-content:space-between;align-items:end;direction:ltr;pointer-events:none}
+#motion button{pointer-events:auto;touch-action:none;min-width:39px;background:#fffbecd9}
+.move-pad{display:grid;grid-template-columns:repeat(3,39px);gap:3px}
+.move-pad [data-motion=forward]{grid-column:2}
+.move-pad [data-motion=left]{grid-column:1}
+.move-actions{display:flex;flex-wrap:wrap;justify-content:end;gap:4px;max-width:51%}
