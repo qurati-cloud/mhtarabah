@@ -1,5 +1,5 @@
 import {laneWidth, obstacles, powerups, attractedPlayer} from './simulation.js';
-import {trackFeatures, nextSigns, adLines, railwayScene} from './track.js';
+import {trackFeatures, nextSigns, roadSignOpacity, adLines, railwayScene} from './track.js';
 import {districtCount, districtModel, roadsidePhrases, makeTextPanel, roadsideBoard, advertisingBoard, advertisingHeight} from './district.js';
 
 // Perspective canvas renderer for devices that cannot open a WebGL context.
@@ -242,12 +242,15 @@ export function createCanvasWorld(canvas) {
     }
     for(const sign of roadsidePhrases(run.distance,run.roadPhrases)) {
       const z=sign.at-run.distance;
-      if(z<1||z>104)continue;
+      const opacity=roadSignOpacity(run.distance,sign.at);
       const {width,height,centerY} = roadsideBoard;
       items.push({z,draw:()=>{
+        ctx.save();
+        ctx.globalAlpha=opacity;
         for(const side of [-1,1])prism(sign.x+side*width*.38,0,z,.15,centerY-height/2,.19,blue);
+        panel(sign.text,sign.x,centerY,z-.11,width,height,true);
+        ctx.restore();
       }});
-      items.push({z,draw:()=>panel(sign.text,sign.x,centerY,z-.11,width,height,true)});
     }
     for (const side of [-1,1]) quad('#becbd0',-12+side*.73-.041,-12+side*.73+.041,-6.71,135,.06);
     for(let z=122-run.distance%2.5;z>-6.7;z-=2.5) quad('#555459',-13.1,-10.9,z,z+.22,.043);
@@ -332,13 +335,13 @@ export function createCanvasWorld(canvas) {
     }
     for (const distance of nextSigns(run.distance)) {
       const z=distance-run.distance;
-      if(z < -5 || z>125) continue;
+      const opacity=roadSignOpacity(run.distance,distance);
       const {height} = advertisingBoard;
       const centerY = advertisingHeight(run.players,z);
       items.push({z,draw:()=>{
+        ctx.save();
+        ctx.globalAlpha=opacity;
         for (const side of [-1,1]) prism(side*5.16,0,z,.23,centerY-height/2,.29,blue);
-      }});
-      items.push({z,draw:()=>{
         const [x,y,s]=project(0,centerY,z);
         ctx.fillStyle='#ffd37e';ctx.fillRect(x-5*s,y-1.25*s,10*s,2.5*s);
         ctx.fillStyle='#122b48';ctx.fillRect(x-4.86*s,y-1.11*s,9.72*s,2.22*s);
@@ -347,6 +350,7 @@ export function createCanvasWorld(canvas) {
         ctx.font='bold '+Math.max(5,.79*s)+'px sans-serif';
         ctx.fillStyle='#fff8e7';ctx.fillText(adLines[0],x,y-.46*s);
         ctx.fillStyle='#ffd37e';ctx.fillText(adLines[1],x,y+.5*s);
+        ctx.restore();
       }});
     }
     for(const obj of run.objects) {

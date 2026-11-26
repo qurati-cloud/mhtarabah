@@ -21,11 +21,21 @@ export function overTunnel(distance) {
     kind === 'tunnel' && distance >= start && distance < start + length);
 }
 
-export function visibleRoadSign(distance, at) {
-  if (at <= distance + 1 || at > distance + 125) return false;
-  const camera = distance - 12;
-  return !trackFeatures(camera).some(({kind,start,length}) =>
-    kind === 'tunnel' && camera < start+length && at >= start);
+export function roadSignOpacity(distance, at) {
+  const ahead = at-distance;
+  const camera = distance-12;
+  const ramp = value => {
+    const t = Math.max(0,Math.min(1,value));
+    return t*t*(3-2*t);
+  };
+  let opacity = Math.min(ramp((125-ahead)/48),ramp((ahead-1)/8));
+  for(const {kind,start,length} of trackFeatures(camera-24)) {
+    if(kind!=='tunnel' || at<start) continue;
+    const end = start+length;
+    const clearance = Math.max(start-camera,camera-end,0);
+    opacity = Math.min(opacity,ramp(clearance/24));
+  }
+  return opacity;
 }
 
 export function openRoadSign(distance) {
@@ -37,9 +47,9 @@ export function openRoadSign(distance) {
 export const adLines = ['Put you add here', '+1 514 446 5664'];
 export const nextSigns = distance => {
   if (overTunnel(distance)) return [];
-  const spacing = 236;
+  const spacing = 472;
   const first = 38 + Math.max(0, Math.floor((distance - 26) / spacing)) * spacing;
-  return [first, first + spacing].map(openRoadSign).filter(at=>visibleRoadSign(distance,at));
+  return [first, first + spacing].map(openRoadSign).filter(at=>roadSignOpacity(distance,at)>0);
 };
 
 export function railwayScene(distance) {

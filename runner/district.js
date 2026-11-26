@@ -1,4 +1,4 @@
-import {openRoadSign, overTunnel, visibleRoadSign} from './track.js';
+import {openRoadSign, overTunnel, roadSignOpacity} from './track.js';
 
 const buildings = [
   ['modest', 2.35, 5.5, 0xc5aa87, 0x8a6657],
@@ -104,12 +104,12 @@ function districtGap(distance) {
 
 export function roadsidePhrases(distance, phrases) {
   if (!phrases?.length || overTunnel(distance)) return [];
-  const spacing = 148;
+  const spacing = 296;
   const first = Math.max(0,Math.floor((distance-32)/spacing));
   return [first,first+1].map(index=>({
     at:index%2 ? openRoadSign(51+index*spacing) : districtGap(51+index*spacing),
     x:roadsideBoard.offset*(index%2?-1:1), text:phrases[index%phrases.length]
-  })).filter(sign=>visibleRoadSign(distance,sign.at));
+  })).filter(sign=>roadSignOpacity(distance,sign.at)>0);
 }
 
 export function makeTextPanel(text, roadside = true) {

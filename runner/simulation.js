@@ -30,7 +30,7 @@ export function attractedPlayer(run, star) {
     Math.abs(star.distance - run.distance) < 11 &&
     Math.abs(star.y - (player.y + 1)) < 3.8);
 }
-export const runningSpeed = time => 12 + 24 * -Math.expm1(-time / 85);
+export const runningSpeed = time => 12 + 48 * -Math.expm1(-time / 68);
 export const difficultyAt = distance => -Math.expm1(-distance / 675);
 
 export function makeRun(avatars, random = Math.random) {
