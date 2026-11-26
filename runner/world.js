@@ -265,16 +265,16 @@ function billboardMaterial() {
   const map = new THREE.CanvasTexture(canvas);
   map.colorSpace = THREE.SRGBColorSpace;
   map.anisotropy = 4;
-  return new THREE.MeshBasicMaterial({map,fog:false});
+  return new THREE.MeshBasicMaterial({map,fog:false,depthTest:false,depthWrite:false});
 }
 function fadeSign(group, opacity) {
   group.traverse(node=>{
     if (!node.isMesh) return;
     node.material.opacity = opacity;
-    const transparent = opacity < 1;
+    const transparent = opacity < 1 || !node.material.depthTest;
     if (node.material.transparent !== transparent) {
       node.material.transparent = transparent;
-      node.material.depthWrite = !transparent;
+      node.material.depthWrite = node.material.depthTest && !transparent;
       node.material.needsUpdate = true;
     }
   });
@@ -285,6 +285,7 @@ function makeBillboard(face) {
   const postHeight = centerY-height/2;
   const posts = [-1,1].map(side=>block(group,0x315063,side*5.16,postHeight/2,0,.25,postHeight,.36));
   const board = part(group,new THREE.PlaneGeometry(width,height),face.clone(),0,centerY,.05,1,1,1);
+  board.renderOrder = 20;
   posts.forEach(post=>{post.material = post.material.clone();});
   group.userData = {posts,board};
   return group;
@@ -344,7 +345,7 @@ function panelMaterial(text, roadside) {
   const map = new THREE.CanvasTexture(makeTextPanel(text,roadside));
   map.colorSpace = THREE.SRGBColorSpace;
   map.anisotropy = 4;
-  return new THREE.MeshBasicMaterial({map,fog:!roadside});
+  return new THREE.MeshBasicMaterial({map,fog:!roadside,depthTest:!roadside,depthWrite:!roadside});
 }
 function roadPanel() {
   const group = new THREE.Group();
@@ -356,6 +357,7 @@ function roadPanel() {
   }
   const face = part(group,new THREE.PlaneGeometry(width,height),
     new THREE.MeshBasicMaterial({color:0x143b42}),0,centerY,.09,1,1,1);
+  face.renderOrder = 21;
   return {group,face,text:''};
 }
 

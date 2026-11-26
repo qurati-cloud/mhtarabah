@@ -233,6 +233,7 @@ export function createCanvasWorld(canvas) {
         run.distance+item.z+5>=start && run.distance+item.z+5<start+length))
       .map(item=>({...item,draw:()=>segment(item.z,item.index)}));
     const items=[...scenery];
+    const signFaces=[];
     const districtIndex=Math.floor(run.distance/24);
     for(let i=0;i<7;i++){
       const z=13+i*24-run.distance%24;
@@ -248,6 +249,11 @@ export function createCanvasWorld(canvas) {
         ctx.save();
         ctx.globalAlpha=opacity;
         for(const side of [-1,1])prism(sign.x+side*width*.38,0,z,.15,centerY-height/2,.19,blue);
+        ctx.restore();
+      }});
+      signFaces.push({z,draw:()=>{
+        ctx.save();
+        ctx.globalAlpha=opacity;
         panel(sign.text,sign.x,centerY,z-.11,width,height,true);
         ctx.restore();
       }});
@@ -342,6 +348,11 @@ export function createCanvasWorld(canvas) {
         ctx.save();
         ctx.globalAlpha=opacity;
         for (const side of [-1,1]) prism(side*5.16,0,z,.23,centerY-height/2,.29,blue);
+        ctx.restore();
+      }});
+      signFaces.push({z,draw:()=>{
+        ctx.save();
+        ctx.globalAlpha=opacity;
         const [x,y,s]=project(0,centerY,z);
         ctx.fillStyle='#ffd37e';ctx.fillRect(x-5*s,y-1.25*s,10*s,2.5*s);
         ctx.fillStyle='#122b48';ctx.fillRect(x-4.86*s,y-1.11*s,9.72*s,2.22*s);
@@ -373,6 +384,7 @@ export function createCanvasWorld(canvas) {
       if(!player.out)items.push({z:0,draw:()=>avatar(player,index,time,run.players.length===2)});
     });
     items.sort((a,b)=>b.z-a.z).forEach(item=>item.draw());
+    signFaces.sort((a,b)=>b.z-a.z).forEach(item=>item.draw());
   }
   resize();
   return {resize,reset(){cameraX=lift=0;},draw};
