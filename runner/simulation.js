@@ -1,19 +1,18 @@
+import {overTunnel, trackFeatures} from './track.js';
 export const laneWidth = 2.85;
 const gravity = 27;
 const jumpSpeed = 14.6;
 const diveSpeed = 26;
 const slideSeconds = 0.78;
-const kinds = ['car', 'bus', 'longBus', 'bar'];
+const kinds = ['car', 'bus', 'longBus', 'bar', 'roadworks'];
 export const obstacles = {
+  roadworks: {height: .92, length: 1.4, halfWidth: 1.14},
   car: {height: 1.12, length: 2.8, halfWidth: 0.88},
   bus: {height: 2.15, length: 5.2, halfWidth: 0.98, roof: true},
   longBus: {height: 2.35, length: 11.5, halfWidth: 0.98, roof: true},
   bar: {height: 1.72, opening: 1.04, length: 0.5, halfWidth: 1.15}
 };
 
-export const tunnelLength = 64;
-export const tunnelSpacing = 240;
-export const firstTunnel = 132;
 export const powerDuration = 15;
 export const flightHeight = 9;
 export const powerups = {
@@ -22,9 +21,6 @@ export const powerups = {
   shield: {color: 0x84e8af, symbol: '⬡'}
 };
 const powerKinds = Object.keys(powerups);
-const overTunnel = distance => distance >= firstTunnel &&
-  (distance - firstTunnel) % tunnelSpacing < tunnelLength;
-
 export function attractedPlayer(run, star) {
   if (star.kind !== 'star') return null;
   return run.players.find((player, index) => !player.out && player.magnet > 0 &&
@@ -35,14 +31,19 @@ export function attractedPlayer(run, star) {
 export const runningSpeed = time => 12 + 24 * -Math.expm1(-time / 85);
 
 export function makeRun(avatars, random = Math.random) {
+  const firstLane = Math.floor(random()*3)-1;
+  const firstDistance = 13 + random()*10;
+  const firstPower = powerKinds[Math.floor(random()*powerKinds.length)];
   return {
     distance: 0, time: 0, players: avatars.map((avatar, index) => {
       const lane = avatars.length === 1 ? 0 : index * 2 - 1;
       return {avatar, lane, x: lane * laneWidth, y: 0, vy: 0, slide: 0,
         support: null, flight: 0, magnet: 0, shield: false, glide: false, protection: 0, ignored: null, diving: false, stars: 0, distance: 0, out: false};
     }),
-    objects: (avatars.length === 1 ? [0] : [-1,1]).map(lane =>
-      ({kind:'flight', lane, distance:18, y:1.05, taken:0})), nextWave: 26, wave: 0, random
+    objects: [{kind:firstPower, lane:firstLane,
+      distance:firstDistance, y:1.05, taken:0}], nextWave: 33, wave: 0,
+    nextReward: 2 + Math.floor(random()*2),
+    rewardBag: powerKinds.filter(kind=>kind!==firstPower), random
   };
 }
 
@@ -66,11 +67,15 @@ export function move(player, command) {
 }
 
 function spawn(run) {
+  const feature = trackFeatures(run.nextWave)[0];
+  const onBridge = feature.kind === 'bridge' && run.nextWave >= feature.start &&
+    run.nextWave < feature.start + feature.length;
   const first = Math.floor(run.random() * 3) - 1;
   const other = [-1, 0, 1].filter(lane => lane !== first);
-  const kind = kinds[run.wave < kinds.length ? run.wave : Math.floor(run.random() * kinds.length)];
+  const choices = onBridge ? ['roadworks','bar','bus'] : kinds;
+  const kind = choices[Math.floor(run.random() * choices.length)];
   run.objects.push({kind, lane: first, distance: run.nextWave, taken: 0});
-  if (run.wave > 4 && run.random() > 0.38) {
+  if (run.wave > 1 && run.random() > (onBridge ? .22 : .48)) {
     const second = other.splice(Math.floor(run.random() * 2), 1)[0];
     run.objects.push({kind: kinds[Math.floor(run.random() * kinds.length)], lane: second, distance: run.nextWave, taken: 0});
   }
@@ -86,11 +91,14 @@ function spawn(run) {
   } else if (kind === 'car') {
     run.objects.push({kind: 'star', lane: first, distance: run.nextWave, y: obstacles.car.height + 1, taken: 0});
   }
-  if (run.wave > 0 && run.wave % 3 === 0) {
-    const power = powerKinds[(run.wave / 3) % powerKinds.length];
-    run.objects.push({kind: power, lane: route, distance: run.nextWave - 8, y: 1.05, taken: 0});
+  if (run.wave >= run.nextReward) {
+    if (!run.rewardBag.length) run.rewardBag = [...powerKinds];
+    const [power] = run.rewardBag.splice(Math.floor(run.random()*run.rewardBag.length),1);
+    run.objects.push({kind: power, lane: route, distance: run.nextWave - 9 + run.random()*3,
+      y: 1.05, taken: 0});
+    run.nextReward = run.wave + 2 + Math.floor(run.random()*3);
   }
-  const airLane = run.wave % 3 - 1;
+  const airLane = Math.floor(run.random()*3)-1;
   for (const offset of [-5,-2,1,4]) {
     run.objects.push({kind: 'star', lane: airLane, distance: run.nextWave + offset,
       y: flightHeight + .85, taken: 0});

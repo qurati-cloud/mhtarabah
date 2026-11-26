@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
-import { laneWidth, obstacles, firstTunnel, tunnelLength, tunnelSpacing, powerups, attractedPlayer } from './simulation.js';
+import { laneWidth, obstacles, powerups, attractedPlayer } from './simulation.js';
+import {trackFeatures, nextSigns, adLines} from './track.js';
 
 const box = new THREE.BoxGeometry(1, 1, 1);
 const sphere = new THREE.SphereGeometry(1, 18, 12);
@@ -150,6 +151,13 @@ function makeHazard(kind) {
     }
     return {group};
   }
+  if (kind === 'roadworks') {
+    block(group, 0xef823d, 0, .43, 0, 2.25, .86, .85);
+    block(group, 0xf4dca0, 0, .64, .438, 2.02, .13, .03);
+    block(group, 0x3c414c, 0, .1, 0, 2.27, .17, 1.25);
+    for (const side of [-1,1]) oval(group, 0xffc15f, side*.85, .84, 0, .14, .12, .14);
+    return {group};
+  }
   if (kind === 'star') {
     part(group, starGeo, starMat, 0, 0, -.06, 1, 1, 1);
     part(group, ringGeo, ringMat, 0, 0, 0, 1, 1, 1);
@@ -187,17 +195,81 @@ function makeHazard(kind) {
   return {group};
 }
 
-function makeTunnel() {
+function roadFeature({kind,style,length,wall,trim}) {
   const group = new THREE.Group();
-  block(group, 0x354956, 0, 6.9, -tunnelLength/2, 11.2, .6, tunnelLength);
+  const color = new THREE.Color(wall).getHex();
+  const accent = new THREE.Color(trim).getHex();
+  if (kind === 'bridge') {
+    block(group, style === 'harbor' ? 0x247e9e : 0x925b46, 0, -.39, -length/2, 40, .6, length);
+    block(group, 0x546474, 0, .02, -length/2, 9.65, .14, length);
+    for (const side of [-1,1]) {
+      for (let z=2; z<length-2; z+=6) block(group,0xffe7a9,side*1.43,.1,-z,.05,.02,2.9);
+      block(group, accent, side*4.93, .97, -length/2, .1, .15, length);
+      for (let z=1; z<length; z+=4) block(group, color, side*4.93, .56, -z, .18, 1.12, .17);
+      for (const z of [8,length-8]) block(group, color, side*5.15, 3.15, -z, .52, 6.3, .53);
+      for (let z=9; z<length-8; z+=4) {
+        const height = 2 + Math.abs(z-length/2)/length*7;
+        block(group, accent, side*5.1, height/2, -z, .055, height, .055);
+      }
+    }
+    for (const z of [8,length-8]) block(group, accent, 0, 6.1, -z, 10.7, .23, .42);
+    return group;
+  }
+  const roof = new THREE.Group();
+  group.add(roof);
+  const transparent = new THREE.MeshStandardMaterial({color:0x8fcfe8,transparent:true,opacity:.29,depthWrite:false});
   for (const side of [-1,1]) {
-    block(group, 0x496473, side*5.28, 3.25, -tunnelLength/2, .6, 6.5, tunnelLength);
-    block(group, 0x78b5ae, side*4.97, 1.25, -tunnelLength/2, .06, .13, tunnelLength);
+    block(group, color, side*5.28, 2.1, -length/2, .55, 4.2, length);
+    block(group, accent, side*4.97, 1.25, -length/2, .06, .13, length);
   }
-  for (let offset=0; offset<=tunnelLength; offset+=8) {
-    block(group, 0x80989f, 0, 6.52, -offset, 10.8, .27, .3);
-    for (const side of [-1,1]) block(group, 0xffe5a5, side*3.45, 6.34, -offset, 1.6, .07, .34);
+  if (style === 'arch') {
+    const canopy = new THREE.CylinderGeometry(5.3,5.3,length,20,1,true,0,Math.PI);
+    const ceiling = new THREE.Mesh(canopy,new THREE.MeshStandardMaterial({color,side:THREE.DoubleSide}));
+    canopy.rotateZ(Math.PI/2).rotateY(Math.PI/2);
+    ceiling.position.set(0,2,-length/2);
+    roof.add(ceiling);
+  } else {
+    block(roof, style === 'glass' ? transparent : color, 0, 6.95, -length/2, 11.2, .35, length);
   }
+  for (let z=0; z<=length; z+= style === 'metro' ? 6 : 9) {
+    if (style === 'arch') {
+      const arch = new THREE.TorusGeometry(5.15,.16,8,26,Math.PI);
+      part(roof,arch,accent,0,2,-z,1,1,1);
+    } else {
+      block(roof,accent,0,6.62,-z,10.8,.2,.28);
+      for (const side of [-1,1]) block(group,accent,side*5.15,4,-z,.23,5,.28);
+    }
+    for (const side of [-1,1]) block(roof,0xfff0b5,side*3.26,5.9,-z,1.12,.07,.25);
+  }
+  group.userData.roof = roof;
+  return group;
+}
+
+function billboardMaterial() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#122b48';
+  ctx.fillRect(0,0,1024,256);
+  ctx.strokeStyle = '#ffd37e';
+  ctx.lineWidth = 12;
+  ctx.strokeRect(9,9,1006,238);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff8e7';
+  ctx.font = 'bold 78px Arial';
+  ctx.fillText(adLines[0],512,109);
+  ctx.fillStyle = '#ffd37e';
+  ctx.font = 'bold 67px Arial';
+  ctx.fillText(adLines[1],512,199);
+  const map = new THREE.CanvasTexture(canvas);
+  map.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.MeshBasicMaterial({map});
+}
+function makeBillboard(face) {
+  const group = new THREE.Group();
+  for (const side of [-1,1]) block(group,0x315063,side*5.16,2.6,0,.25,5.2,.36);
+  part(group,new THREE.PlaneGeometry(10,2.5),face,0,5.65,.05,1,1,1);
   return group;
 }
 
@@ -223,8 +295,13 @@ export function createWorld(canvas, context) {
     scene.add(group);
     return group;
   });
-  const tunnel = makeTunnel();
-  scene.add(tunnel);
+  const features = new Map();
+  const face = billboardMaterial();
+  const signs = Array.from({length:2},()=>{
+    const group = makeBillboard(face);
+    scene.add(group);
+    return group;
+  });
   const renderObjects = new Map();
   const pool = new Map();
   let racers = [];
@@ -255,13 +332,41 @@ export function createWorld(canvas, context) {
     renderObjects.delete(object);
   }
   function draw(run, time) {
-    const tunnelIndex = Math.max(0, Math.floor((run.distance - firstTunnel - tunnelLength - 13) / tunnelSpacing) + 1);
-    tunnel.position.z = run.distance - firstTunnel - tunnelIndex * tunnelSpacing;
-    tunnel.visible = tunnel.position.z > -140;
+    const upcoming = trackFeatures(run.distance - 14);
+    for (const [start,group] of features) {
+      if (!upcoming.some(feature=>feature.start === start)) {
+        scene.remove(group);
+        group.traverse(node=>{
+          if (node.geometry && ![box,sphere,wheel].includes(node.geometry)) node.geometry.dispose();
+          if (node.material && ![...materials.values()].includes(node.material)) node.material.dispose();
+        });
+        features.delete(start);
+      }
+    }
+    const mixedHeight = run.players.some(player=>!player.out && player.glide) &&
+      run.players.some(player=>!player.out && !player.glide);
+    for (const feature of upcoming) {
+      if (!features.has(feature.start)) {
+        const group = roadFeature(feature);
+        scene.add(group);
+        features.set(feature.start,group);
+      }
+      const group = features.get(feature.start);
+      group.position.z = run.distance - feature.start;
+      group.visible = group.position.z > -145;
+      if (group.userData.roof) group.userData.roof.visible = !mixedHeight;
+    }
+    nextSigns(run.distance).forEach((distance,i)=>{
+      signs[i].position.z = run.distance-distance;
+    });
     const offset = run.distance % 24;
     const segment = Math.floor(run.distance / 24);
     for (let i = 0; i < scenery.length; i++) {
-      scenery[(i + segment) % scenery.length].position.z = 11 - i * 24 + offset;
+      const piece = scenery[(i + segment) % scenery.length];
+      piece.position.z = 11 - i * 24 + offset;
+      const middle = run.distance - piece.position.z;
+      piece.visible = !upcoming.some(({kind,start,length})=>kind === 'bridge' &&
+        middle > start+12 && middle < start+length-12);
     }
     const objects = new Set(run.objects);
     for (const [object, model] of renderObjects) if (!objects.has(object)) recycle(object, model);

@@ -1,4 +1,5 @@
-import {laneWidth, obstacles, firstTunnel, tunnelLength, tunnelSpacing, powerups, attractedPlayer} from './simulation.js';
+import {laneWidth, obstacles, powerups, attractedPlayer} from './simulation.js';
+import {trackFeatures, nextSigns, adLines} from './track.js';
 
 // Perspective canvas renderer for devices that cannot open a WebGL context.
 export function createCanvasWorld(canvas) {
@@ -83,6 +84,11 @@ export function createCanvasWorld(canvas) {
   function vehicle(kind,x,z) {
     const {length,height,halfWidth}=obstacles[kind];
     const w=halfWidth*2;
+    if (kind === 'roadworks') {
+      prism(x,0,z,2.28,.92,1.3,['#ffbd6a','#c36742','#eb8d46']);
+      prism(x,.55,z-.65,2.02,.15,.03,light);
+      return;
+    }
     if (kind === 'bar') {
       for (const side of [-1,1]) prism(x+side*1.1,0,z,.13,1.56,.23,gold);
       prism(x,1.04,z,2.45,.60,.28,gold);
@@ -180,28 +186,72 @@ export function createCanvasWorld(canvas) {
       for(const side of [-1,1]) quad('#f9e7ba',side*1.44-.033,side*1.44+.033,z,z+2.9,.004);
       quad('#73bdca',-14,-10,z,z+.19,-.082);
     }
+    const features=trackFeatures(run.distance-12);
     const chunk=Math.floor(run.distance/15);
     const scenery=Array.from({length:9},(_,i)=>({z:i*15-run.distance%15,index:chunk+i}))
-      .filter(item=>item.z>-7).map(item=>({...item,draw:()=>segment(item.z,item.index)}));
+      .filter(item=>item.z>-7 && !features.some(({kind,start,length})=>kind==='bridge' &&
+        run.distance+item.z+5>=start && run.distance+item.z+5<start+length))
+      .map(item=>({...item,draw:()=>segment(item.z,item.index)}));
     const items=[...scenery];
-    const index=Math.max(0,Math.floor((run.distance-firstTunnel-tunnelLength-9)/tunnelSpacing)+1);
-    const entrance=firstTunnel+index*tunnelSpacing-run.distance;
-    if (entrance < 135) {
-      const near=Math.max(-6.7,entrance), far=entrance+tunnelLength;
-      if (far>near) {
-        for (let z=far;z>near;z-=8) {
-          const from=Math.max(near,z-8);
-          items.push({z,draw:()=>{
-            quad('#344752',-5.45,5.45,from,z,6.6);
-            for(const side of [-1,1]) {
-              const x=side*5.2;
-              polygon('#496473',project(x,0,from),project(x,0,z),
-                project(x,6.6,z),project(x,6.6,from));
-              quad('#ffe3a5',side*3.5-.65,side*3.5+.65,from,Math.min(from+.33,z),6.56);
+    for (const feature of features) {
+      const entrance=feature.start-run.distance;
+      const start=Math.max(-6.7,entrance), end=Math.min(150,entrance+feature.length);
+      for (let z=end;z>start;z-=6) {
+        const from=Math.max(start,z-6);
+        items.push({z,draw:()=>{
+          if (feature.kind==='bridge') {
+            const below=feature.style==='harbor'?'#277c9c':'#a67358';
+            quad(below,-27,-4.7,from,z,-.08);
+            quad(below,4.7,27,from,z,-.08);
+            quad('#586674',-4.7,4.7,from,z,.01);
+            for (const side of [-1,1]) {
+              quad('#f8e0a2',side*1.43-.035,side*1.43+.035,from,Math.min(from+2.7,z),.016);
+              const x=side*4.87;
+              quad(feature.trim,x-.07,x+.07,from,z,1);
+              prism(x,0,from+.28,.14,1,.14,[feature.trim,feature.wall,feature.trim]);
+              const tall=Math.floor((z-entrance)/6)%6===1;
+              if(tall) prism(side*5.2,0,from+.4,.42,5.7,.35,[feature.trim,feature.wall,feature.wall]);
             }
-          }});
-        }
+            return;
+          }
+          const mixed = visible.some(player=>player.glide) && visible.some(player=>!player.glide);
+          if (!mixed) {
+            if (feature.style==='glass') ctx.globalAlpha=.47;
+            if (feature.style==='arch') {
+              for (let x=-5.2;x<5.18;x+=.4) {
+                const y=2+Math.sqrt(Math.max(0,5.25**2-x*x));
+                quad(feature.wall,x,x+.41,from,z,y);
+                quad(feature.trim,x,x+.41,from,Math.min(from+.21,z),y-.035);
+              }
+            } else {
+              quad(feature.wall,-5.45,5.45,from,z,6.7);
+              quad(feature.trim,-5.27,5.27,from,Math.min(from+.22,z),6.66);
+            }
+            ctx.globalAlpha=1;
+          }
+          for(const side of [-1,1]) {
+            const x=side*5.2;
+            polygon(feature.wall,project(x,0,from),project(x,0,z),
+              project(x,feature.style==='arch'?2:6.7,z),project(x,feature.style==='arch'?2:6.7,from));
+            quad(feature.trim,x-.05,x+.05,from,z,1.25);
+          }
+        }});
       }
+    }
+    for (const distance of nextSigns(run.distance)) {
+      const z=distance-run.distance;
+      if(z < -5 || z>125) continue;
+      items.push({z,draw:()=>{
+        const [x,y,s]=project(0,5.65,z);
+        for (const side of [-1,1]) prism(side*5.16,0,z,.23,5.1,.29,blue);
+        ctx.fillStyle='#ffd37e';ctx.fillRect(x-5*s,y-1.25*s,10*s,2.5*s);
+        ctx.fillStyle='#122b48';ctx.fillRect(x-4.86*s,y-1.11*s,9.72*s,2.22*s);
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.direction='ltr';
+        ctx.font='bold '+Math.max(5,.79*s)+'px sans-serif';
+        ctx.fillStyle='#fff8e7';ctx.fillText(adLines[0],x,y-.46*s);
+        ctx.fillStyle='#ffd37e';ctx.fillText(adLines[1],x,y+.5*s);
+      }});
     }
     for(const obj of run.objects) {
       const z=obj.distance-run.distance;
