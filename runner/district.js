@@ -92,9 +92,10 @@ export const advertisingBoard = {width:10, height:2.5, centerY:6.78};
 
 export function roadsidePhrases(distance, phrases) {
   if (!phrases?.length) return [];
-  const first = Math.max(0,Math.floor((distance-32)/74));
+  const spacing = 148;
+  const first = Math.max(0,Math.floor((distance-32)/spacing));
   return [first,first+1].map(index=>({
-    at:51+index*74, x:roadsideBoard.offset*(index%2?-1:1), text:phrases[index%phrases.length]
+    at:51+index*spacing, x:roadsideBoard.offset*(index%2?-1:1), text:phrases[index%phrases.length]
   }));
 }
 

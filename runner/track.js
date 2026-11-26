@@ -23,8 +23,9 @@ export function overTunnel(distance) {
 
 export const adLines = ['Put you add here', '+1 514 446 5664'];
 export const nextSigns = distance => {
-  const first = 38 + Math.max(0, Math.floor((distance - 26) / 118)) * 118;
-  return [first, first + 118];
+  const spacing = 236;
+  const first = 38 + Math.max(0, Math.floor((distance - 26) / spacing)) * spacing;
+  return [first, first + spacing];
 };
 
 export function railwayScene(distance) {
