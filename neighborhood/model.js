@@ -39,8 +39,8 @@ export function surface(board,x,z){
  if(!valid(x,z,0)||scenery.has(x+','+z)||(!top&&water(x,z)))return null;
  return board.get(key(x,z,top-1))==='tree'?null:top;
 }
-export function path(board,from,to){
- if(surface(board,...from)===null||surface(board,...to)===null)return [];
+export function path(board,from,to,at=(x,z)=>surface(board,x,z)){
+ if(at(...from)===null||at(...to)===null)return [];
  const id=([x,z])=>key(x,z,0);
  const queue=[from], previous=new Map([[id(from),null]]);
  for(let i=0;i<queue.length;i++){
@@ -52,8 +52,8 @@ export function path(board,from,to){
   }
   for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){
    const next=[here[0]+dx,here[1]+dz];
-   const top=surface(board,...next);
-   if(top===null||Math.abs(top-surface(board,...here))>1||previous.has(id(next)))continue;
+   const top=at(...next);
+   if(top===null||Math.abs(top-at(...here))>1||previous.has(id(next)))continue;
    previous.set(id(next),here);queue.push(next);
   }
  }
@@ -68,4 +68,22 @@ export function gardenReady(board){
 export function squareReady(board){
  const tiles=square.map(([x,z])=>board.get(key(x,z,0))).filter(type=>['blue','green','amber','lilac'].includes(type));
  return tiles.length===6&&new Set(tiles).size>=2;
+}
+
+export const pier = [[9,6],[8,6],[9,7]];
+export const islandStart = [10,11];
+export const islandTreasure = [
+ {id:'shell',at:[12,5],piece:['صدفة المرفأ','#ecb19b']},
+ {id:'lantern',at:[15,8],piece:['فانوس الجزيرة','#e5a63d']},
+ {id:'mosaic',at:[11,13],piece:['فسيفساء البحر','#398c96']}
+];
+
+for(const {id,piece} of islandTreasure)pieces[id]=piece;
+
+export function pierReady(board){
+ return pier.every(([x,z])=>board.get(key(x,z,0))==='wood'&&height(board,x,z)===1);
+}
+
+export function islandGround(x,z){
+ return valid(x,z,0)&&((x-12.5)/4.75)**2+((z-9)/6.5)**2<=1 ? 0 : null;
 }

@@ -1,4 +1,4 @@
-import {size,levels,pieces,key,water,start,dock,garden,square,loadBoard,height,surface,path,bridgeReady,gardenReady,squareReady,scenery} from './model.js';
+import {size,levels,pieces,key,water,start,dock,garden,square,loadBoard,height,surface,path,bridgeReady,gardenReady,squareReady,scenery,pier,pierReady,islandStart,islandGround,islandTreasure} from './model.js';
 
 const el=id=>document.getElementById(id);
 const copy=id=>document.querySelector('[data-text-key="town:'+id+'"]').textContent;
@@ -10,6 +10,11 @@ let board=loadBoard(saved.board), mission=Number.isInteger(saved.mission)?Math.m
 let avatar=saved.avatar==='habiba'?'habiba':'mohammad';
 let player=Array.isArray(saved.player)&&saved.player.length===2&&surface(board,...saved.player)!==null?saved.player:[...start];
 let mode=saved.mode==='free'?'free':'missions', tool='build', selected='wood';
+const unlocked=new Set(Array.isArray(saved.unlocked)?saved.unlocked.filter(id=>islandTreasure.some(t=>t.id===id)):[]);
+const found=new Set(Array.isArray(saved.found)?saved.found.filter(id=>islandTreasure.some(t=>t.id===id)):[]);
+const point=saved.islandPosition;
+let island=saved.island===true&&mission>=1;
+let islandPosition=Array.isArray(point)&&point.length===2&&islandGround(...point)!==null?point:[...islandStart];
 const undo=[], redo=[];
 let route=[], nextStep=0, hover, pointer, panX=0,panY=0, zoom=1,width=0,heightPx=0,unit=23, hits=[];
 const same=(a,b)=>a&&b&&a[0]===b[0]&&a[1]===b[1];
@@ -22,16 +27,47 @@ for(const [type,[label,color]] of Object.entries(pieces)){
  button.append(swatch,name);palette.append(button);
  button.onclick=()=>{selected=type;setTool('build');};
 }
+for(const {id,piece:[label]} of islandTreasure){
+ const button=document.createElement('button');
+ button.type='button';button.dataset.treasure=id;
+ button.dataset.textKey='town:treasure:'+id;
+ button.textContent=label;
+ button.onclick=()=>{
+  if(!island||found.size!==islandTreasure.length||unlocked.has(id))return;
+  unlocked.add(id);
+  returnHome();
+  el('status').textContent=copy('treasureSaved');
+ };
+ el('treasure-options').append(button);
+}
 function persist(){
  try {
-  localStorage.setItem(saveKey,JSON.stringify({board:[...board],mission,player,avatar,mode}));
+  localStorage.setItem(saveKey,JSON.stringify({board:[...board],mission,player,avatar,mode,island,islandPosition,found:[...found],unlocked:[...unlocked]}));
   el('status').textContent=copy('saved');
  } catch { el('status').textContent=copy('storage'); }
 }
 const missionIds=['bridge','garden','square','done'];
 function refresh(){
  const id=missionIds[mission];
- el('mission-card').hidden=mode==='free';
+ el('mission-card').hidden=mode==='free'||island;
+ el('harbor-card').hidden=mission<1;
+ const complete=found.size===islandTreasure.length;
+ const all=unlocked.size===islandTreasure.length;
+ el('harbor-instruction').textContent=island?
+   copy(all?'allTreasure':complete?'chooseTreasure':'islandBody')+(!complete?' ('+found.size+' / 3)':''):
+   copy(pierReady(board)?'boatBody':'pierBody');
+ el('sail').hidden=island||!pierReady(board)||!same(player,dock);
+ el('return-home').hidden=!island;
+ el('treasure-options').hidden=!island||!complete||all;
+ for(const button of el('treasure-options').children)button.hidden=unlocked.has(button.dataset.treasure);
+ for(const button of palette.children){
+  const id=button.dataset.piece;
+  button.hidden=island||(islandTreasure.some(t=>t.id===id)&&!unlocked.has(id));
+ }
+ palette.hidden=island;
+ for(const button of document.querySelectorAll('[data-tool]'))button.hidden=island&&button.dataset.tool!=='walk';
+ el('reset').hidden=island;
+ el('undo').hidden=el('redo').hidden=island;
  el('mission-title').textContent=copy(id+'Title');
  el('mission-description').textContent=copy(id+'Body');
  el('mission-count').textContent=mission<3?(mission+1)+' / 3':'✓';
@@ -41,7 +77,7 @@ function refresh(){
  draw();
 }
 function checkMission(){
- if(mode!=='missions')return false;
+ if(mode!=='missions'||island)return false;
  const won=mission===0&&same(player,dock)&&bridgeReady(board)||
   mission===1&&gardenReady(board)||mission===2&&squareReady(board);
  if(won)mission++;
@@ -73,18 +109,29 @@ el('undo').onclick=()=>{const edit=undo.pop();if(edit){redo.push(edit);apply(edi
 el('redo').onclick=()=>{const edit=redo.pop();if(edit){undo.push(edit);apply(edit,false);}};
 el('reset').onclick=()=>{
  if(!confirm(copy('confirm')))return;
- board.clear();mission=0;player=[...start];undo.length=redo.length=0;route=[];panX=panY=0;update();
+ board.clear();mission=0;island=false;found.clear();player=[...start];undo.length=redo.length=0;route=[];panX=panY=0;update();
+};
+function returnHome(){
+ island=false;route=[];panX=panY=0;
+ center();update();
+}
+el('return-home').onclick=returnHome;
+el('sail').onclick=()=>{
+ if(mission<1||!same(player,dock)||!pierReady(board))return;
+ island=true;route=[];found.clear();islandPosition=[...islandStart];
+ setTool('walk');center();update();
 };
 function walk(to){
- if(same(player,to))return;
- route=path(board,player,to);
+ const here=island?islandPosition:player;
+ if(same(here,to))return;
+ route=island?path(board,here,to,islandGround):path(board,here,to);
  if(!route.length)el('status').textContent=copy('blocked');
  else nextStep=0;
 }
 function interact(cell){
  if(!cell)return;
  const [x,z]=cell;
- if(tool==='walk'){walk(cell);return;}
+ if(island||tool==='walk'){walk(cell);return;}
  const y=height(board,x,z);
  if(same(cell,player)||same(cell,start)||tool==='remove'&&!y||
     scenery.has(x+','+z)||tool==='build'&&(y>=levels||board.get(key(x,z,y-1))==='tree'||selected==='tree'&&water(x,z))){
@@ -146,13 +193,31 @@ function character(x,z,y){
  dot(px,py-unit*.65,unit*.17,unit*.20,girl?'#b58ac1':'#523d31');
  if(!girl)dot(px,py-unit*.79,unit*.16,unit*.08,'#fdf2de');
 }
+function drawIsland(){
+ for(let sum=0;sum<2*size-1;sum++)for(let x=Math.max(0,sum-size+1);x<=Math.min(size-1,sum);x++){
+  const z=sum-x, land=islandGround(x,z)!==null;
+  poly(tile(x,z,0),land?((x+z)%2?'#e0c790':'#e8d5aa'):((x+z)%2?'#429bab':'#51a7b6'),'#ffffff22');
+  if(!land)continue;
+  hits.push({cell:[x,z],face:tile(x,z,0)});
+  if(same(hover,[x,z]))poly(tile(x,z,.01),'#fff1a388','#fff0a0');
+  const treasure=islandTreasure.find(t=>same(t.at,[x,z])&&!found.has(t.id));
+  if(treasure && Math.abs(x-islandPosition[0])+Math.abs(z-islandPosition[1])<=3){
+   const [px,py]=project(x+.5,z+.5,.32);
+   dot(px,py,unit*.31,unit*.24,'#e89a36');
+   dot(px,py,unit*.13,unit*.11,'#fff2a9');
+  }
+  if((x===14&&z===4)||(x===14&&z===12)||(x===9&&z===9))piece(x,z,0,'tree');
+  if(same(islandPosition,[x,z]))character(x,z,0);
+ }
+}
 function draw(){
  if(!width||!ctx)return;
  ctx.fillStyle='#bdddd0';ctx.fillRect(0,0,width,heightPx);hits=[];
+ if(island){drawIsland();return;}
  const targets=mode==='missions'?[ [[7,8],[8,8],[9,8]],garden,square,[] ][mission]:[];
  for(let sum=0;sum<2*size-1;sum++)for(let x=Math.max(0,sum-size+1);x<=Math.min(size-1,sum);x++){
   const z=sum-x, wet=water(x,z), y=height(board,x,z);
-  const highlighted=targets.some(cell=>same(cell,[x,z]));
+  const highlighted=targets.some(cell=>same(cell,[x,z]))||mission>=1&&!pierReady(board)&&pier.some(cell=>same(cell,[x,z]));
   const ground=wet?((x+z)%2?'#58aab9':'#64b4c0'):x>=10&&z>=6&&z<=9?'#d9bf8b':(x+z)%2?'#a6bf82':'#afc78b';
   poly(tile(x,z,0),ground,'#ffffff28');
   if(!y&&highlighted)poly(tile(x,z,0),'#ffe0887c','#f8d56b');
@@ -161,6 +226,12 @@ function draw(){
   for(let level=0;level<y;level++)piece(x,z,level,board.get(key(x,z,level)));
   if(same(hover,[x,z]))poly(tile(x,z,tool==='build'&&y<levels?y+.05:y),'#fff1a368','#fff0a0');
   if(same(dock,[x,z])&&!y){const [px,py]=project(x+.5,z+.5);dot(px,py,unit*.52,unit*.21,'#c77c42');}
+  if(x===8&&z===5&&pierReady(board)){
+   const [px,py]=project(x+.5,z+.5,.1);
+   dot(px,py,unit*.65,unit*.29,'#295d68');
+   poly([[px-unit*.58,py],[px+unit*.58,py],[px+unit*.38,py+unit*.22],[px-unit*.38,py+unit*.22]],'#934d32');
+   poly([[px,py-unit*.78],[px,py],[px+unit*.47,py]],'#faf2d7','#cbaf78');
+  }
   hits.push({cell:[x,z],face:tile(x,z,y)});
   if(same(player,[x,z]))character(x,z,y);
  }
@@ -179,7 +250,8 @@ function resize(){
 }
 function center(){
  panX=0;panY=0;
- const [x,y]=project(player[0]+.5,player[1]+.5);
+ const point=island?islandPosition:player;
+ const [x,y]=project(point[0]+.5,point[1]+.5);
  panX=width/2-x;panY=heightPx*.49-y;draw();
 }
 canvas.onpointerdown=e=>{
@@ -207,13 +279,18 @@ for(const [id,scale] of [['zoom-in',1.18],['zoom-out',1/1.18]])el(id).onclick=()
 window.addEventListener('keydown',e=>{
  if(document.querySelector('dialog[open]')||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
  const direction={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,1],ArrowRight:[0,-1]}[e.key];
- if(direction){e.preventDefault();walk([player[0]+direction[0],player[1]+direction[1]]);}
+ if(direction){e.preventDefault();const p=island?islandPosition:player;walk([p[0]+direction[0],p[1]+direction[1]]);}
 });
 function frame(time){
  if(route.length&&time>=nextStep){
-  player=route.shift();nextStep=time+105;
+  const point=route.shift();nextStep=time+105;
+  if(island){
+   islandPosition=point;
+   const treasure=islandTreasure.find(t=>same(t.at,point));
+   if(treasure)found.add(treasure.id);
+  } else player=point;
   const won=checkMission();persist();if(won)el('status').textContent=copy('complete');refresh();
-  const [x,y]=project(player[0],player[1]);
+  const [x,y]=project(...point);
   if(x<30||x>width-30||y<35||y>heightPx-40)center();
  }
  requestAnimationFrame(frame);
