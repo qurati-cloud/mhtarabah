@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>نبني حارتنا</title><link rel="stylesheet" href="neighborhood/style.css"></head>
+<body><main class="town">
+ <div class="town-heading"><a href="games.html" data-text-key="town:back">كل الألعاب</a><h1 data-text-key="town:title">نبني حارتنا</h1></div>
+ <section class="workbench">
+  <div class="viewport">
+   <canvas id="town-view" aria-label="خريطة الحارة"></canvas>
+   <div class="view-controls">
+    <button type="button" id="zoom-in" aria-label="تكبير">＋</button><button type="button" id="zoom-out" aria-label="تصغير">−</button>
+    <button type="button" id="center" aria-label="العودة إلى الشخصية">◎</button>
+   </div>
+  </div>
+  <aside class="tools">
+   <div class="tabs">
+    <button type="button" id="missions" aria-pressed="true" data-text-key="town:missions">المهمات</button>
+    <button type="button" id="free" aria-pressed="false" data-text-key="town:free">البناء الحر</button>
+   </div>
+   <div id="mission-card"><h2 id="mission-title"></h2><p id="mission-description"></p><p id="mission-count"></p></div>
+   <div class="tabs" aria-label="الشخصية">
+    <button type="button" id="mohammad" aria-pressed="true" data-text-key="town:mohammad">محمد</button>
+    <button type="button" id="habiba" aria-pressed="false" data-text-key="town:habiba">حبيبة</button>
+   </div>
+   <div class="tabs" aria-label="أدوات اللعبة">
+    <button type="button" data-tool="build" aria-pressed="true" data-text-key="town:build">بناء</button>
+    <button type="button" data-tool="remove" aria-pressed="false" data-text-key="town:remove">إزالة</button>
+    <button type="button" data-tool="walk" aria-pressed="false" data-text-key="town:walk">مشي</button>
+   </div>
+   <div id="palette" aria-label="قطع البناء"></div>
+   <div class="tabs">
+    <button type="button" id="undo" disabled data-text-key="town:undo">تراجع</button>
+    <button type="button" id="redo" disabled data-text-key="town:redo">إعادة</button>
+    <button type="button" id="reset" data-text-key="town:reset">حارة جديدة</button>
+   </div>
+   <p data-text-key="town:help">اضغط على الخريطة لاستخدام الأداة المحددة، واسحبها لتحريك المشهد. استخدم الأسهم للمشي.</p>
+   <p id="status" role="status"></p>
+  </aside>
+ </section>
+ <div id="town-copy" hidden>
+  <span data-text-key="town:bridgeTitle">جسر إلى المرفأ</span>
+  <span data-text-key="town:bridgeBody">ابنِ طبقة واحدة فوق الخانات الثلاث المضيئة في الماء، ثم اختر «مشي» واضغط على المرفأ لعبور الجسر.</span>
+  <span data-text-key="town:gardenTitle">حديقة المرفأ</span>
+  <span data-text-key="town:gardenBody">ازرع ثلاث أشجار في الخانات المضيئة قرب المرفأ.</span>
+  <span data-text-key="town:squareTitle">ساحة الحارة</span>
+  <span data-text-key="town:squareBody">غطِّ الخانات الست ببلاط من لونين على الأقل.</span>
+  <span data-text-key="town:doneTitle">اكتملت مهمات الحارة!</span>
+  <span data-text-key="town:doneBody">أكمل بناء حارتك كما تحب.</span>
+  <span data-text-key="town:saved">حُفظت حارتك على هذا الجهاز.</span>
+  <span data-text-key="town:storage">تعذّر الحفظ على هذا الجهاز.</span>
+  <span data-text-key="town:blocked">اختر وجهة يمكنك الوصول إليها.</span>
+  <span data-text-key="town:placement">هذه الخانة غير متاحة لهذه القطعة.</span>
+  <span data-text-key="town:confirm">هل تريد بدء حارة جديدة؟ سيُستبدل البناء الحالي.</span>
+  <span data-text-key="town:complete">أحسنت! اكتملت المهمة.</span>
+ </div>
+</main>
+<script type="module" src="neighborhood/game.js"></script>
+<script type="module" src="auth/navigation.js"></script>
+</body></html>
