@@ -107,13 +107,16 @@ try {
  const page = location.pathname.split('/').pop() || 'index.html';
  const headings = [...document.querySelectorAll('h1,h2,.hero p,.menu-card strong,.menu-card span')]
   .filter(node => !node.closest('#mh-shared-nav,#mh-brand-header,#daily-editor,#question-editor,#users,#content')
-   && node.children.length === 0 && node.textContent.trim());
+   && !node.dataset.textKey && node.children.length === 0 && node.textContent.trim());
  const fields = headings.map((node, index) => ({node, key: page + ':' + index}));
  const cardFields = isHome
   ? [...document.querySelectorAll('#home .home-card strong[data-text-key]')]
    .map(node => ({node, key: node.dataset.textKey}))
   : [];
- fields.push(...cardFields);
+ const explicit = [...document.querySelectorAll('[data-text-key]')]
+  .filter(node => !cardFields.some(field => field.node === node))
+  .map(node => ({node, key: node.dataset.textKey}));
+ fields.push(...cardFields, ...explicit);
  for (const field of fields) field.defaultText = field.node.textContent;
 
  function showTexts(snapshot) {
@@ -177,7 +180,7 @@ try {
      transaction.set(ref, {value: {...previous, ...updates}}, {merge: true});
     });
     if (!isHome) {
-     for (const {key, node} of changed) node.textContent = updates[key];
+     for (const {key, node} of fields) if (Object.hasOwn(updates, key)) node.textContent = updates[key];
     }
     dialog.close();
    } catch (error) {
@@ -208,7 +211,9 @@ try {
     : (await data.getDoc(data.doc(db, 'roles', user.uid))).data()?.role;
    if (change !== authChange || !['admin', 'editor'].includes(role)) return;
 
-   const editor = button('تحرير عناوين الصفحة', () => openTextEditor(fields));
+   const editable = [...new Map(fields.map(field => [field.key, field])).values()];
+   const editor = button(page === 'runner.html' ? 'تحرير نصوص اللعبة' : 'تحرير عناوين الصفحة',
+     () => openTextEditor(editable));
    editor.id = 'mh-text-editor';
    nav.insertBefore(editor, panel);
    controls.push(editor);

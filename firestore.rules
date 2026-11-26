@@ -95,7 +95,7 @@ service cloud.firestore {
           && !existsAfter(deletionPath(uid, profileId))
           && (key in ['mh_capitals_v1', 'mh_math_v1', 'mh_word_problems_v1',
                       'mh_obstacles_v1', 'mh_flight_endless_record_v1',
-                      'mh_submarine_endless_record_v1', 'mh-prayer-v1', 'mh-awrad-v1']
+                      'mh_submarine_endless_record_v1', 'mh_runner_record_v1', 'mh-prayer-v1', 'mh-awrad-v1']
               || key.matches('mh-daily-v1:[0-9]{4}-[0-9]{2}-[0-9]{2}'))
           && request.resource.data.keys().hasOnly(['value'])
           && (request.resource.data.value is list || request.resource.data.value is map);

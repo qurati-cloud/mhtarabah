@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>سباق النجوم | محمد وحبيبة</title>
+<link rel="stylesheet" href="runner/runner.css">
+<main class="runner">
+  <div class="runner-heading">
+    <a href="games.html" data-text-key="runner:back">كل الألعاب</a>
+    <h1 data-text-key="runner:title">سباق النجوم</h1>
+  </div>
+  <section id="track" aria-label="مضمار سباق النجوم">
+    <canvas id="world"></canvas>
+    <div id="hud" hidden>
+      <div id="p1Hud" class="player-stat">
+        <span class="avatar-icon" id="p1Portrait"></span>
+        <span><b id="p1Distance">٠</b> <span data-text-key="runner:metres">م</span></span>
+        <span>★ <b id="p1Stars">٠</b></span>
+        <small id="p1Out" data-text-key="runner:out" hidden>خرج من الجولة</small>
+      </div>
+      <button id="pause" type="button" data-text-key="runner:pause">إيقاف مؤقت</button>
+      <div id="p2Hud" class="player-stat" hidden>
+        <span class="avatar-icon habiba"></span>
+        <span><b id="p2Distance">٠</b> <span data-text-key="runner:metres">م</span></span>
+        <span>★ <b id="p2Stars">٠</b></span>
+        <small id="p2Out" data-text-key="runner:out" hidden>خرج من الجولة</small>
+      </div>
+    </div>
+    <div id="menu" class="scrim">
+      <div class="glass">
+        <p class="eyebrow" data-text-key="runner:menu">اختر طريقة اللعب</p>
+        <div class="modes">
+          <button type="button" data-mode="solo" data-text-key="runner:solo" aria-pressed="true">لاعب واحد</button>
+          <button type="button" data-mode="duo" data-text-key="runner:duo" aria-pressed="false">لاعبان</button>
+        </div>
+        <div id="avatars" class="avatars">
+          <button type="button" data-avatar="mohammad" aria-pressed="true">
+            <span class="portrait mohammad"></span><strong data-text-key="runner:mohammad">محمد</strong>
+          </button>
+          <button type="button" data-avatar="habiba" aria-pressed="false">
+            <span class="portrait habiba"></span><strong data-text-key="runner:habiba">حبيبة</strong>
+          </button>
+        </div>
+        <p id="soloHelp" data-text-key="runner:soloHelp">اسحب أو استخدم الأسهم للتحرك والقفز والانخفاض.</p>
+        <p id="duoHelp" data-text-key="runner:duoHelp" hidden>محمد يستعمل W A S D، وحبيبة تستعمل الأسهم. استخدما مجموعتي الأزرار على شاشة اللمس.</p>
+        <p class="personal"><span data-text-key="runner:best">الرقم القياسي</span> <b id="bestDistance">٠</b> <span data-text-key="runner:metres">م</span> · ★ <b id="bestStars">٠</b></p>
+        <button class="primary" id="start" type="button" data-text-key="runner:start">ابدأ السباق</button>
+        <p id="graphicsError" role="status" data-text-key="runner:graphics" hidden>تعذّر تشغيل الرسومات ثلاثية الأبعاد على هذا الجهاز.</p>
+      </div>
+    </div>
+    <div id="overlay" class="scrim" hidden>
+      <div class="glass">
+        <p id="pausedTitle" class="overlay-title" data-text-key="runner:paused" hidden>السباق متوقف مؤقتًا</p>
+        <p id="endTitle" class="overlay-title" data-text-key="runner:end" hidden>انتهت الجولة</p>
+        <p id="result" class="personal" hidden></p>
+        <div class="modes">
+          <button class="primary" id="resume" type="button" data-text-key="runner:resume">متابعة</button>
+          <button class="primary" id="again" type="button" data-text-key="runner:again" hidden>إعادة اللعب</button>
+          <button id="change" type="button" data-text-key="runner:change">اختيار اللاعبين</button>
+        </div>
+      </div>
+    </div>
+  <div id="touchControls" hidden>
+    <div class="pad" id="pad1">
+    <button type="button" data-command="left"><span aria-hidden="true">←</span><small data-text-key="runner:left">يسار</small></button>
+    <button type="button" data-command="jump"><span aria-hidden="true">↑</span><small data-text-key="runner:jump">قفز</small></button>
+    <button type="button" data-command="down"><span aria-hidden="true">↓</span><small data-text-key="runner:down">انخفاض</small></button>
+    <button type="button" data-command="right"><span aria-hidden="true">→</span><small data-text-key="runner:right">يمين</small></button>
+    </div>
+    <div class="pad" id="pad2" hidden>
+    <button type="button" data-command="left"><span aria-hidden="true">←</span><small data-text-key="runner:left">يسار</small></button>
+    <button type="button" data-command="jump"><span aria-hidden="true">↑</span><small data-text-key="runner:jump">قفز</small></button>
+    <button type="button" data-command="down"><span aria-hidden="true">↓</span><small data-text-key="runner:down">انخفاض</small></button>
+    <button type="button" data-command="right"><span aria-hidden="true">→</span><small data-text-key="runner:right">يمين</small></button>
+    </div>
+  </div>
+
+  </section>
+  <p id="recordStatus" role="status" data-text-key="runner:sync" hidden>تعذّرت مزامنة الرقم القياسي.</p>
+</main>
+<script type="module" src="runner/runner.js"></script>
+<script type="module" src="auth/navigation.js"></script>
+</html>

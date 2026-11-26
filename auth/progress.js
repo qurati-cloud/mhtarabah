@@ -1,6 +1,12 @@
 import { connect } from './firebase.js';
 
 export let progress = localStorage;
+export let updateProgress = async (key, update) => {
+  const previous = JSON.parse(progress.getItem(key) || 'null');
+  const next = update(previous);
+  if (JSON.stringify(previous) !== JSON.stringify(next)) progress.setItem(key, JSON.stringify(next));
+  return next;
+};
 const profileId = localStorage.getItem('mh-selected-profile');
 
 function changes(previous, next, data) {
@@ -66,6 +72,18 @@ if (profileId && /^[a-zA-Z0-9_-]+$/.test(profileId)) {
     const snapshot = await data.getDocs(collection);
     let pending = 0, failed = false;
     const values = new Map(snapshot.docs.map(doc => [doc.id, doc.data().value]));
+    updateProgress = async (key, update) => {
+      if (!valid()) throw new Error('Family session changed');
+      const ref = data.doc(collection, key);
+      const value = await data.runTransaction(db, async transaction => {
+        const previous = (await transaction.get(ref)).data()?.value;
+        const next = update(previous);
+        if (JSON.stringify(previous) !== JSON.stringify(next)) transaction.set(ref, {value: next});
+        return next;
+      });
+      if (valid()) values.set(key, value);
+      return value;
+    };
     progress = {
       getItem(key) {
         if (!valid()) return null;
