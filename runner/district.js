@@ -36,7 +36,6 @@ export function districtModel(index) {
         add('dome',0xc7bba7,x,.38,z-.45,.51,.39,.25);
       }
     }
-    label('مقبرة',8.15,1.14,length/2+.05,2.4,.73);
     return shapes;
   }
 
@@ -82,8 +81,7 @@ export function districtModel(index) {
     if(kind==='restaurant') {
       for(let i=0;i<8;i++)box(i%2?trim:0xffe7bf,7.65+i*.48,2.32,length/2+.58,.49,.19,1.25);
     }
-    const name={school:'مدرسة',restaurant:'مطعم',hospital:'مستشفى'}[kind];
-    label(name,9.65,height-.54,length/2+.14,3,1);
+    if(kind==='restaurant') label('مطعم',9.65,height-.54,length/2+.14,3,1);
     if(kind==='hospital') label('☾',11.75,height-1.48,length/2+.16,1.15,1.25);
   }
   return shapes;
