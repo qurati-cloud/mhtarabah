@@ -1,6 +1,7 @@
 import { progress, updateProgress } from '../auth/progress.js';
 import { makeRun, move, step } from './simulation.js';
 import { createWorld } from './world.js';
+import { createCanvasWorld } from './fallback.js';
 
 const el = id => document.getElementById(id);
 const track = el('track');
@@ -164,12 +165,13 @@ for (const [index, id] of ['pad1','pad2'].entries()) {
   });
 }
 let swipe;
-el('world').addEventListener('pointerdown', event => {
+for (const canvas of [el('world'),el('worldFallback')]) {
+canvas.addEventListener('pointerdown', event => {
   if (state !== 'playing' || mode !== 'solo') return;
   swipe = {id: event.pointerId, x: event.clientX, y: event.clientY};
   event.currentTarget.setPointerCapture(event.pointerId);
 });
-el('world').addEventListener('pointermove', event => {
+canvas.addEventListener('pointermove', event => {
   if (!swipe || event.pointerId !== swipe.id) return;
   const dx = event.clientX - swipe.x, dy = event.clientY - swipe.y;
   if (Math.max(Math.abs(dx),Math.abs(dy)) < 24) return;
@@ -178,7 +180,8 @@ el('world').addEventListener('pointermove', event => {
   swipe = undefined;
 });
 for (const type of ['pointerup','pointercancel']) {
-  el('world').addEventListener(type, () => { swipe = undefined; });
+  canvas.addEventListener(type, () => { swipe = undefined; });
+}
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -204,7 +207,18 @@ function frame(time) {
   requestAnimationFrame(frame);
 }
 try {
-  graphics = createWorld(el('world'));
+  const canvas = el('world');
+  let context;
+  try { context = canvas.getContext('webgl2', {antialias:true}); } catch {}
+  if (context) {
+    try { graphics = createWorld(canvas, context); } catch (error) { console.warn(error); }
+  }
+  if (!graphics) {
+    canvas.hidden = true;
+    const fallback = el('worldFallback');
+    fallback.hidden = false;
+    graphics = createCanvasWorld(fallback);
+  }
   syncMenu();
   new ResizeObserver(() => {
     graphics.resize();

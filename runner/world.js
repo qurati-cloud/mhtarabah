@@ -162,8 +162,8 @@ function makeHazard(kind) {
   return {group};
 }
 
-export function createWorld(canvas) {
-  const renderer = new THREE.WebGLRenderer({canvas, antialias: true, alpha: false, powerPreference: 'high-performance'});
+export function createWorld(canvas, context) {
+  const renderer = new THREE.WebGLRenderer({canvas, context});
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.65));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   const scene = new THREE.Scene();
