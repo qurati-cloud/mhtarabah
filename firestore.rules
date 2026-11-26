@@ -61,9 +61,12 @@ service cloud.firestore {
           && score.distance is int && score.distance >= 1 && score.distance <= 10000000
           && score.stars is int && score.stars >= 0 && score.stars <= score.distance * 2;
       }
+      function runnerPlayer() {
+        return verified() || (request.auth != null && request.auth.token.firebase.sign_in_provider == 'anonymous');
+      }
       allow get: if mode in ['solo', 'duo'];
-      allow create: if verified() && validRecord();
-      allow update: if verified() && validRecord()
+      allow create: if runnerPlayer() && validRecord();
+      allow update: if runnerPlayer() && validRecord()
         && request.resource.data.distance >= resource.data.distance
         && request.resource.data.stars >= resource.data.stars;
     }

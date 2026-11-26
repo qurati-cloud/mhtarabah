@@ -1,5 +1,5 @@
 import { progress, updateProgress } from '../auth/progress.js';
-import { connect } from '../auth/firebase.js';
+import { connect, connectRunnerGuest } from '../auth/firebase.js';
 import { makeRun, move, step } from './simulation.js';
 import { createWorld } from './world.js';
 import { createCanvasWorld } from './fallback.js';
@@ -58,11 +58,12 @@ function maximum(a = blank, b = blank) {
 }
 async function publishGlobal(currentMode, score) {
   const connection = leaderboard;
-  if (!connection?.auth.currentUser?.emailVerified) return;
+  if (!connection) return;
   const known = globalRecords[currentMode];
   if (known && known.distance >= score.distance && known.stars >= score.stars) return;
   if (!score.distance && !score.stars) return;
-  const {data, db} = connection;
+  const {data, db} = connection.auth.currentUser?.emailVerified
+    ? connection : await connectRunnerGuest();
   await data.runTransaction(db, async transaction => {
     const ref = data.doc(db, 'runnerWorldRecords', currentMode);
     const current = (await transaction.get(ref)).data() || blank;

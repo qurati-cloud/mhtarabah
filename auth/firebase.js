@@ -49,3 +49,20 @@ export async function provisionFamily({ appApi, authApi, data, db }, entry, chil
     await appApi.deleteApp(app);
   }
 }
+
+let runnerGuest;
+export function connectRunnerGuest() {
+  return runnerGuest ??= (async () => {
+    const {appApi, authApi, data} = await connect();
+    const name = 'runner-guest';
+    const app = appApi.getApps().find(candidate => candidate.name === name) ||
+      appApi.initializeApp(firebaseConfig, name);
+    const auth = authApi.getAuth(app);
+    await auth.authStateReady();
+    if (!auth.currentUser) await authApi.signInAnonymously(auth);
+    return {data, db: data.getFirestore(app)};
+  })().catch(error => {
+    runnerGuest = undefined;
+    throw error;
+  });
+}
