@@ -2,6 +2,8 @@ import * as THREE from './vendor/three.module.min.js';
 import { laneWidth, obstacles, powerups, attractedPlayer } from './simulation.js';
 import {trackFeatures, nextSigns, adLines, railwayScene} from './track.js';
 
+import {districtCount, districtModel, roadsidePhrases, makeTextPanel} from './district.js';
+
 const box = new THREE.BoxGeometry(1, 1, 1);
 const sphere = new THREE.SphereGeometry(1, 18, 12);
 const wheel = new THREE.CylinderGeometry(1, 1, 1, 12);
@@ -70,18 +72,6 @@ function waterfrontSegment(index) {
   }
   tree(segment, -6.37, -3.7, index % 2);
   tree(segment, 6.2, 6, index % 2);
-  const base = [0xf2bc89, 0xe9ddbc, 0xe8a48b, 0xc7dbca][index % 4];
-  const trim = [0x2a7c82, 0x956148, 0x457a76][index % 3];
-  const height = 4.5 + index % 3 * 0.85;
-  block(segment, base, 10.15, height / 2-.05, -2, 5.2, height, 11);
-  block(segment, 0xd5c2a4, 10.15, height-.03, -2, 5.5, .24, 11.25);
-  for (const z of [-5.6, -2, 1.6]) {
-    block(segment, trim, 7.48, 1.12, z, .14, 2.09, 1.2);
-    block(segment, 0x79a5ad, 7.47, height-.95, z, .15, 1.01, 1.06);
-    block(segment, trim, 7.45, height-1.43, z, .31, .13, 1.14);
-    const awning = block(segment, trim, 7.03, 2.41, z, 1.09, .13, 1.5);
-    awning.rotation.z = .15;
-  }
   return segment;
 }
 
@@ -95,23 +85,18 @@ function makeAvatar(avatar) {
   group.add(body);
   const torso = new THREE.Group();
   body.add(torso);
-  const robe = new THREE.CylinderGeometry(.26, girl ? .43 : .39, 1.19, 14);
-  part(torso, robe, cloth, 0, .76, 0, 1, 1, .65);
-  if (!girl) block(torso,0x233b52,0,.75,.217,.08,1.1,.02);
-  const hem = new THREE.CylinderGeometry(girl?.426:.386,girl?.43:.39,.035,14);
-  part(torso,hem,trim,0,.184,0,1,1,.65);
-  block(torso, trim, -.13, 1.05, .182, .027, .57, .023);
-  block(torso, trim, .13, 1.05, .182, .027, .57, .023);
+  const robe = new THREE.CylinderGeometry(.27, girl ? .45 : .41, 1.36, 18);
+  part(torso, robe, cloth, 0, .695, 0, 1, 1, .72);
   oval(torso, girl ? trim : 0x352825, 0, 1.63, .02, .255, .274, .225);
   oval(torso, skin, 0, 1.61, -.1, .202, .21, .13);
   if (girl) {
     oval(torso, trim, 0, 1.39, .028, .265, .17, .21);
     oval(torso, cloth, .04, 1.24, .159, .175, .16, .076);
   } else {
-    oval(torso, cloth, 0, 1.77, .02, .248, .13, .222);
-    block(torso, trim, 0, .85, .19, .47, .035, .025);
+    part(torso,new THREE.CylinderGeometry(.218,.245,.17,24),0xf2eee0,0,1.81,.008,1,1,.95);
+    oval(torso,0xf2eee0,0,1.89,.008,.218,.052,.207);
   }
-  const arms = [], legs = [];
+  const arms = [];
   for (const side of [-1, 1]) {
     const arm = new THREE.Group();
     arm.position.set(side * .29, 1.31, .02);
@@ -119,16 +104,10 @@ function makeAvatar(avatar) {
     oval(arm, cloth, 0, -.19, 0, .128, .26, .125);
     oval(arm, skin, 0, -.408, 0, .075, .084, .075);
     arms.push(arm);
-    const leg = new THREE.Group();
-    leg.position.set(side * .134, .75, 0);
-    body.add(leg);
-    oval(leg, girl ? 0x67356f : 0x203554, 0, -.27, 0, .11, .32, .11);
-    oval(leg, 0xe9e1d2, 0, -.66, -.07, .115, .084, .18);
-    legs.push(leg);
   }
   const trail = oval(body, 0x56d9f5, 0, .33, .33, .22, .32, .16);
   const aura = part(body, ringGeo, new THREE.MeshBasicMaterial({color:0x84e8af}), 0, .84, 0, 1.62, 1.96, 1);
-  return {group, body, torso, legs, arms, ground, trail, aura};
+  return {group, body, torso, arms, ground, trail, aura};
 }
 
 function makeHazard(kind) {
@@ -325,6 +304,38 @@ function railway() {
   return {track,station,train,riders};
 }
 
+function districtPrototype(index, labels) {
+  const group = new THREE.Group();
+  for(const {type,color,x,y,z,w,h,d,text} of districtModel(index)) {
+    if (type==='label') {
+      if(!labels.has(text)) labels.set(text,panelMaterial(text,false));
+      part(group,new THREE.PlaneGeometry(w,h),labels.get(text),x,y,z,1,1,1);
+    } else if(type==='box') block(group,color,x,y,z,w,h,d);
+    else if(type==='dome') oval(group,color,x,y,z,w,h,d);
+    else {
+      const sides = type==='roof'?4:12;
+      const geometry = new THREE.CylinderGeometry(type==='column'?1:0,1,1,sides);
+      if(type==='roof') geometry.rotateY(Math.PI/4);
+      const width = type==='roof'?w*1.42:w;
+      const depth = type==='roof'?d*1.42:d;
+      part(group,geometry,color,x,y,z,width,h,depth);
+    }
+  }
+  return group;
+}
+function panelMaterial(text, roadside) {
+  const map = new THREE.CanvasTexture(makeTextPanel(text,roadside));
+  map.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.MeshBasicMaterial({map});
+}
+function roadPanel() {
+  const group = new THREE.Group();
+  for(const side of [-1,1]) block(group,0x425658,side*2.2,1.22,0,.15,2.44,.19);
+  const face = part(group,new THREE.PlaneGeometry(5.65,2.31),
+    new THREE.MeshBasicMaterial({color:0x143b42}),0,2.68,.09,1,1,1);
+  return {group,face,text:''};
+}
+
 export function createWorld(canvas, context) {
   const renderer = new THREE.WebGLRenderer({canvas, context});
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.65));
@@ -347,6 +358,11 @@ export function createWorld(canvas, context) {
     scene.add(group);
     return group;
   });
+  const labels = new Map();
+  const district = Array.from({length:districtCount},(_,i)=>districtPrototype(i, labels));
+  const districtSlots = Array.from({length:7},()=>new THREE.Group());
+  const phraseBoards = Array.from({length:2},roadPanel);
+  scene.add(...districtSlots,...phraseBoards.map(board=>board.group));
   const treasurePath = block(scene,0x987549,-5.7,.133,0,1.24,.024,1);
   treasurePath.visible = false;
   const rail = railway();
@@ -440,6 +456,32 @@ export function createWorld(canvas, context) {
       piece.visible = !upcoming.some(({kind,start,length})=>kind === 'bridge' &&
         middle > start+12 && middle < start+length-12);
     }
+    for (const [i,slot] of districtSlots.entries()) {
+      const index = segment+i;
+      const prototype = index%district.length;
+      if(slot.userData.prototype !== prototype) {
+        slot.clear();
+        slot.add(district[prototype].clone(true));
+        slot.userData.prototype = prototype;
+      }
+      slot.position.z = 11-i*24+offset;
+      const middle = run.distance-slot.position.z;
+      slot.visible = !upcoming.some(({kind,start,length})=>kind==='bridge' &&
+        middle>start && middle<start+length);
+    }
+    const phrases = roadsidePhrases(run.distance,run.roadPhrases);
+    for(const [i,board] of phraseBoards.entries()) {
+      const sign=phrases[i];
+      board.group.visible = Boolean(sign) && sign.at-run.distance<104 && sign.at-run.distance>1;
+      if(!board.group.visible) continue;
+      if(board.text!==sign.text) {
+        board.face.material.map?.dispose();
+        board.face.material.dispose();
+        board.face.material = panelMaterial(sign.text,true);
+        board.text = sign.text;
+      }
+      board.group.position.set(sign.x,0,run.distance-sign.at);
+    }
     const objects = new Set(run.objects);
     for (const [object, model] of renderObjects) if (!objects.has(object)) recycle(object, model);
     for (const object of run.objects) {
@@ -488,7 +530,6 @@ export function createWorld(canvas, context) {
       model.body.rotation.z = (player.x - player.lane * laneWidth) * .16;
       for (let i = 0; i < 2; i++) {
         const swing = gait * (i ? 1 : -1);
-        model.legs[i].rotation.x = slide ? -.47 : !grounded ? -.33 + i*.6 : swing*.74;
         model.arms[i].rotation.x = slide ? -.62 : !grounded ? -.81 : -swing*.64;
       }
     });

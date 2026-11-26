@@ -1,5 +1,6 @@
 import {laneWidth, obstacles, powerups, attractedPlayer} from './simulation.js';
 import {trackFeatures, nextSigns, adLines, railwayScene} from './track.js';
+import {districtCount, districtModel, roadsidePhrases, makeTextPanel} from './district.js';
 
 // Perspective canvas renderer for devices that cannot open a WebGL context.
 export function createCanvasWorld(canvas) {
@@ -111,13 +112,6 @@ export function createCanvasWorld(canvas) {
     }
   }
   function segment(z, index) {
-    const palette=stone[(index%stone.length+stone.length)%stone.length];
-    const building=4.3+Math.abs(index%3)*.7;
-    prism(10,0,z+7,4.9,building,11,palette);
-    prism(10,building,z+7,5.08,.18,11.2,stone[1]);
-    prism(7.76,2.3,z+3.1,1.16,.14,2.3,index%2 ? accent : gold);
-    prism(7.76,2.3,z+8,1.16,.14,2.3,index%2 ? accent : gold);
-    prism(10,1.14,z+1.4,1,.96,.15,blue);
     const [tx,ty,s]=project(-6.1,1.52,z+4);
     prism(-6.1,0,z+4,.17,1.35,.18,bark);
     ellipse('#477e59',tx,ty,s*.52,s*.63);
@@ -127,11 +121,44 @@ export function createCanvasWorld(canvas) {
       prism(side*5.14,1.97,z+10,.36,.14,.22,light);
     }
   }
+  const panels = new Map();
+  const layouts = Array.from({length:districtCount},(_,i)=>districtModel(i));
+  const material = color => '#'+color.toString(16).padStart(6,'0');
+  const shade = (color,factor) => material(
+    Math.round((color>>16)*factor)*65536 +
+    Math.round(((color>>8)&255)*factor)*256 + Math.round((color&255)*factor));
+  function panel(text,x,y,z,w,h,roadside) {
+    const key=(roadside?'road:':'district:')+text;
+    if(!panels.has(key)) {
+      if(panels.size>=48)panels.delete(panels.keys().next().value);
+      panels.set(key,makeTextPanel(text,roadside));
+    }
+    const [px,py,s]=project(x,y,z);
+    ctx.drawImage(panels.get(key),px-w*s/2,py-h*s/2,w*s,h*s);
+  }
+  function district(z,index) {
+    for(const shape of layouts[index%layouts.length]) {
+      const {type,color,x,y,z:offset,w,h,d,text}=shape;
+      const depth=z-offset;
+      if(depth<-6.3)continue;
+      if(type==='label')panel(text,x,y,depth,w,h,false);
+      else if(type==='box'||type==='column')prism(x,y-h/2,depth,w,h,d,
+        [material(color),shade(color,.76),shade(color,.9)]);
+      else if(type==='dome') {
+        const [px,py,s]=project(x,y,depth);
+        ellipse(material(color),px,py,w*s,h*s);
+      } else {
+        polygon(material(color),project(x-w,y-h/2,depth-d/2),project(x,y+h/2,depth-d/2),
+          project(x+w,y-h/2,depth-d/2));
+        polygon(shade(color,.77),project(x+w,y-h/2,depth-d/2),project(x,y+h/2,depth-d/2),
+          project(x,y+h/2,depth+d/2),project(x+w,y-h/2,depth+d/2));
+      }
+    }
+  }
   function avatar(player, index, time, duo) {
     const girl=player.avatar==='habiba';
     const cloth=girl?'#9c5cab':'#203d6c';
     const highlight=girl?'#dfa7d9':'#edc269';
-    const shadow=girl?'#643975':'#172c51';
     const x=player.x+(duo?(index ? .34 : -.34):0);
     const [gx,gy,s] = project(x,0,0);
     const [px,py] = project(x,player.y,0);
@@ -145,24 +172,20 @@ export function createCanvasWorld(canvas) {
     ctx.scale(s,s*scale);
     ctx.lineCap='round';
     for(const side of [-1,1]) {
-      const legX=side*.14;
-      const legY=-.12+gait*side*.12;
-      ctx.strokeStyle=shadow;ctx.lineWidth=.19;ctx.beginPath();
-      ctx.moveTo(legX,-.76);ctx.lineTo(legX+gait*side*.087,legY);ctx.stroke();
-      ellipse('#efe6cf',legX+gait*side*.087,legY,.126,.07);
       ctx.strokeStyle=cloth;ctx.lineWidth=.17;ctx.beginPath();
       ctx.moveTo(side*.225,-1.27);ctx.lineTo(side*.34,-.82-gait*side*.1);ctx.stroke();
       ellipse('#c88365',side*.34,-.82-gait*side*.1,.085,.075);
     }
-    polygon(cloth,[-.26,-1.4],[.26,-1.4],[girl?.44:.39,-.19],[-(girl?.44:.39),-.19]);
-    polygon(highlight,[-.37,-.22],[.37,-.22],[.39,-.18],[-.39,-.18]);
-    polygon(highlight,[-.16,-1.36],[-.125,-1.38],[-.095,-.69],[-.13,-.68]);
-    polygon(highlight,[.16,-1.36],[.125,-1.38],[.095,-.69],[.13,-.68]);
+    polygon(cloth,[-.27,-1.4],[.27,-1.4],[girl?.45:.41,-.014],[-(girl?.45:.41),-.014]);
     ellipse(girl ? highlight : '#332c26',0,-1.57,.245,.259);
     if (girl) {
       ellipse(cloth,.04,-1.40,.22,.135);
       ellipse(highlight,-.05,-1.31,.175,.11);
-    } else ellipse(cloth,0,-1.74,.24,.12);
+    } else {
+      ctx.fillStyle='#f2eee0';
+      ctx.fillRect(-.233,-1.88,.466,.176);
+      ellipse('#fff8eb',0,-1.878,.232,.052);
+    }
     ctx.restore();
   }
   function draw(run,time) {
@@ -194,6 +217,21 @@ export function createCanvasWorld(canvas) {
         run.distance+item.z+5>=start && run.distance+item.z+5<start+length))
       .map(item=>({...item,draw:()=>segment(item.z,item.index)}));
     const items=[...scenery];
+    const districtIndex=Math.floor(run.distance/24);
+    for(let i=0;i<7;i++){
+      const z=13+i*24-run.distance%24;
+      if(z < -8 || features.some(({kind,start,length})=>kind==='bridge' &&
+        run.distance+z>start && run.distance+z<start+length))continue;
+      items.push({z,draw:()=>district(z,districtIndex+i)});
+    }
+    for(const sign of roadsidePhrases(run.distance,run.roadPhrases)) {
+      const z=sign.at-run.distance;
+      if(z<1||z>104)continue;
+      items.push({z,draw:()=>{
+        for(const side of [-1,1])prism(sign.x+side*2.2,0,z,.15,2.45,.19,blue);
+        panel(sign.text,sign.x,2.68,z-.11,5.65,2.31,true);
+      }});
+    }
     for (const side of [-1,1]) quad('#becbd0',-12+side*.73-.041,-12+side*.73+.041,-6.71,135,.06);
     for(let z=122-run.distance%2.5;z>-6.7;z-=2.5) quad('#555459',-13.1,-10.9,z,z+.22,.043);
     const rail=railwayScene(run.distance);

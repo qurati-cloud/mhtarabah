@@ -15,6 +15,11 @@ let mode = 'solo';
 let avatar = 'mohammad';
 let state = 'menu';
 let run, graphics;
+const phraseSource = el('runner-road-phrases');
+const readPhrases = () => [...phraseSource.children].map(entry=>entry.textContent.trim()).filter(Boolean);
+new MutationObserver(()=>{
+  if (run) run.roadPhrases = readPhrases();
+}).observe(phraseSource,{subtree:true,childList:true,characterData:true});
 let last = 0, lastSave = 0, saving = Promise.resolve();
 let records = {};
 const globalRecords = {};
@@ -35,6 +40,7 @@ function syncMenu() {
   showBest();
   if (graphics) {
     run = makeRun(selection());
+  run.roadPhrases = readPhrases();
     graphics.reset(run);
     graphics.draw(run, 0);
   }
@@ -141,6 +147,7 @@ function paintHud() {
 function begin() {
   if (!graphics) return;
   run = makeRun(selection());
+  run.roadPhrases = readPhrases();
   graphics.reset(run);
   lastSave = 0;
   last = 0;

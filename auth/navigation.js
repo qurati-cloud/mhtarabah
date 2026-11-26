@@ -115,7 +115,7 @@ try {
   : [];
  const explicit = [...document.querySelectorAll('[data-text-key]')]
   .filter(node => !cardFields.some(field => field.node === node))
-  .map(node => ({node, key: node.dataset.textKey}));
+  .map(node => ({node, key: node.dataset.textKey, label: node.dataset.editorLabel}));
  fields.push(...cardFields, ...explicit);
  for (const field of fields) field.defaultText = field.node.textContent;
 
@@ -127,7 +127,7 @@ try {
  }
 
  if (fields.length) {
-  if (isHome) data.onSnapshot(ref, showTexts, error => console.warn('Text loading failed', error));
+  if (isHome || page === 'runner.html') data.onSnapshot(ref, showTexts, error => console.warn('Text loading failed', error));
   else data.getDoc(ref).then(showTexts).catch(error => console.warn('Text loading failed', error));
  }
 
@@ -140,12 +140,13 @@ try {
   dialog.dir = 'rtl';
   dialog.style.cssText = 'width:min(85vw,520px);border:1px solid #e6ad65;border-radius:12px';
   const form = document.createElement('form');
-  const entries = selection.map(({node, key}) => {
+  const entries = selection.map(({node, key, label: fieldLabel}) => {
    const label = document.createElement('label');
-   label.textContent = node.textContent;
+   label.textContent = fieldLabel || node.textContent;
    const input = document.createElement('textarea');
    input.value = node.textContent;
-   input.required = true;
+   input.required = !fieldLabel;
+   if (fieldLabel) input.maxLength = 110;
    input.style.cssText = 'display:block;width:100%;box-sizing:border-box;margin:8px 0';
    input.oninput = () => input.setCustomValidity('');
    label.append(input);
@@ -160,7 +161,7 @@ try {
   form.append(save, cancel, status);
   form.onsubmit = async event => {
    event.preventDefault();
-   const blank = entries.find(({input}) => !input.value.trim());
+   const blank = entries.find(({input}) => input.required && !input.value.trim());
    if (blank) {
     blank.input.setCustomValidity('أدخل نصًا قبل الحفظ');
     blank.input.reportValidity();
@@ -211,7 +212,13 @@ try {
     : (await data.getDoc(data.doc(db, 'roles', user.uid))).data()?.role;
    if (change !== authChange || !['admin', 'editor'].includes(role)) return;
 
-   const editable = [...new Map(fields.map(field => [field.key, field])).values()];
+   const editable = [...new Map(fields.filter(field=>!field.label).map(field => [field.key, field])).values()];
+   const signs = fields.filter(field=>field.label);
+   if (signs.length) {
+    const signEditor = button('لافتات الطريق (٣٠)', () => openTextEditor(signs));
+    nav.insertBefore(signEditor,panel);
+    controls.push(signEditor);
+   }
    const editor = button(page === 'runner.html' ? 'تحرير نصوص اللعبة' : 'تحرير عناوين الصفحة',
      () => openTextEditor(editable));
    editor.id = 'mh-text-editor';

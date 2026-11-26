@@ -100,6 +100,16 @@
   </section>
   <p id="recordStatus" role="status" data-text-key="runner:sync" hidden>تعذّرت مزامنة الرقم القياسي.</p>
 </main>
+<div id="runner-road-phrases" hidden></div>
+<script>
+  const roadPhrases = document.getElementById('runner-road-phrases');
+  for (let slot = 1; slot <= 30; slot++) {
+    const entry = document.createElement('span');
+    entry.dataset.textKey = 'runner:roadPhrase:' + slot;
+    entry.dataset.editorLabel = 'لافتة ' + slot;
+    roadPhrases.append(entry);
+  }
+</script>
 <script type="module" src="runner/runner.js"></script>
 <script type="module" src="auth/navigation.js"></script>
 </html>
