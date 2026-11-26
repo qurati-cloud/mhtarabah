@@ -41,16 +41,27 @@ if (profileId && /^[a-zA-Z0-9_-]+$/.test(profileId)) {
     if (!user?.emailVerified || localStorage.getItem('mh-selected-owner') !== user.uid) throw new Error('Family session unavailable');
     const {auth, data, db} = connection;
     const collection = data.collection(db, 'families', user.uid, 'profiles', profileId, 'progress');
-    const profile = await data.getDoc(data.doc(db, 'families', user.uid, 'profiles', profileId));
-    if (!profile.exists()) throw new Error('Unknown profile');
+    const profileRef = data.doc(db, 'families', user.uid, 'profiles', profileId);
+    const profile = await data.getDocFromServer(profileRef);
+    if (!profile.exists() || profile.data().deleting) throw new Error('Unknown profile');
+    let active = true;
+    data.onSnapshot(profileRef, {includeMetadataChanges: true}, current => {
+      if (!current.metadata.fromCache && (!current.exists() || current.data().deleting)) {
+        active = false;
+      }
+    }, () => { active = false; });
     const link = document.getElementById('mh-family-link');
     if (link) link.textContent = profile.data().name + ' — تبديل المستخدم';
-    const valid = () => auth.currentUser?.uid === user.uid &&
+    const valid = () => active && auth.currentUser?.uid === user.uid &&
       localStorage.getItem('mh-selected-owner') === user.uid &&
       localStorage.getItem('mh-selected-profile') === profileId;
     auth.onAuthStateChanged(current => { if (current?.uid !== user.uid) location.replace('login.html'); });
     window.addEventListener('storage', event => {
-      if (['mh-selected-owner','mh-selected-profile'].includes(event.key) && !valid()) location.replace('login.html');
+      if (['mh-selected-owner','mh-selected-profile'].includes(event.key) && !valid()) {
+        if (auth.currentUser?.uid === user.uid && localStorage.getItem('mh-selected-owner') === user.uid &&
+            localStorage.getItem('mh-selected-profile')) location.reload();
+        else location.replace('login.html');
+      }
     });
     const snapshot = await data.getDocs(collection);
     let pending = 0, failed = false;

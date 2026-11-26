@@ -1,4 +1,5 @@
 import { connect } from './firebase.js';
+import { deleteProfile, reconcileProfileSelection } from './profiles.js';
 
 const el = id => document.getElementById(id);
 const selectedKey = 'mh-selected-profile';
@@ -34,6 +35,8 @@ function configure({auth, authApi, data, db}) {
   el("finish").onclick = () => { if (!firstId || !auth.currentUser) return; localStorage.setItem(ownerKey,auth.currentUser.uid); if(!localStorage.getItem(selectedKey)) localStorage.setItem(selectedKey,firstId); location.href="index.html"; };
   function show(user) {
     unsubscribe?.();
+    count = 0;
+    firstId = null;
     el('loginForm').hidden = Boolean(user);
     el('signOut').hidden = !user;
     el('verify').hidden = !user || user.emailVerified;
@@ -46,8 +49,9 @@ function configure({auth, authApi, data, db}) {
     if (!user?.emailVerified) return;
     data.setDoc(data.doc(db,'directory',user.uid),{email:user.email}).catch(e=>console.warn('Directory registration',e));
 
-    unsubscribe = data.onSnapshot(collection(user.uid), snapshot => {
-      count = snapshot.size; firstId = snapshot.docs[0]?.id; el("finish").hidden = !count; el("profileForm").hidden = count >= 20; el("childTitle").textContent = "ملف الولد " + (ordinals[count] || ""); el("addChild").textContent = "إضافة الولد " + (ordinals[count] || "");
+    unsubscribe = data.onSnapshot(collection(user.uid), {includeMetadataChanges: true}, snapshot => {
+      const {profiles} = reconcileProfileSelection(snapshot, user.uid);
+      count = profiles.length; firstId = profiles[0]?.id; el("finish").hidden = !count; el("profileForm").hidden = count >= 20; el("childTitle").textContent = "ملف الولد " + (ordinals[count] || ""); el("addChild").textContent = "إضافة الولد " + (ordinals[count] || "");
       const buttons = snapshot.docs.map(doc => {
         const button = document.createElement('button');
         button.type = 'button';
@@ -64,13 +68,18 @@ function configure({auth, authApi, data, db}) {
         const edit=document.createElement('button');edit.type='button';edit.textContent='تعديل البيانات';
         edit.onclick=()=>{const p=doc.data();const d=document.createElement('dialog');d.dir='rtl';const f=document.createElement('form');const fields={};for(const [k,label] of [['firstName','الاسم'],['lastName','اسم العائلة'],['gender','الجنس'],['birthDate','تاريخ الميلاد']]){const l=document.createElement('label');l.textContent=label;const x=document.createElement(k==='gender'?'select':'input');if(k==='gender'){x.add(new Option('ذكر','male'));x.add(new Option('أنثى','female'))}else{x.type=k==='birthDate'?'date':'text';x.maxLength=40;if(k==='birthDate')x.max=el('birthDate').max}x.required=true;x.value=p[k]|| (k==='firstName'?p.name:'');fields[k]=x;l.append(x);f.append(l)}const save=document.createElement('button');save.textContent='حفظ';const cancel=document.createElement('button');cancel.type='button';cancel.textContent='إلغاء';cancel.onclick=()=>d.close();f.append(save,cancel);d.append(f);document.body.append(d);d.onclose=()=>d.remove();f.onsubmit=e=>{e.preventDefault();busy(save,async()=>{const v=Object.fromEntries(Object.entries(fields).map(([k,x])=>[k,x.value.trim()]));await data.updateDoc(doc.ref,{...v,name:v.firstName+' '+v.lastName});d.close()})};d.showModal()};row.append(edit);
         const remove=document.createElement('button');remove.type='button';remove.textContent='حذف الملف';remove.style.background='#fce1dc';
-        remove.onclick=()=>{if(!confirm('هل تريد حذف ملف '+doc.data().name+' وإنجازاته نهائيًا؟'))return;busy(remove,async()=>{
-          const progress=await data.getDocs(data.collection(doc.ref,'progress'));
-          for(let i=0;i<progress.docs.length;i+=400){const batch=data.writeBatch(db);for(const p of progress.docs.slice(i,i+400))batch.delete(p.ref);await batch.commit();}
-          await data.deleteDoc(doc.ref);
-          if(localStorage.getItem(selectedKey)===doc.id)localStorage.removeItem(selectedKey);
-          message('حُذف الملف.');
-        })};row.append(remove);return row;
+        const deleting = doc.data().deleting === true;
+        button.disabled = edit.disabled = deleting;
+        if (deleting) remove.textContent = 'إكمال الحذف';
+        remove.onclick = () => {
+          if (!deleting && !confirm('هل تريد حذف ملف '+doc.data().name+' وإنجازاته نهائيًا؟')) return;
+          busy(remove, async () => {
+            await deleteProfile(data, db, doc.ref);
+            message('حُذف الملف وإنجازاته.');
+          });
+        };
+        row.append(remove);
+        return row;
       });
       el('profiles').replaceChildren(...buttons);
     }, () => message('تعذّر تحميل ملفات العائلة.'));

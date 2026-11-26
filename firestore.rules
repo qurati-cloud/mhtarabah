@@ -24,12 +24,29 @@ service cloud.firestore {
     }
     match /siteContent/{key} {
       allow read: if true;
-      allow write: if (admin() || roleIs('editor')) && key in ['awrad','math','word-problems','capitals','texts','daily'];
+      allow write: if (admin() || roleIs('editor'));
+    }
+    function profilePath(uid, profileId) {
+      return /databases/$(database)/documents/families/$(uid)/profiles/$(profileId);
+    }
+    function deletionPath(uid, profileId) {
+      return /databases/$(database)/documents/families/$(uid)/deletedProfiles/$(profileId);
+    }
+    match /families/{uid}/deletedProfiles/{profileId} {
+      allow create: if ownsFamily(uid)
+        && request.resource.data.keys().hasOnly(['deleted'])
+        && request.resource.data.deleted == true
+        && getAfter(profilePath(uid, profileId)).data.deleting == true;
     }
     match /families/{uid}/profiles/{profileId} {
-      allow delete: if ownsFamily(uid);
+      allow delete: if ownsFamily(uid) && exists(deletionPath(uid, profileId));
       allow read: if ownsFamily(uid) || admin();
+      allow update: if ownsFamily(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleting'])
+        && request.resource.data.deleting == true
+        && existsAfter(deletionPath(uid, profileId));
       allow create, update: if ownsFamily(uid)
+        && !existsAfter(deletionPath(uid, profileId))
         && request.resource.data.keys().hasOnly(['name','firstName','lastName','gender','birthDate'])
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
@@ -39,7 +56,8 @@ service cloud.firestore {
         allow delete: if ownsFamily(uid);
         allow read: if ownsFamily(uid);
         allow create, update: if ownsFamily(uid)
-          && exists(/databases/$(database)/documents/families/$(uid)/profiles/$(profileId))
+          && existsAfter(profilePath(uid, profileId))
+          && !existsAfter(deletionPath(uid, profileId))
           && (key in ['mh_capitals_v1', 'mh_math_v1', 'mh_word_problems_v1',
                       'mh_obstacles_v1', 'mh_flight_endless_record_v1',
                       'mh_submarine_endless_record_v1', 'mh-prayer-v1', 'mh-awrad-v1']

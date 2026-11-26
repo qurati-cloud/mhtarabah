@@ -1,4 +1,5 @@
 import {connect} from './firebase.js';
+import {activeProfiles, reconcileProfileSelection} from './profiles.js';
 const home=new URL('../index.html',import.meta.url), login=new URL('../login.html',import.meta.url);
 const nav=document.createElement('nav');nav.dir='rtl';nav.style.cssText='display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;padding:10px;background:#fff5e3;color:#463426;font: bold 15px Tahoma,Arial;position:relative;z-index:10';
 function button(label,fn){const b=document.createElement('button');b.type='button';b.textContent=label;b.style.cssText='width:auto;min-height:42px;margin:0;padding:10px 16px;border:1px solid #e6ad65;border-radius:12px;background:#ffdfa9;color:#463426;font:inherit;cursor:pointer';b.onclick=fn;return b}
@@ -31,7 +32,73 @@ nav.id='mh-shared-nav';
 style.textContent+=' #mh-shared-nav{box-sizing:border-box!important;width:100%!important;max-width:none!important;margin:0!important;flex-shrink:0!important} #mh-shared-nav button{font:bold 15px Tahoma,Arial!important;min-height:42px!important;width:auto!important;margin:0!important;padding:10px 16px!important;border:1px solid #e6ad65!important;border-radius:12px!important;background:#ffdfa9!important;color:#463426!important}';
 if(location.pathname===login.pathname){document.body.style.flexDirection='column';document.body.style.justifyContent='flex-start';}
 document.querySelectorAll('img').forEach(img=>{if(/mohammad-habiba-logo/i.test(img.getAttribute('src')||'')){img.style.cursor='pointer';img.tabIndex=0;img.setAttribute('role','link');img.onclick=()=>location.href=home.href;img.onkeydown=e=>{if(e.key==='Enter')location.href=home.href}}});
-try{const {auth,authApi,data,db}=await connect();authApi.onAuthStateChanged(auth,async user=>{account.textContent=user?'تسجيل الخروج':'تسجيل الدخول';account.onclick=async()=>{if(!user){location.href=login.href;return}try{await authApi.signOut(auth);localStorage.removeItem('mh-selected-owner');localStorage.removeItem('mh-selected-profile');location.href=home.href}catch{alert('تعذر تسجيل الخروج')}};family.hidden=!user?.emailVerified;panel.hidden=true;panel.replaceChildren();if(!user?.emailVerified)return;nav.querySelector('#mh-admin-link')?.remove();try{const role=user.email==='quraaty@gmail.com'?'admin':(await data.getDoc(data.doc(db,'roles',user.uid))).data()?.role;if(isHome&&['admin','editor'].includes(role)){const b=button(role==='admin'?'لوحة المدير':'لوحة المحرر',()=>location.href=new URL('../admin.html',import.meta.url).href);b.id='mh-admin-link';nav.insertBefore(b,panel)}}catch(e){console.warn('Role lookup failed',e)}try{const snap=await data.getDocs(data.collection(db,'families',user.uid,'profiles'));for(const doc of snap.docs){const p=doc.data();const b=button((p.gender==='female'?'👧 ':p.gender==='male'?'👦 ':'👤 ')+p.name,()=>{localStorage.setItem('mh-selected-owner',user.uid);localStorage.setItem('mh-selected-profile',doc.id);location.reload()});b.style.margin='5px';if(doc.id===localStorage.getItem('mh-selected-profile')){b.style.outline='2px solid #77522f';family.textContent='العائلة · '+p.name}panel.append(b)}panel.append(button('إدارة ملفات الأولاد',()=>location.href=login.href))}catch{panel.textContent='تعذر تحميل العائلة'}})}catch{account.title='تعذر الاتصال بخدمة الحسابات'}
+try {
+  const {auth, authApi, data, db} = await connect();
+  let stopProfiles;
+  authApi.onAuthStateChanged(auth, async user => {
+    stopProfiles?.();
+    nav.querySelector('#mh-admin-link')?.remove();
+    account.textContent = user ? 'تسجيل الخروج' : 'تسجيل الدخول';
+    account.onclick = async () => {
+      if (!user) { location.href = login.href; return; }
+      try {
+        await authApi.signOut(auth);
+        localStorage.removeItem('mh-selected-owner');
+        localStorage.removeItem('mh-selected-profile');
+        location.href = home.href;
+      } catch { alert('تعذر تسجيل الخروج'); }
+    };
+    family.hidden = !user?.emailVerified;
+    family.textContent = 'العائلة';
+    panel.hidden = true;
+    panel.replaceChildren();
+    if (!user?.emailVerified) return;
+
+    const onManagementPage = location.pathname === login.pathname;
+    const profilesRef = data.collection(db, 'families', user.uid, 'profiles');
+    stopProfiles = data.onSnapshot(profilesRef, {includeMetadataChanges: true}, snapshot => {
+      // The management page owns its selection so interrupted deletions can be resumed there.
+      const result = onManagementPage
+        ? {profiles: activeProfiles(snapshot), changed: false}
+        : reconcileProfileSelection(snapshot, user.uid);
+      if (result.changed) {
+        location.replace(result.profiles.length ? location.href : login.href);
+        return;
+      }
+      family.textContent = 'العائلة';
+      panel.replaceChildren();
+      for (const profile of result.profiles) {
+        const p = profile.data();
+        const prefix = p.gender === 'female' ? '👧 ' : p.gender === 'male' ? '👦 ' : '👤 ';
+        const b = button(prefix + p.name, () => {
+          localStorage.setItem('mh-selected-owner', user.uid);
+          localStorage.setItem('mh-selected-profile', profile.id);
+          if (onManagementPage) location.href = home.href;
+          else location.reload();
+        });
+        b.style.margin = '5px';
+        if (localStorage.getItem('mh-selected-owner') === user.uid &&
+            profile.id === localStorage.getItem('mh-selected-profile')) {
+          b.style.outline = '2px solid #77522f';
+          family.textContent = 'العائلة · ' + p.name;
+        }
+        panel.append(b);
+      }
+      panel.append(button('إدارة ملفات الأولاد', () => location.href = login.href));
+    }, () => { panel.textContent = 'تعذر تحميل العائلة'; });
+
+    try {
+      const role = user.email === 'quraaty@gmail.com' ? 'admin'
+        : (await data.getDoc(data.doc(db, 'roles', user.uid))).data()?.role;
+      if (auth.currentUser?.uid === user.uid && isHome && ['admin', 'editor'].includes(role)) {
+        const b = button(role === 'admin' ? 'لوحة المدير' : 'لوحة المحرر',
+          () => location.href = new URL('../admin.html', import.meta.url).href);
+        b.id = 'mh-admin-link';
+        nav.insertBefore(b, panel);
+      }
+    } catch (error) { console.warn('Role lookup failed', error); }
+  });
+} catch { account.title = 'تعذر الاتصال بخدمة الحسابات'; }
 
 /* Keep positional keys for existing headings. Home cards have explicit keys. */
 try {
