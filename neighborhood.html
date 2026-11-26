@@ -18,6 +18,12 @@
     <button type="button" id="free" aria-pressed="false" data-text-key="town:free">البناء الحر</button>
    </div>
    <div id="mission-card"><h2 id="mission-title"></h2><p id="mission-description"></p><p id="mission-count"></p></div>
+   <section id="village-card">
+    <h2 data-text-key="town:villageTitle">سكّان الحارة</h2>
+    <p data-text-key="town:villageHelp">ضع مدخل بيت وفوقه سقفًا، واترك أمامه خانة فارغة. ادخله من زر «ادخل البيت»، أو اربطه بالسوق بطريق حجري.</p>
+    <p><b id="home-count">٠</b> <span data-text-key="town:homeCount">بيوت مأهولة</span></p>
+    <button type="button" id="visit-home" disabled data-text-key="town:visitHome">ادخل البيت</button>
+   </section>
    <section id="harbor-card" hidden>
     <h2 data-text-key="town:harbor">مغامرة المرفأ</h2>
     <p id="harbor-instruction"></p>
@@ -45,7 +51,19 @@
    <p id="status" role="status"></p>
   </aside>
  </section>
+ <dialog id="home-room">
+  <h2 data-text-key="town:roomTitle">داخل البيت</h2>
+  <div id="room-preview" aria-hidden="true"><span id="room-furniture"></span></div>
+  <p data-text-key="town:residentGreeting">أهلًا بك في البيت! اختر ما تريد وضعه هنا.</p>
+  <div class="tabs">
+   <button type="button" data-furniture="rug" data-text-key="town:rug">سجادة</button>
+   <button type="button" data-furniture="plant" data-text-key="town:plant">نبتة</button>
+   <button type="button" data-furniture="lamp" data-text-key="town:lamp">فانوس</button>
+   <button type="button" id="leave-room" data-text-key="town:leaveRoom">اخرج من البيت</button>
+  </div>
+ </dialog>
  <div id="town-copy" hidden>
+  <span data-text-key="town:market">السوق</span>
   <span data-text-key="town:bridgeTitle">جسر إلى المرفأ</span>
   <span data-text-key="town:bridgeBody">ابنِ طبقة واحدة فوق الخانات الثلاث المضيئة في الماء، ثم اختر «مشي» واضغط على المرفأ لعبور الجسر.</span>
   <span data-text-key="town:gardenTitle">حديقة المرفأ</span>

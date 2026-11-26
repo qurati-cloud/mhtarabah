@@ -2,3 +2,9 @@
 #harbor-card{border:1px solid #a8c4bb;border-radius:10px;background:#edf6ee;margin:8px 0;padding:9px}
 #harbor-card h2{font-size:16px;margin:0}
 #treasure-options{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+#village-card{border:1px solid #d8c7a3;border-radius:10px;background:#f9f0dc;margin:8px 0;padding:9px}
+#village-card h2{font-size:16px;margin:0}
+#home-room{width:min(480px,92vw);border:1px solid #c8a974;border-radius:18px;background:#fff9e9;color:#173b38;padding:18px}
+#home-room::backdrop{background:#163d3a9e}
+#room-preview{height:160px;display:grid;place-items:end center;padding:24px;background:linear-gradient(#f5e0b4 63%,#b88764 63%);border:5px solid #a97b55;border-radius:12px}
+#room-furniture{font-size:54px;line-height:1}

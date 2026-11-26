@@ -1,4 +1,4 @@
-import {size,levels,pieces,key,water,start,dock,garden,square,loadBoard,height,surface,path,bridgeReady,gardenReady,squareReady,scenery,pier,pierReady,islandStart,islandGround,islandTreasure} from './model.js';
+import {size,levels,pieces,key,water,start,dock,garden,square,loadBoard,height,surface,path,bridgeReady,gardenReady,squareReady,scenery,pier,pierReady,islandStart,islandGround,islandTreasure,households,marketRoute,market} from './model.js';
 
 const el=id=>document.getElementById(id);
 const copy=id=>document.querySelector('[data-text-key="town:'+id+'"]').textContent;
@@ -15,6 +15,12 @@ const found=new Set(Array.isArray(saved.found)?saved.found.filter(id=>islandTrea
 const point=saved.islandPosition;
 let island=saved.island===true&&mission>=1;
 let islandPosition=Array.isArray(point)&&point.length===2&&islandGround(...point)!==null?point:[...islandStart];
+const rooms=Object.create(null);
+for(const [id,choice] of Object.entries(saved.rooms||{})){
+ if(['rug','plant','lamp'].includes(choice))rooms[id]=choice;
+}
+let homes=[], activeHome, residents=[], lastResidentFrame=0;
+const roomIcons={rug:'▰',plant:'🪴',lamp:'🏮'};
 const undo=[], redo=[];
 let route=[], nextStep=0, hover, pointer, panX=0,panY=0, zoom=1,width=0,heightPx=0,unit=23, hits=[];
 const same=(a,b)=>a&&b&&a[0]===b[0]&&a[1]===b[1];
@@ -42,14 +48,21 @@ for(const {id,piece:[label]} of islandTreasure){
 }
 function persist(){
  try {
-  localStorage.setItem(saveKey,JSON.stringify({board:[...board],mission,player,avatar,mode,island,islandPosition,found:[...found],unlocked:[...unlocked]}));
+  localStorage.setItem(saveKey,JSON.stringify({board:[...board],mission,player,avatar,mode,island,islandPosition,found:[...found],unlocked:[...unlocked],rooms}));
   el('status').textContent=copy('saved');
  } catch { el('status').textContent=copy('storage'); }
 }
 const missionIds=['bridge','garden','square','done'];
+function syncHomes(){
+ homes=households(board);
+ residents=homes.slice(0,16).map((home,index)=>({...home,index,route:marketRoute(board,home.entrance)}));
+}
 function refresh(){
  const id=missionIds[mission];
  el('mission-card').hidden=mode==='free'||island;
+ el('village-card').hidden=island;
+ el('home-count').textContent=new Intl.NumberFormat('ar').format(homes.length);
+ el('visit-home').disabled=!homes.some(home=>same(home.entrance,player));
  el('harbor-card').hidden=mission<1;
  const complete=found.size===islandTreasure.length;
  const all=unlocked.size===islandTreasure.length;
@@ -98,18 +111,40 @@ function setTool(value){
 document.querySelectorAll('[data-tool]').forEach(button=>button.onclick=()=>setTool(button.dataset.tool));
 for(const id of ['mohammad','habiba'])el(id).onclick=()=>{avatar=id;update();};
 for(const id of ['missions','free'])el(id).onclick=()=>{mode=id;update();};
+function visit(home){
+ if(!home||island||!same(home.entrance,player)||el('home-room').open)return;
+ activeHome=home.id;route=[];
+ showRoom();
+ el('home-room').showModal();
+}
+function showRoom(){
+ const choice=rooms[activeHome];
+ el('room-furniture').textContent=roomIcons[choice]||'';
+ for(const button of document.querySelectorAll('[data-furniture]')){
+  button.setAttribute('aria-pressed',String(choice===button.dataset.furniture));
+ }
+}
+el('visit-home').onclick=()=>visit(homes.find(home=>same(home.entrance,player)));
+el('leave-room').onclick=()=>el('home-room').close();
+el('home-room').onclose=()=>{activeHome=undefined;};
+for(const button of document.querySelectorAll('[data-furniture]'))button.onclick=()=>{
+ if(!activeHome)return;
+ rooms[activeHome]=button.dataset.furniture;
+ showRoom();persist();
+};
 function apply({id,before,after},reverse){
  const type=reverse?before:after;
  if(type)board.set(id,type);else board.delete(id);
  if(surface(board,...player)===null)player=[...start];
  route=[];
+ syncHomes();
  update();
 }
 el('undo').onclick=()=>{const edit=undo.pop();if(edit){redo.push(edit);apply(edit,true);}};
 el('redo').onclick=()=>{const edit=redo.pop();if(edit){undo.push(edit);apply(edit,false);}};
 el('reset').onclick=()=>{
  if(!confirm(copy('confirm')))return;
- board.clear();mission=0;island=false;found.clear();player=[...start];undo.length=redo.length=0;route=[];panX=panY=0;update();
+ board.clear();for(const id of Object.keys(rooms))delete rooms[id];syncHomes();mission=0;island=false;found.clear();player=[...start];undo.length=redo.length=0;route=[];panX=panY=0;update();
 };
 function returnHome(){
  island=false;route=[];panX=panY=0;
@@ -131,7 +166,14 @@ function walk(to){
 function interact(cell){
  if(!cell)return;
  const [x,z]=cell;
- if(island||tool==='walk'){walk(cell);return;}
+ if(island||tool==='walk'){
+  const home=!island&&homes.find(home=>same(home.at,cell));
+  if(home){
+   if(same(home.entrance,player))visit(home);
+   else walk(home.entrance);
+  } else walk(cell);
+  return;
+ }
  const y=height(board,x,z);
  if(same(cell,player)||same(cell,start)||tool==='remove'&&!y||
     scenery.has(x+','+z)||tool==='build'&&(y>=levels||board.get(key(x,z,y-1))==='tree'||selected==='tree'&&water(x,z))){
@@ -180,6 +222,16 @@ function piece(x,z,y,type){
   poly([top[0],top[1],top[2],top[3],base[3].map((v,i)=>v+(top[3][i]-v)*.73),base[0].map((v,i)=>v+(top[0][i]-v)*.73)],color);
  } else {
   box(x,z,y,color);
+  if(type==='door'){
+   poly([project(x+.24,z+1,y),project(x+.24,z+1,y+.81),
+    project(x+.76,z+1,y+.81),project(x+.76,z+1,y)],'#563b2f');
+   const [px,py]=project(x+.64,z+1,y+.39);
+   dot(px,py,unit*.036,unit*.036,'#eac074');
+  }
+  if(type==='road'){
+   const [px,py]=project(x+.5,z+.5,y+1);
+   dot(px,py,unit*.15,unit*.035,'#e4dbb5');
+  }
   if(type==='steps'){
    const [px,py]=project(x+.5,z+.5,y+1);
    ctx.strokeStyle='#81785c';ctx.beginPath();ctx.moveTo(px-unit*.5,py-unit*.26);ctx.lineTo(px+unit*.5,py+unit*.26);ctx.stroke();
@@ -210,10 +262,34 @@ function drawIsland(){
   if(same(islandPosition,[x,z]))character(x,z,0);
  }
 }
+function residentPositions(){
+ const positions=new Map();
+ for(const {index,entrance,route} of residents){
+  const leg=Math.max(0,route.length-1);
+  const progress=(lastResidentFrame/1050+index*.63)%(leg*2||1);
+  const step=progress>leg?2*leg-progress:progress;
+  const a=route[Math.floor(step)]||entrance,b=route[Math.ceil(step)]||a;
+  const fraction=step%1;
+  const x=a[0]+(b[0]-a[0])*fraction,z=a[1]+(b[1]-a[1])*fraction;
+  const cell=Math.floor(x)+','+Math.floor(z);
+  const occupants=positions.get(cell)||[];
+  occupants.push({x,z,index,moving:leg>0});
+  positions.set(cell,occupants);
+ }
+ return positions;
+}
+function drawResident({x,z,index,moving}){
+ const [px,py]=project(x+.29,z+.29,height(board,Math.floor(x),Math.floor(z)));
+ const bob=moving?Math.sin(lastResidentFrame/82+index)*unit*.035:0;
+ dot(px,py,unit*.14,unit*.075,'#23403d4a');
+ dot(px,py-unit*.19+bob,unit*.13,unit*.19,['#a9534e','#5a846c','#6e6490'][index%3]);
+ dot(px,py-unit*.41+bob,unit*.095,unit*.10,'#bd865f');
+}
 function draw(){
  if(!width||!ctx)return;
  ctx.fillStyle='#bdddd0';ctx.fillRect(0,0,width,heightPx);hits=[];
  if(island){drawIsland();return;}
+ const people=residentPositions();
  const targets=mode==='missions'?[ [[7,8],[8,8],[9,8]],garden,square,[] ][mission]:[];
  for(let sum=0;sum<2*size-1;sum++)for(let x=Math.max(0,sum-size+1);x<=Math.min(size-1,sum);x++){
   const z=sum-x, wet=water(x,z), y=height(board,x,z);
@@ -233,6 +309,13 @@ function draw(){
    poly([[px,py-unit*.78],[px,py],[px+unit*.47,py]],'#faf2d7','#cbaf78');
   }
   hits.push({cell:[x,z],face:tile(x,z,y)});
+  if(same(market,[x,z])){
+   const [px,py]=project(x+.5,z+1,1.55);
+   ctx.fillStyle='#894b39';ctx.fillRect(px-unit*.41,py-unit*.22,unit*.82,unit*.37);
+   ctx.fillStyle='#fff1d6';ctx.textAlign='center';ctx.font='bold '+Math.max(8,unit*.38)+'px Tahoma';
+   ctx.fillText(copy('market'),px,py+unit*.06,unit*.76);
+  }
+  for(const resident of people.get(x+','+z)||[])drawResident(resident);
   if(same(player,[x,z]))character(x,z,y);
  }
 }
@@ -282,6 +365,9 @@ window.addEventListener('keydown',e=>{
  if(direction){e.preventDefault();const p=island?islandPosition:player;walk([p[0]+direction[0],p[1]+direction[1]]);}
 });
 function frame(time){
+ if(!island&&residents.some(resident=>resident.route.length)&&time-lastResidentFrame>=45){
+  lastResidentFrame=time;draw();
+ }
  if(route.length&&time>=nextStep){
   const point=route.shift();nextStep=time+105;
   if(island){
@@ -297,4 +383,4 @@ function frame(time){
 }
 new MutationObserver(refresh).observe(el('town-copy'),{subtree:true,childList:true,characterData:true});
 new ResizeObserver(resize).observe(canvas);
-resize();center();setTool(tool);refresh();requestAnimationFrame(frame);
+syncHomes();resize();center();setTool(tool);refresh();requestAnimationFrame(frame);

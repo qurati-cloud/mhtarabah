@@ -87,3 +87,32 @@ export function pierReady(board){
 export function islandGround(x,z){
  return valid(x,z,0)&&((x-12.5)/4.75)**2+((z-9)/6.5)**2<=1 ? 0 : null;
 }
+
+pieces.door=['مدخل بيت','#b2764e'];
+pieces.road=['طريق حجري','#89928c'];
+export const market=[6,3];
+scenery.set(market.join(','),['brick','roof']);
+
+export function households(board){
+ const homes=[];
+ for(const [id,type] of board){
+  if(type!=='door')continue;
+  const [x,z,y]=id.split(',').map(Number);
+  if(y!==0||water(x,z)||height(board,x,z)!==2||board.get(key(x,z,1))!=='roof')continue;
+  const entrance=[x,z+1];
+  if(surface(board,...entrance)!==0)continue;
+  homes.push({id,at:[x,z],entrance});
+ }
+ return homes;
+}
+
+export function marketRoute(board,entrance){
+ const goal=[market[0],market[1]+1];
+ if(entrance[0]===goal[0]&&entrance[1]===goal[1])return [];
+ const route=path(board,entrance,goal,(x,z)=>{
+  if(surface(board,x,z)===null)return null;
+  return (x===entrance[0]&&z===entrance[1])||(x===goal[0]&&z===goal[1])||
+    board.get(key(x,z,0))==='road'&&height(board,x,z)===1 ? 0 : null;
+ });
+ return route.length?[entrance,...route]:[];
+}
