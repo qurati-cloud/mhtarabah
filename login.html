@@ -49,10 +49,16 @@ select{width:100%;padding:14px;border:1px solid #ddc8ad;border-radius:12px;font:
 <label for="password">كلمة المرور</label>
 <input id="password" type="password" autocomplete="current-password" required>
 <button type="submit" value="signin">دخول</button>
+<button type="button" id="resetPassword">نسيت كلمة المرور؟</button>
 <button type="submit" value="register">مستخدم جديد؟ إنشاء حساب</button>
 </form>
 <div id="family" hidden>
 <h2>من يستخدم التطبيق؟</h2>
+<form id="countryForm" hidden>
+  <label for="country">بلد التسجيل</label>
+  <select id="country" required><option value="">اختر البلد</option></select>
+  <button type="submit">حفظ البلد</button>
+</form>
 <div id="profiles"></div>
 <form id="profileForm">
 <h3 id="childTitle">ملف الولد الأول</h3><label for="childName">الاسم</label><input id="childName" maxlength="40" required><label for="lastName">اسم العائلة</label><input id="lastName" maxlength="40" required><label for="gender">الجنس</label><select id="gender" required><option value="">اختر</option><option value="male">ذكر</option><option value="female">أنثى</option></select><label for="birthDate">تاريخ الميلاد</label><input id="birthDate" type="date" required><button type="submit" id="addChild">إضافة الولد</button></form><button id="finish" hidden type="button">أنهيت</button>

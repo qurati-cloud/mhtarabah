@@ -16,5 +16,36 @@ async function initialize() {
     localCache: data.memoryLocalCache()
   });
   await auth.authStateReady();
-  return { auth, authApi, data, db };
+  return { auth, authApi, data, db, appApi };
+}
+
+export async function provisionFamily({ appApi, authApi, data, db }, entry, children) {
+  const app = appApi.initializeApp(firebaseConfig, 'provision-' + crypto.randomUUID());
+  const auth = authApi.initializeAuth(app, {persistence: authApi.inMemoryPersistence});
+  let user;
+  try {
+    const password = crypto.randomUUID() + crypto.randomUUID();
+    ({user} = await authApi.createUserWithEmailAndPassword(auth, entry.email, password));
+    const batch = data.writeBatch(db);
+    batch.set(data.doc(db, 'directory', user.uid), {
+      ...entry, email: user.email, source: 'admin', registeredAt: data.serverTimestamp()
+    });
+    for (const child of children) {
+      const profiles = data.collection(db, 'families', user.uid, 'profiles');
+      batch.set(data.doc(profiles), child);
+    }
+    await batch.commit();
+    return user.email;
+  } catch (error) {
+    if (user) {
+      try { await authApi.deleteUser(user); }
+      catch (cleanupError) {
+        console.warn('Provisioning rollback failed', cleanupError);
+        throw new Error('تعذّر حفظ البيانات وإلغاء حساب الدخول. راجع حساب البريد في Firebase قبل المحاولة مجددًا.');
+      }
+    }
+    throw error;
+  } finally {
+    await appApi.deleteApp(app);
+  }
 }

@@ -1,5 +1,5 @@
-const CACHE = 'mh-tarabah-pwa-v7';
-self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./index.html','./manifest.json','./app-icon.png','./auth/navigation.js','./auth/navigation.js?v=20261126a','./auth/progress.js','./auth/profiles.js','./auth/family.js','./login.html','./auth/firebase.js','./auth/firebase-config.js'])).then(() => self.skipWaiting())); });
+const CACHE = 'mh-tarabah-pwa-v8';
+self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./index.html','./manifest.json','./app-icon.png','./auth/navigation.js','./auth/navigation.js?v=20261126a','./auth/progress.js','./auth/profiles.js','./auth/registration.js','./auth/admin-families.js','./admin.html','./auth/family.js','./login.html','./auth/firebase.js','./auth/firebase-config.js'])).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('mh-tarabah-pwa-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
  const u = new URL(e.request.url);

@@ -1,5 +1,6 @@
 import { connect } from './firebase.js';
 import { deleteProfile, reconcileProfileSelection } from './profiles.js';
+import { childFields, populateCountries } from './registration.js';
 
 const el = id => document.getElementById(id);
 const selectedKey = 'mh-selected-profile';
@@ -28,6 +29,8 @@ try {
 }
 
 function configure({auth, authApi, data, db}) {
+  populateCountries(el('country'));
+  const directory = uid => data.doc(db, 'directory', uid);
   const collection = uid => data.collection(db, 'families', uid, 'profiles');
   let unsubscribe, count = 0, firstId = null;
   const ordinals = ["الأول","الثاني","الثالث","الرابع","الخامس","السادس","السابع","الثامن","التاسع","العاشر","الحادي عشر","الثاني عشر","الثالث عشر","الرابع عشر","الخامس عشر","السادس عشر","السابع عشر","الثامن عشر","التاسع عشر","العشرون"];
@@ -42,12 +45,26 @@ function configure({auth, authApi, data, db}) {
     el('verify').hidden = !user || user.emailVerified;
     el('family').hidden = !user?.emailVerified;
     el('profiles').replaceChildren();
+    el('countryForm').hidden = true;
     if (!user || localStorage.getItem(ownerKey) !== user.uid) {
       localStorage.removeItem(selectedKey);
       localStorage.removeItem(ownerKey);
     }
     if (!user?.emailVerified) return;
-    data.setDoc(data.doc(db,'directory',user.uid),{email:user.email}).catch(e=>console.warn('Directory registration',e));
+    const ref = directory(user.uid);
+    const registrationKey = 'mh-web-registration:' + user.uid;
+    data.runTransaction(db, async transaction => {
+      const current = await transaction.get(ref);
+      const entry = current.data() || {};
+      const registeredAt = entry.registeredAt || data.Timestamp.fromDate(new Date(user.metadata.creationTime));
+      const fields = {email: user.email, registeredAt};
+      if (!current.exists() && localStorage.getItem(registrationKey)) fields.source = 'web';
+      if (!current.exists() || !entry.registeredAt || entry.email !== user.email) transaction.set(ref, fields, {merge: true});
+      return entry.country;
+    }).then(country => {
+      localStorage.removeItem(registrationKey);
+      if (auth.currentUser?.uid === user.uid) el('countryForm').hidden = Boolean(country);
+    }).catch(error => console.warn('Directory registration', error));
 
     unsubscribe = data.onSnapshot(collection(user.uid), {includeMetadataChanges: true}, snapshot => {
       const {profiles} = reconcileProfileSelection(snapshot, user.uid);
@@ -95,6 +112,7 @@ function configure({auth, authApi, data, db}) {
       const password = el('password').value;
       if (button.value === 'register') {
         const {user} = await authApi.createUserWithEmailAndPassword(auth, email, password);
+        localStorage.setItem('mh-web-registration:' + user.uid, '1');
         await authApi.sendEmailVerification(user);
         message('أرسلنا رابط التحقّق إلى بريد العائلة.');
       } else {
@@ -103,6 +121,21 @@ function configure({auth, authApi, data, db}) {
       el('loginForm').reset();
     });
   });
+
+  el('resetPassword').onclick = event => busy(event.currentTarget, async () => {
+    const email = el('email');
+    if (!email.reportValidity()) return;
+    await authApi.sendPasswordResetEmail(auth, email.value.trim());
+    message('إذا كان البريد مرتبطًا بحساب، فسيصلك رابط لتعيين كلمة المرور.');
+  });
+  el('countryForm').onsubmit = event => {
+    event.preventDefault();
+    busy(event.submitter, async () => {
+      await data.updateDoc(directory(auth.currentUser.uid), {country: el('country').value});
+      el('countryForm').hidden = true;
+      message('حُفظ البلد.');
+    });
+  };
 
   el('sendEmail').onclick = event => busy(event.currentTarget, async () => {
     await authApi.sendEmailVerification(auth.currentUser);
@@ -132,7 +165,11 @@ function configure({auth, authApi, data, db}) {
       if(count >= 20) return;
       const lastName = el("lastName").value.trim(), gender = el("gender").value, birthDate = el("birthDate").value;
       if(!lastName || !["male","female"].includes(gender) || !birthDate || birthDate > el("birthDate").max) {message("أكمل بيانات الولد.");return;}
-      await data.addDoc(collection(auth.currentUser.uid), {name: name+" "+lastName,firstName:name,lastName,gender,birthDate});
+      if (name.length + lastName.length + 1 > 80) {
+        message('ينبغي أن يكون الاسم الكامل ٨٠ حرفًا على الأكثر.');
+        return;
+      }
+      await data.addDoc(collection(auth.currentUser.uid), childFields(name, lastName, gender, birthDate));
       el('profileForm').reset();
     });
   });
