@@ -33,19 +33,134 @@ if(location.pathname===login.pathname){document.body.style.flexDirection='column
 document.querySelectorAll('img').forEach(img=>{if(/mohammad-habiba-logo/i.test(img.getAttribute('src')||'')){img.style.cursor='pointer';img.tabIndex=0;img.setAttribute('role','link');img.onclick=()=>location.href=home.href;img.onkeydown=e=>{if(e.key==='Enter')location.href=home.href}}});
 try{const {auth,authApi,data,db}=await connect();authApi.onAuthStateChanged(auth,async user=>{account.textContent=user?'تسجيل الخروج':'تسجيل الدخول';account.onclick=async()=>{if(!user){location.href=login.href;return}try{await authApi.signOut(auth);localStorage.removeItem('mh-selected-owner');localStorage.removeItem('mh-selected-profile');location.href=home.href}catch{alert('تعذر تسجيل الخروج')}};family.hidden=!user?.emailVerified;panel.hidden=true;panel.replaceChildren();if(!user?.emailVerified)return;nav.querySelector('#mh-admin-link')?.remove();try{const role=user.email==='quraaty@gmail.com'?'admin':(await data.getDoc(data.doc(db,'roles',user.uid))).data()?.role;if(isHome&&['admin','editor'].includes(role)){const b=button(role==='admin'?'لوحة المدير':'لوحة المحرر',()=>location.href=new URL('../admin.html',import.meta.url).href);b.id='mh-admin-link';nav.insertBefore(b,panel)}}catch(e){console.warn('Role lookup failed',e)}try{const snap=await data.getDocs(data.collection(db,'families',user.uid,'profiles'));for(const doc of snap.docs){const p=doc.data();const b=button((p.gender==='female'?'👧 ':p.gender==='male'?'👦 ':'👤 ')+p.name,()=>{localStorage.setItem('mh-selected-owner',user.uid);localStorage.setItem('mh-selected-profile',doc.id);location.reload()});b.style.margin='5px';if(doc.id===localStorage.getItem('mh-selected-profile')){b.style.outline='2px solid #77522f';family.textContent='العائلة · '+p.name}panel.append(b)}panel.append(button('إدارة ملفات الأولاد',()=>location.href=login.href))}catch{panel.textContent='تعذر تحميل العائلة'}})}catch{account.title='تعذر الاتصال بخدمة الحسابات'}
 
-/* Editable page headings and descriptions, keyed by page and element position. */
-try{
- const {auth,authApi,data,db}=await connect();
- const ref=data.doc(db,'siteContent','texts');
- const page=location.pathname.split('/').pop()||'index.html';
- const nodes=[...document.querySelectorAll('h1,h2,.hero p,.menu-card strong,.menu-card span')].filter(n=>!n.closest('#mh-shared-nav,#mh-brand-header,#daily-editor,#question-editor,#users,#content')&&n.children.length===0&&n.textContent.trim());
- const keys=nodes.map((n,i)=>page+':'+i);
- const snap=await data.getDoc(ref);const values=snap.data()?.value||{};
- nodes.forEach((n,i)=>{if(typeof values[keys[i]]==='string')n.textContent=values[keys[i]]});
- authApi.onAuthStateChanged(auth,async u=>{
- document.getElementById('mh-text-editor')?.remove();if(!u?.emailVerified||page==='admin.html'||page==='login.html'||!nodes.length)return;
- try{const role=u.email==='quraaty@gmail.com'?'admin':(await data.getDoc(data.doc(db,'roles',u.uid))).data()?.role;if(!['admin','editor'].includes(role))return;
- const b=button('تحرير عناوين الصفحة',()=>{const d=document.createElement('dialog');d.dir='rtl';d.style.cssText='width:min(85vw,520px);border:1px solid #e6ad65;border-radius:12px';const f=document.createElement('form');const fields=nodes.map(n=>{const l=document.createElement('label');l.textContent=n.textContent;const x=document.createElement('textarea');x.value=n.textContent;x.required=true;x.style.cssText='display:block;width:100%;box-sizing:border-box;margin:8px 0';l.append(x);f.append(l);return x});const save=button('حفظ',()=>{});save.type='submit';const cancel=button('إلغاء',()=>d.close());f.append(save,cancel);f.onsubmit=async e=>{e.preventDefault();save.disabled=true;try{await data.runTransaction(db,async tx=>{const old=(await tx.get(ref)).data()?.value||{};tx.set(ref,{value:{...old,...Object.fromEntries(keys.map((k,i)=>[k,fields[i].value.trim()]))}})});nodes.forEach((n,i)=>n.textContent=fields[i].value.trim());d.close()}catch(e){alert(e.message);save.disabled=false}};d.append(f);document.body.append(d);d.onclose=()=>d.remove();d.showModal()});b.id='mh-text-editor';nav.insertBefore(b,panel);
- }catch(e){console.warn(e)}
+/* Keep positional keys for existing headings. Home cards have explicit keys. */
+try {
+ const {auth, authApi, data, db} = await connect();
+ const ref = data.doc(db, 'siteContent', 'texts');
+ const page = location.pathname.split('/').pop() || 'index.html';
+ const headings = [...document.querySelectorAll('h1,h2,.hero p,.menu-card strong,.menu-card span')]
+  .filter(node => !node.closest('#mh-shared-nav,#mh-brand-header,#daily-editor,#question-editor,#users,#content')
+   && node.children.length === 0 && node.textContent.trim());
+ const fields = headings.map((node, index) => ({node, key: page + ':' + index}));
+ const cardFields = isHome
+  ? [...document.querySelectorAll('#home .home-card strong[data-text-key]')]
+   .map(node => ({node, key: node.dataset.textKey}))
+  : [];
+ fields.push(...cardFields);
+ for (const field of fields) field.defaultText = field.node.textContent;
+
+ function showTexts(snapshot) {
+  const values = snapshot.data()?.value || {};
+  for (const {node, key, defaultText} of fields) {
+   node.textContent = typeof values[key] === 'string' ? values[key] : defaultText;
+  }
+ }
+
+ if (fields.length) {
+  if (isHome) data.onSnapshot(ref, showTexts, error => console.warn('Text loading failed', error));
+  else data.getDoc(ref).then(showTexts).catch(error => console.warn('Text loading failed', error));
+ }
+
+ let controls = [];
+ let activeDialog;
+ let authChange = 0;
+
+ function openTextEditor(selection) {
+  const dialog = document.createElement('dialog');
+  dialog.dir = 'rtl';
+  dialog.style.cssText = 'width:min(85vw,520px);border:1px solid #e6ad65;border-radius:12px';
+  const form = document.createElement('form');
+  const entries = selection.map(({node, key}) => {
+   const label = document.createElement('label');
+   label.textContent = node.textContent;
+   const input = document.createElement('textarea');
+   input.value = node.textContent;
+   input.required = true;
+   input.style.cssText = 'display:block;width:100%;box-sizing:border-box;margin:8px 0';
+   input.oninput = () => input.setCustomValidity('');
+   label.append(input);
+   form.append(label);
+   return {key, node, input, original: input.value};
+  });
+  const save = button('حفظ', () => {});
+  save.type = 'submit';
+  const cancel = button('إلغاء', () => dialog.close());
+  const status = document.createElement('p');
+  status.setAttribute('role', 'status');
+  form.append(save, cancel, status);
+  form.onsubmit = async event => {
+   event.preventDefault();
+   const blank = entries.find(({input}) => !input.value.trim());
+   if (blank) {
+    blank.input.setCustomValidity('أدخل نصًا قبل الحفظ');
+    blank.input.reportValidity();
+    return;
+   }
+   const changed = entries.filter(({input, original}) => input.value.trim() !== original);
+   if (!changed.length) {
+    dialog.close();
+    return;
+   }
+   const updates = Object.fromEntries(changed.map(({key, input}) => [key, input.value.trim()]));
+   save.disabled = true;
+   status.textContent = 'جارٍ الحفظ…';
+   try {
+    await data.runTransaction(db, async transaction => {
+     const previous = (await transaction.get(ref)).data()?.value || {};
+     transaction.set(ref, {value: {...previous, ...updates}}, {merge: true});
+    });
+    if (!isHome) {
+     for (const {key, node} of changed) node.textContent = updates[key];
+    }
+    dialog.close();
+   } catch (error) {
+    console.warn('Text saving failed', error);
+    status.textContent = 'تعذّر الحفظ. حاول مرة أخرى.';
+    save.disabled = false;
+   }
+  };
+  dialog.append(form);
+  document.body.append(dialog);
+  activeDialog = dialog;
+  dialog.onclose = () => {
+   dialog.remove();
+   if (activeDialog === dialog) activeDialog = undefined;
+  };
+  dialog.showModal();
+ }
+
+ authApi.onAuthStateChanged(auth, async user => {
+  const change = ++authChange;
+  controls.forEach(control => control.remove());
+  controls = [];
+  activeDialog?.close();
+  if (!user?.emailVerified || page === 'admin.html' || page === 'login.html' || !fields.length) return;
+
+  try {
+   const role = user.email === 'quraaty@gmail.com' ? 'admin'
+    : (await data.getDoc(data.doc(db, 'roles', user.uid))).data()?.role;
+   if (change !== authChange || !['admin', 'editor'].includes(role)) return;
+
+   const editor = button('تحرير عناوين الصفحة', () => openTextEditor(fields));
+   editor.id = 'mh-text-editor';
+   nav.insertBefore(editor, panel);
+   controls.push(editor);
+
+   for (const field of cardFields) {
+    const card = field.node.closest('.home-card');
+    const pencil = document.createElement('button');
+    pencil.type = 'button';
+    pencil.className = 'home-card-edit';
+    pencil.textContent = '✎';
+    pencil.setAttribute('aria-label', 'تحرير عنوان بطاقة ' + field.defaultText);
+    pencil.onclick = () => openTextEditor([field]);
+    card.append(pencil);
+    controls.push(pencil);
+   }
+  } catch (error) {
+   console.warn('Text editor role lookup failed', error);
+  }
  });
-}catch(e){console.warn(e)}
+} catch (error) {
+ console.warn('Text editor initialization failed', error);
+}

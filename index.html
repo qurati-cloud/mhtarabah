@@ -249,6 +249,26 @@ body > main {
   max-width: none !important;
   margin: 0 !important;
 }
+#home .home-card {
+  position: relative;
+  min-width: 0;
+}
+#home .home-card > .game {
+  height: 100%;
+}
+#home .home-card-edit {
+  position: absolute;
+  inset-block-start: 5px;
+  inset-inline-end: 5px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid #e6ad65;
+  border-radius: 9px;
+  font-size: 17px;
+}
 #home .game {
   display: flex !important;
   flex-direction: column !important;
@@ -324,46 +344,62 @@ body > main {
 
 
 <div class="games">
+<div class="home-card">
 <a href="games.html" class="game games-main">
 <span class="icon">🎮</span>
-<strong>أسئلة وألعاب</strong>
+<strong data-text-key="index.html:1">أسئلة وألعاب</strong>
 
 </a>
+</div>
+<div class="home-card">
 <a href="prayer.html" class="game prayer-main">
 <span class="icon">🗓️</span>
-<strong>برنامج الصلاة</strong>
+<strong data-text-key="index.html:2">برنامج الصلاة</strong>
 
 </a>
+</div>
+<div class="home-card">
 <a href="daily.html" class="game daily-main">
 <span class="icon">✅</span>
-<strong>أعمال يومية</strong>
+<strong data-text-key="index.html:3">أعمال يومية</strong>
 
 </a>
+</div>
+<div class="home-card">
 <a href="https://youtube.com/playlist?list=PLkCuAwiQFTLuKbz4vAVWsGSlKTEiW3ibJ" class="game nasheed-main" target="_blank" rel="noopener noreferrer">
 <span class="icon">🎤</span>
-<strong>أناشيد</strong>
+<strong data-text-key="index.html:4">أناشيد</strong>
 
 </a>
+</div>
+<div class="home-card">
 <a href="https://youtube.com/playlist?list=PLkCuAwiQFTLtQFcvnKIToIsgLumY4cBD1" class="game benefits-main" target="_blank" rel="noopener noreferrer">
 <span class="icon">💡</span>
-<strong>فوائد</strong>
+<strong data-text-key="index.html:5">فوائد</strong>
 
 </a>
+</div>
+<div class="home-card">
 <a href="https://youtube.com/playlist?list=PLkCuAwiQFTLurs-QJjXw4sbUoJu5ahAZK" class="game memorize-main" target="_blank" rel="noopener noreferrer">
 <span class="icon">📖</span>
-<strong>احفظ معي</strong>
+<strong data-text-key="index.html:6">احفظ معي</strong>
 
 </a>
+</div>
+<div class="home-card">
 <a href="awrad.html" class="game awrad-main">
 <span class="icon">🌙</span>
-<strong>أوراد</strong>
+<strong data-text-key="index.html:7">أوراد</strong>
 
 </a>
+</div>
+<div class="home-card">
 <a href="quran.html" class="game quran-main">
 <span class="icon"><img src="quran-icon.png?v=50" alt="" class="quran-picture"></span>
-<strong>قرءان</strong>
+<strong data-text-key="index.html:8">قرءان</strong>
 
 </a>
+</div>
 </div>
 </section>
 
@@ -626,6 +662,6 @@ Object.assign(window, {goHome, move, retry});
  if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(console.warn);
 })();
 </script>
-<script type="module" src="auth/navigation.js?v=20261125b"></script>
+<script type="module" src="auth/navigation.js?v=20261126a"></script>
 </body>
 </html>
