@@ -13,12 +13,15 @@ export const obstacles = {
   bar: {height: 1.72, opening: 1.04, length: 0.5, halfWidth: 1.15}
 };
 
-export const powerDuration = 15;
+export const powerDuration = 10;
 export const flightHeight = 9;
 export const powerups = {
   flight: {color: 0x5bdaef, symbol: '✈'},
   magnet: {color: 0xf57183, symbol: '🧲'},
-  shield: {color: 0x84e8af, symbol: '⬡'}
+  shield: {color: 0x84e8af, symbol: '⬡'},
+  golden: {color: 0xffcf49, symbol: '★'},
+  shoes: {color: 0xbfa5fa, symbol: '↑↑'},
+  key: {color: 0xffaf57, symbol: '⚿'}
 };
 const powerKinds = Object.keys(powerups);
 export function attractedPlayer(run, star) {
@@ -29,28 +32,58 @@ export function attractedPlayer(run, star) {
     Math.abs(star.y - (player.y + 1)) < 3.8);
 }
 export const runningSpeed = time => 12 + 24 * -Math.expm1(-time / 85);
+export const difficultyAt = distance => -Math.expm1(-distance / 675);
 
 export function makeRun(avatars, random = Math.random) {
   const firstLane = Math.floor(random()*3)-1;
   const firstDistance = 13 + random()*10;
   const firstPower = powerKinds[Math.floor(random()*powerKinds.length)];
-  return {
+  const run = {
     distance: 0, time: 0, players: avatars.map((avatar, index) => {
       const lane = avatars.length === 1 ? 0 : index * 2 - 1;
       return {avatar, lane, x: lane * laneWidth, y: 0, vy: 0, slide: 0,
-        support: null, flight: 0, magnet: 0, shield: false, glide: false, protection: 0, ignored: null, diving: false, stars: 0, distance: 0, out: false};
+        support: null, flight: 0, magnet: 0, shield: 0, golden: 0, shoes: 0, key: 0, combo: 0, comboLane: null, comboTime: 0, airJump: false, treasure: 0, glide: false, protection: 0, ignored: null, diving: false, stars: 0, distance: 0, out: false};
     }),
-    objects: [{kind:firstPower, lane:firstLane,
-      distance:firstDistance, y:1.05, taken:0}], nextWave: 33, wave: 0,
-    nextReward: 2 + Math.floor(random()*2),
-    rewardBag: powerKinds.filter(kind=>kind!==firstPower), random
+    objects: [], nextWave: 33, wave: 0,
+    nextReward: 6 + Math.floor(random()*10), rewardBag: [...powerKinds], random
   };
+  if (random() < .2 && (firstPower !== 'key' || treasureFits(firstDistance))) {
+    placeReward(run, firstPower, firstLane, firstDistance);
+  }
+  return run;
+}
+
+function treasureFits(distance) {
+  return trackFeatures(distance).every(({start,length}) =>
+    distance + 58 < start || distance + 14 > start + length);
+}
+
+function placeReward(run, kind, lane, distance) {
+  run.objects.push({kind,lane,distance,y:1.05,taken:0});
+  if (kind === 'key') run.objects.push({kind:'gate',lane,distance:distance+14,y:.95,taken:0});
+  run.rewardBag = run.rewardBag.filter(reward=>reward!==kind);
+}
+
+function enterTreasure(run, player, index) {
+  player.key = 0;
+  player.treasure = run.distance + 41;
+  player.lane = -2;
+  player.combo = 0;
+  player.protection = .7;
+  for(let offset=5;offset<38;offset+=2.6) {
+    run.objects.push({kind:'star',lane:-2,distance:run.distance+offset,y:offset>=18&&offset<=24?2.9:1.05,
+      taken:((1<<run.players.length)-1) ^ (1<<index)});
+  }
+  run.objects.push({kind:'roadworks',lane:-2,distance:run.distance+21,only:index});
 }
 
 export function move(player, command) {
   if (!player || player.out) return;
   if (command === 'left' || command === 'right') {
+    if (player.treasure) return;
+    const previous = player.lane;
     player.lane = Math.max(-1, Math.min(1, player.lane + (command === 'left' ? -1 : 1)));
+    if (previous !== player.lane) player.combo = 0;
   } else if (player.flight || player.glide) {
     return;
   } else if (command === 'jump' && (player.y === 0 || player.support)) {
@@ -58,6 +91,10 @@ export function move(player, command) {
     player.vy = jumpSpeed;
     player.support = null;
     player.y += 0.001;
+  } else if (command === 'jump' && player.shoes && !player.airJump) {
+    player.airJump = true;
+    player.vy = jumpSpeed * .88;
+    player.diving = false;
   } else if (command === 'down') {
     if (player.y > 0 && !player.support) {
       player.vy = -diveSpeed;
@@ -75,7 +112,8 @@ function spawn(run) {
   const choices = onBridge ? ['roadworks','bar','bus'] : kinds;
   const kind = choices[Math.floor(run.random() * choices.length)];
   run.objects.push({kind, lane: first, distance: run.nextWave, taken: 0});
-  if (run.wave > 1 && run.random() > (onBridge ? .22 : .48)) {
+  const difficulty = difficultyAt(run.nextWave);
+  if (run.wave > 1 && run.random() < .20 + .55*difficulty + (onBridge ? .06 : 0)) {
     const second = other.splice(Math.floor(run.random() * 2), 1)[0];
     run.objects.push({kind: kinds[Math.floor(run.random() * kinds.length)], lane: second, distance: run.nextWave, taken: 0});
   }
@@ -93,10 +131,12 @@ function spawn(run) {
   }
   if (run.wave >= run.nextReward) {
     if (!run.rewardBag.length) run.rewardBag = [...powerKinds];
-    const [power] = run.rewardBag.splice(Math.floor(run.random()*run.rewardBag.length),1);
-    run.objects.push({kind: power, lane: route, distance: run.nextWave - 9 + run.random()*3,
-      y: 1.05, taken: 0});
-    run.nextReward = run.wave + 2 + Math.floor(run.random()*3);
+    const position = run.nextWave - 9 + run.random()*3;
+    const available = run.rewardBag.filter(kind=>kind!=='key' || treasureFits(position));
+    if (available.length) {
+      placeReward(run, available[Math.floor(run.random()*available.length)], route, position);
+      run.nextReward = run.wave + 10 + Math.floor(run.random()*11);
+    } else run.nextReward = run.wave + 1;
   }
   const airLane = Math.floor(run.random()*3)-1;
   for (const offset of [-5,-2,1,4]) {
@@ -104,7 +144,7 @@ function spawn(run) {
       y: flightHeight + .85, taken: 0});
   }
   run.wave++;
-  run.nextWave += 17 + Math.min(10, run.time / 10) + run.random() * 5;
+  run.nextWave += Math.max(18, runningSpeed(run.time)*.69 + 7) + run.random()*4;
 }
 
 export function step(run, dt) {
@@ -115,10 +155,15 @@ export function step(run, dt) {
     const player = run.players[index];
     if (player.out) continue;
     player.distance = run.distance;
+    if (player.treasure && run.distance >= player.treasure) {
+      player.treasure = 0;
+      player.lane = -1;
+      player.protection = 1;
+    }
+    if (player.combo && run.time - player.comboTime > 2.6) player.combo = 0;
     player.x += (player.lane * laneWidth - player.x) * (1 - Math.exp(-15 * dt));
     player.slide = Math.max(0, player.slide - dt);
-    player.flight = Math.max(0, player.flight - dt);
-    player.magnet = Math.max(0, player.magnet - dt);
+    for (const kind of powerKinds) player[kind] = Math.max(0, player[kind] - dt);
     player.protection = Math.max(0, player.protection - dt);
     if (player.flight > 0 || (player.glide && overTunnel(run.distance + 3) && player.y > 6.9)) {
       player.y = Math.min(flightHeight, player.y + 22 * dt);
@@ -155,10 +200,19 @@ export function step(run, dt) {
         player.diving = false;
       }
     }
+    if (player.y === 0 || player.support) player.airJump = false;
     const height = player.slide > 0 ? 0.72 : 1.65;
     for (const object of run.objects) {
       const depth = Math.abs(run.distance - object.distance);
       const side = Math.abs(player.x - object.lane * laneWidth);
+      if (object.only !== undefined && object.only !== index) continue;
+      if (object.kind === 'gate') {
+        if (player.key && depth < 2.25 && side < .9 && player.y < 1.65) {
+          object.taken |= 1 << index;
+          enterTreasure(run,player,index);
+        }
+        continue;
+      }
       if (object.kind === 'star' || Object.hasOwn(powerups, object.kind)) {
         const touch = depth < 1.1 && side < .85 &&
           object.y >= player.y - .25 && object.y <= player.y + height + .45;
@@ -166,9 +220,16 @@ export function step(run, dt) {
           Math.abs(object.y - (player.y + 1)) < 3.8;
         if (!(object.taken & (1 << index)) && (touch || pull)) {
           object.taken |= 1 << index;
-          if (object.kind === 'star') player.stars++;
-          if (object.kind === 'magnet') player.magnet = powerDuration;
-          if (object.kind === 'shield') player.shield = true;
+          if (object.kind === 'star') {
+            player.stars += player.golden ? 2 : 1;
+            player.combo = player.comboLane === object.lane ? player.combo + 1 : 1;
+            player.comboLane = object.lane;
+            player.comboTime = run.time;
+            if (player.combo === 10) {
+              player.stars += 5;
+              player.combo = 0;
+            }
+          } else player[object.kind] = powerDuration;
           if (object.kind === 'flight') {
             player.flight = powerDuration;
             player.glide = true;
@@ -186,7 +247,7 @@ export function step(run, dt) {
       const clears = player.y >= hazard.height ||
         (hazard.opening && player.y + height < hazard.opening);
       if (!clears && player.shield) {
-        player.shield = false;
+        player.shield = 0;
         player.ignored = object;
         player.protection = .65;
         continue;

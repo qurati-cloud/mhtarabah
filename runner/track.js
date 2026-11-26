@@ -26,3 +26,13 @@ export const nextSigns = distance => {
   const first = 38 + Math.max(0, Math.floor((distance - 26) / 118)) * 118;
   return [first, first + 118];
 };
+
+export function railwayScene(distance) {
+  const spacing = 156;
+  const station = 51 + Math.max(0,Math.floor((distance-91)/spacing)+1)*spacing;
+  const delta = distance-station;
+  return {
+    station, train:station+(delta < -37 ? (delta+37)*.48 : Math.max(0,delta-21)*1.18),
+    unloading:Math.max(0,Math.min(1,(delta+35)/29))
+  };
+}

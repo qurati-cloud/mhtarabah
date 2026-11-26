@@ -1,5 +1,5 @@
 import {laneWidth, obstacles, powerups, attractedPlayer} from './simulation.js';
-import {trackFeatures, nextSigns, adLines} from './track.js';
+import {trackFeatures, nextSigns, adLines, railwayScene} from './track.js';
 
 // Perspective canvas renderer for devices that cannot open a WebGL context.
 export function createCanvasWorld(canvas) {
@@ -154,7 +154,8 @@ export function createCanvasWorld(canvas) {
       ctx.moveTo(side*.225,-1.27);ctx.lineTo(side*.34,-.82-gait*side*.1);ctx.stroke();
       ellipse('#c88365',side*.34,-.82-gait*side*.1,.085,.075);
     }
-    ellipse(cloth,0,-1.03,.29,.41);
+    polygon(cloth,[-.26,-1.4],[.26,-1.4],[girl?.44:.39,-.19],[-(girl?.44:.39),-.19]);
+    polygon(highlight,[-.37,-.22],[.37,-.22],[.39,-.18],[-.39,-.18]);
     polygon(highlight,[-.16,-1.36],[-.125,-1.38],[-.095,-.69],[-.13,-.68]);
     polygon(highlight,[.16,-1.36],[.125,-1.38],[.095,-.69],[.13,-.68]);
     ellipse(girl ? highlight : '#332c26',0,-1.57,.245,.259);
@@ -193,6 +194,44 @@ export function createCanvasWorld(canvas) {
         run.distance+item.z+5>=start && run.distance+item.z+5<start+length))
       .map(item=>({...item,draw:()=>segment(item.z,item.index)}));
     const items=[...scenery];
+    for (const side of [-1,1]) quad('#becbd0',-12+side*.73-.041,-12+side*.73+.041,-6.71,135,.06);
+    for(let z=122-run.distance%2.5;z>-6.7;z-=2.5) quad('#555459',-13.1,-10.9,z,z+.22,.043);
+    const rail=railwayScene(run.distance);
+    const platform=rail.station-run.distance, train=rail.train-run.distance;
+    const stoneRail=['#c3d8dc','#4f7b86','#84a7ad'];
+    for(const spacing of [-12,0,12]) {
+      const z=train+spacing;
+      if(z>-12 && z<126) items.push({z,draw:()=>{
+        prism(-12,0,z,2.34,2.46,11.4,stoneRail);
+        prism(-12,2.36,z,2.34,.19,11.45,blue);
+        for (const dz of [-4,-2,2,4]) prism(-10.82,1.32,z+dz,.055,.61,1.28,blue);
+        prism(-10.79,.41,z,.08,1.5,1.3,blue);
+      }});
+    }
+    for(const spacing of [-12,0,12]) {
+      const z=platform+spacing;
+      if(z>-11 && z<120) items.push({z:z-.09,draw:()=>{
+        prism(-9.25,0,z,2.25,.41,11.9,light);
+        prism(-8.89,2.95,z,1.8,.16,9.1,blue);
+        prism(-8.2,.41,z,.15,2.56,.16,blue);
+      }});
+    }
+    for(let i=0;i<5;i++){
+      const movement=Math.max(0,rail.unloading-i*.1);
+      const z=platform-8+i*4.1+movement*3;
+      if(!movement||z<-6.5||z>104)continue;
+      const x=-10.55+movement*1.77;
+      items.push({z:z-.35,draw:()=>{
+        const [px,py,s]=project(x,.44,z);
+        const sway=Math.sin(movement*22+i)*.11*s;
+        ellipse('#405563',px-sway,py-.18*s,.08*s,.24*s);
+        ellipse('#405563',px+sway,py-.18*s,.08*s,.24*s);
+        ellipse(['#9d5860','#dd996f','#2f6b76','#b088c6','#687e63'][i],px,py-.85*s,.24*s,.47*s);
+        ellipse('#bc836b',px,py-1.47*s,.145*s,.17*s);
+      }});
+    }
+    const treasureEnd=Math.max(0,...visible.map(player=>player.treasure))-run.distance;
+    if(treasureEnd>0) quad('#ac773b',-6.25,-5.12,-4,treasureEnd,.12);
     for (const feature of features) {
       const entrance=feature.start-run.distance;
       const start=Math.max(-6.7,entrance), end=Math.min(150,entrance+feature.length);
@@ -265,6 +304,13 @@ export function createCanvasWorld(canvas) {
           const offsetY=target ? (target.y+1-obj.y)*pull : 0;
           items.push({z,draw:()=>star(x+offsetX,obj.y+offsetY,z,time)});
         }
+      } else if (obj.kind==='gate') {
+        if(obj.taken!==(1<<run.players.length)-1) items.push({z,draw:()=>{
+          for(const side of [-1,1]) prism(x+side*1.02,0,z,.17,2.93,.18,gold);
+          prism(x,2.66,z,2.2,.23,.18,gold);
+          const [px,py,s]=project(x,2.28,z);
+          ellipse('#ffbd58',px,py,.18*s,.22*s);
+        }});
       } else if (Object.hasOwn(powerups,obj.kind)) {
         if(obj.taken!==(1<<run.players.length)-1) items.push({z,draw:()=>pickup(obj,z,time)});
       } else items.push({z,draw:()=>vehicle(obj.kind,x,z)});

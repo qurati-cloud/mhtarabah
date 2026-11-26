@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
 import { laneWidth, obstacles, powerups, attractedPlayer } from './simulation.js';
-import {trackFeatures, nextSigns, adLines} from './track.js';
+import {trackFeatures, nextSigns, adLines, railwayScene} from './track.js';
 
 const box = new THREE.BoxGeometry(1, 1, 1);
 const sphere = new THREE.SphereGeometry(1, 18, 12);
@@ -95,7 +95,11 @@ function makeAvatar(avatar) {
   group.add(body);
   const torso = new THREE.Group();
   body.add(torso);
-  oval(torso, cloth, 0, 1.08, 0, .29, .44, .19);
+  const robe = new THREE.CylinderGeometry(.26, girl ? .43 : .39, 1.19, 14);
+  part(torso, robe, cloth, 0, .76, 0, 1, 1, .65);
+  if (!girl) block(torso,0x233b52,0,.75,.217,.08,1.1,.02);
+  const hem = new THREE.CylinderGeometry(girl?.426:.386,girl?.43:.39,.035,14);
+  part(torso,hem,trim,0,.184,0,1,1,.65);
   block(torso, trim, -.13, 1.05, .182, .027, .57, .023);
   block(torso, trim, .13, 1.05, .182, .027, .57, .023);
   oval(torso, girl ? trim : 0x352825, 0, 1.63, .02, .255, .274, .225);
@@ -112,7 +116,7 @@ function makeAvatar(avatar) {
     const arm = new THREE.Group();
     arm.position.set(side * .29, 1.31, .02);
     torso.add(arm);
-    oval(arm, cloth, 0, -.19, 0, .101, .24, .1);
+    oval(arm, cloth, 0, -.19, 0, .128, .26, .125);
     oval(arm, skin, 0, -.408, 0, .075, .084, .075);
     arms.push(arm);
     const leg = new THREE.Group();
@@ -129,6 +133,12 @@ function makeAvatar(avatar) {
 
 function makeHazard(kind) {
   const group = new THREE.Group();
+  if (kind === 'gate') {
+    for (const side of [-1,1]) block(group,0xf8c67b,side*1.02,.72,0,.17,2.36,.18);
+    block(group,0xfb9e41,0,1.89,0,2.25,.24,.19);
+    part(group,ringGeo,new THREE.MeshBasicMaterial({color:0xffb75b}),0,1.5,.02,.85,.85,1);
+    return {group};
+  }
   if (Object.hasOwn(powerups, kind)) {
     const {color} = powerups[kind];
     const rim = new THREE.MeshBasicMaterial({color});
@@ -145,6 +155,17 @@ function makeHazard(kind) {
         block(group, 0xf7fcff, side*.18, .26, 0, .14, .11, .15);
       }
       block(group, color, 0, -.20, 0, .43, .14, .15);
+    } else if (kind === 'golden') {
+      part(group,starGeo,starMat,0,0,-.08,1,1,1);
+    } else if (kind === 'shoes') {
+      for (const side of [-1,1]) {
+        oval(group,0xf5eaff,side*.18,0,0,.13,.2,.075);
+        block(group,color,side*.18,-.15,.04,.24,.07,.08);
+      }
+    } else if (kind === 'key') {
+      part(group,ringGeo,rim,-.15,.13,0,.38,.38,1);
+      block(group,color,.05,-.07,0,.37,.09,.1).rotation.z=-.68;
+      block(group,color,.19,-.19,0,.09,.15,.09);
     } else {
       const emblem = block(group, color, 0, 0, 0, .47, .47, .12);
       emblem.rotation.z = Math.PI/4;
@@ -273,6 +294,37 @@ function makeBillboard(face) {
   return group;
 }
 
+function railway() {
+  const track = new THREE.Group();
+  block(track,0x6a706b,-12,-.01,0,3.4,.16,168);
+  for(const side of [-1,1]) block(track,0xc9d4d7,-12+side*.74,.14,0,.075,.085,168);
+  for(let z=-81;z<84;z+=2.5) block(track,0x544b48,-12,.075,z,2.28,.13,.23);
+  const station = new THREE.Group();
+  block(station,0xd3ba8d,-9.25,.2,0,2.25,.45,34);
+  block(station,0xffd46e,-10.25,.45,0,.12,.025,34);
+  block(station,0x326770,-8.8,3.1,0,2.4,.19,24);
+  for(const z of [-10,0,10]) block(station,0x51828b,-8.1,1.75,z,.19,2.65,.19);
+  const train = new THREE.Group();
+  for (const z of [-12,0,12]) {
+    block(train,0xc9dce1,-12,1.3,z,2.35,2.43,11.6);
+    block(train,0x2b7083,-12,2.48,z,2.22,.26,11.25);
+    block(train,0x1c576d,-10.81,.67,z,.045,.30,11.4);
+    for (const offset of [-4,-2,2,4]) block(train,0x376576,-10.81,1.76,z+offset,.048,.74,1.33);
+    block(train,0x2a4f5a,-10.8,1.12,z,.058,1.62,1.3);
+  }
+  const riders = [0x9d5860,0xffc68c,0x2f6b76,0xb088c6,0x687e63].map((color,i)=>{
+    const group = new THREE.Group();
+    const x = -10.6;
+    oval(group,0xbe8464,0,1.48,0,.14,.17,.14);
+    const coat = new THREE.CylinderGeometry(.16,.24,1.02,8);
+    part(group,coat,color,0,.83,0,1,1,1);
+    const legs = [-1,1].map(side=>block(group,0x405263,side*.09,.24,0,.095,.36,.13));
+    station.add(group);
+    return {group,x,z:-9+i*4.5,legs};
+  });
+  return {track,station,train,riders};
+}
+
 export function createWorld(canvas, context) {
   const renderer = new THREE.WebGLRenderer({canvas, context});
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.65));
@@ -295,6 +347,10 @@ export function createWorld(canvas, context) {
     scene.add(group);
     return group;
   });
+  const treasurePath = block(scene,0x987549,-5.7,.133,0,1.24,.024,1);
+  treasurePath.visible = false;
+  const rail = railway();
+  scene.add(rail.track,rail.station,rail.train);
   const features = new Map();
   const face = billboardMaterial();
   const signs = Array.from({length:2},()=>{
@@ -332,6 +388,22 @@ export function createWorld(canvas, context) {
     renderObjects.delete(object);
   }
   function draw(run, time) {
+    const treasureEnd = Math.max(0,...run.players.filter(player=>!player.out).map(player=>player.treasure))-run.distance;
+    treasurePath.visible = treasureEnd>0;
+    if(treasureEnd>0) {
+      treasurePath.position.z = -treasureEnd/2+2;
+      treasurePath.scale.z = treasureEnd+4;
+    }
+    const railway = railwayScene(run.distance);
+    rail.track.position.z = -58 + run.distance%2.5;
+    rail.station.position.z = run.distance-railway.station;
+    rail.train.position.z = run.distance-railway.train;
+    for (const [i,rider] of rail.riders.entries()) {
+      const walking = Math.max(0,railway.unloading-i*.1);
+      rider.group.visible = walking>0;
+      rider.group.position.set(rider.x+walking*1.7,.45,rider.z+walking*3);
+      rider.legs.forEach((leg,j)=>leg.rotation.x=Math.sin(walking*19+j*Math.PI)*.44);
+    }
     const upcoming = trackFeatures(run.distance - 14);
     for (const [start,group] of features) {
       if (!upcoming.some(feature=>feature.start === start)) {
@@ -378,6 +450,7 @@ export function createWorld(canvas, context) {
       }
       const {group} = renderObjects.get(object);
       group.position.set(object.lane * laneWidth, object.y || 0, run.distance - object.distance);
+      if (object.kind === 'gate') group.visible = object.taken !== (1 << run.players.length) - 1;
       if (object.kind === 'star' || Object.hasOwn(powerups, object.kind)) {
         const target = attractedPlayer(run, object);
         if (target) {
@@ -406,7 +479,7 @@ export function createWorld(canvas, context) {
       const gait = Math.sin(phase);
       const slide = player.slide > 0;
       model.trail.visible = player.glide;
-      model.aura.visible = player.shield;
+      model.aura.visible = Boolean(player.shield);
       const grounded = player.y === 0 || player.support;
       model.ground.position.y = (player.support ? player.y : 0) + .018;
       model.body.scale.y = slide ? .43 : 1;
