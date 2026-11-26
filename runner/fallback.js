@@ -1,6 +1,6 @@
 import {laneWidth, obstacles, powerups, attractedPlayer} from './simulation.js';
 import {trackFeatures, nextSigns, adLines, railwayScene} from './track.js';
-import {districtCount, districtModel, roadsidePhrases, makeTextPanel} from './district.js';
+import {districtCount, districtModel, roadsidePhrases, makeTextPanel, roadsideBoard, advertisingBoard} from './district.js';
 
 // Perspective canvas renderer for devices that cannot open a WebGL context.
 export function createCanvasWorld(canvas) {
@@ -11,10 +11,11 @@ export function createCanvasWorld(canvas) {
   function resize() {
     width = canvas.clientWidth;
     height = canvas.clientHeight;
-    const ratio = Math.min(devicePixelRatio, 1.5);
+    const ratio = Math.min(devicePixelRatio, 2);
     canvas.width = width * ratio;
     canvas.height = height * ratio;
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.imageSmoothingQuality = 'high';
     horizon = height * .29;
     focal = Math.min(width * 1.24, height * .87);
     sky = ctx.createLinearGradient(0, 0, 0, height*.72);
@@ -76,6 +77,21 @@ export function createCanvasWorld(canvas) {
   function pickup(object,z,time) {
     const [x,y,s]=project(object.lane*laneWidth,object.y+Math.sin(time*4)*.18,z);
     const {color,symbol}=powerups[object.kind];
+    if(object.kind==='golden') {
+      ellipse('#bc75ff66',x,y,s*.9,s*.9);
+      ellipse('#753eab',x,y,s*.67,s*.67);
+      ellipse('#fff1a2',x,y,s*.53,s*.53);
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle='#784aa5';ctx.font='bold '+Math.max(7,s*.78)+'px sans-serif';
+      ctx.fillText(symbol,x,y-.06*s);
+      ctx.fillStyle='#fff9d8';ctx.font='bold '+Math.max(5,s*.37)+'px sans-serif';
+      ctx.fillText('×2',x,y+s*.63);
+      for(const [i,[dx,dy]] of [[-.68,-.45],[.69,-.34],[.54,.50]].entries()) {
+        const radius=s*(.035+.095*(.5+.5*Math.sin(time*6+i*1.9)));
+        ellipse('#fff8dc',x+dx*s,y+dy*s,radius,radius);
+      }
+      return;
+    }
     ellipse('#143c50',x,y,s*.54,s*.54);
     ellipse('#'+color.toString(16),x,y,s*.45,s*.45);
     ctx.font='bold '+Math.max(6,s*.62)+'px sans-serif';
@@ -217,6 +233,7 @@ export function createCanvasWorld(canvas) {
         run.distance+item.z+5>=start && run.distance+item.z+5<start+length))
       .map(item=>({...item,draw:()=>segment(item.z,item.index)}));
     const items=[...scenery];
+    const signFaces=[];
     const districtIndex=Math.floor(run.distance/24);
     for(let i=0;i<7;i++){
       const z=13+i*24-run.distance%24;
@@ -227,10 +244,11 @@ export function createCanvasWorld(canvas) {
     for(const sign of roadsidePhrases(run.distance,run.roadPhrases)) {
       const z=sign.at-run.distance;
       if(z<1||z>104)continue;
+      const {width,height,centerY} = roadsideBoard;
       items.push({z,draw:()=>{
-        for(const side of [-1,1])prism(sign.x+side*2.2,0,z,.15,2.45,.19,blue);
-        panel(sign.text,sign.x,2.68,z-.11,5.65,2.31,true);
+        for(const side of [-1,1])prism(sign.x+side*width*.38,0,z,.15,centerY-height/2,.19,blue);
       }});
+      signFaces.push({z,draw:()=>panel(sign.text,sign.x,centerY,z-.11,width,height,true)});
     }
     for (const side of [-1,1]) quad('#becbd0',-12+side*.73-.041,-12+side*.73+.041,-6.71,135,.06);
     for(let z=122-run.distance%2.5;z>-6.7;z-=2.5) quad('#555459',-13.1,-10.9,z,z+.22,.043);
@@ -318,9 +336,12 @@ export function createCanvasWorld(canvas) {
     for (const distance of nextSigns(run.distance)) {
       const z=distance-run.distance;
       if(z < -5 || z>125) continue;
+      const {height,centerY} = advertisingBoard;
       items.push({z,draw:()=>{
-        const [x,y,s]=project(0,5.65,z);
-        for (const side of [-1,1]) prism(side*5.16,0,z,.23,5.1,.29,blue);
+        for (const side of [-1,1]) prism(side*5.16,0,z,.23,centerY-height/2,.29,blue);
+      }});
+      signFaces.push({z,draw:()=>{
+        const [x,y,s]=project(0,centerY,z);
         ctx.fillStyle='#ffd37e';ctx.fillRect(x-5*s,y-1.25*s,10*s,2.5*s);
         ctx.fillStyle='#122b48';ctx.fillRect(x-4.86*s,y-1.11*s,9.72*s,2.22*s);
         ctx.textAlign='center';ctx.textBaseline='middle';
@@ -357,6 +378,7 @@ export function createCanvasWorld(canvas) {
       if(!player.out)items.push({z:0,draw:()=>avatar(player,index,time,run.players.length===2)});
     });
     items.sort((a,b)=>b.z-a.z).forEach(item=>item.draw());
+    signFaces.sort((a,b)=>b.z-a.z).forEach(item=>item.draw());
   }
   resize();
   return {resize,reset(){cameraX=lift=0;},draw};

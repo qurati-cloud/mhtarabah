@@ -19,7 +19,7 @@ export const powerups = {
   flight: {color: 0x5bdaef, symbol: '✈'},
   magnet: {color: 0xf57183, symbol: '🧲'},
   shield: {color: 0x84e8af, symbol: '⬡'},
-  golden: {color: 0xffcf49, symbol: '★'},
+  golden: {color: 0xbc75ff, symbol: '★'},
   shoes: {color: 0xbfa5fa, symbol: '↑↑'},
   key: {color: 0xffaf57, symbol: '⚿'}
 };
@@ -45,9 +45,9 @@ export function makeRun(avatars, random = Math.random) {
         support: null, flight: 0, magnet: 0, shield: 0, golden: 0, shoes: 0, key: 0, combo: 0, comboLane: null, comboTime: 0, airJump: false, treasure: 0, glide: false, protection: 0, ignored: null, diving: false, stars: 0, distance: 0, out: false};
     }),
     objects: [], nextWave: 33, wave: 0,
-    nextReward: 6 + Math.floor(random()*10), rewardBag: [...powerKinds], random
+    nextReward: 4 + Math.floor(random()*7), rewardBag: [...powerKinds], random
   };
-  if (random() < .2 && (firstPower !== 'key' || treasureFits(firstDistance))) {
+  if (random() < .30 && (firstPower !== 'key' || treasureFits(firstDistance))) {
     placeReward(run, firstPower, firstLane, firstDistance);
   }
   return run;
@@ -135,7 +135,7 @@ function spawn(run) {
     const available = run.rewardBag.filter(kind=>kind!=='key' || treasureFits(position));
     if (available.length) {
       placeReward(run, available[Math.floor(run.random()*available.length)], route, position);
-      run.nextReward = run.wave + 10 + Math.floor(run.random()*11);
+      run.nextReward = run.wave + 7 + Math.floor(run.random()*7.5);
     } else run.nextReward = run.wave + 1;
   }
   const airLane = Math.floor(run.random()*3)-1;

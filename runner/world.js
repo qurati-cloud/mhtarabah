@@ -2,7 +2,7 @@ import * as THREE from './vendor/three.module.min.js';
 import { laneWidth, obstacles, powerups, attractedPlayer } from './simulation.js';
 import {trackFeatures, nextSigns, adLines, railwayScene} from './track.js';
 
-import {districtCount, districtModel, roadsidePhrases, makeTextPanel} from './district.js';
+import {districtCount, districtModel, roadsidePhrases, makeTextPanel, roadsideBoard, advertisingBoard} from './district.js';
 
 const box = new THREE.BoxGeometry(1, 1, 1);
 const sphere = new THREE.SphereGeometry(1, 18, 12);
@@ -26,6 +26,10 @@ const shadowMat = new THREE.MeshBasicMaterial({color: 0x102229, transparent: tru
 const starMat = new THREE.MeshStandardMaterial({
   color: 0xffc335, metalness: 0.35, roughness: 0.34, emissive: 0x9c5503, emissiveIntensity: 0.35
 });
+const goldenMat = new THREE.MeshStandardMaterial({
+  color:0xfff2ac, emissive:0xffc432, emissiveIntensity:1.25, metalness:.18, roughness:.24
+});
+const goldenSpark = new THREE.MeshBasicMaterial({color:0xfff6cf,fog:false});
 const starShape = new THREE.Shape();
 for (let i = 0; i < 10; i++) {
   const angle = Math.PI / 2 + i * Math.PI / 5;
@@ -135,7 +139,12 @@ function makeHazard(kind) {
       }
       block(group, color, 0, -.20, 0, .43, .14, .15);
     } else if (kind === 'golden') {
-      part(group,starGeo,starMat,0,0,-.08,1,1,1);
+      part(group,starGeo,goldenMat,0,.04,-.09,1.28,1.28,1);
+      const badge = part(group,new THREE.PlaneGeometry(.59,.20),panelMaterial('×2',false),
+        0,-.59,.13,1,1,1);
+      badge.material.side = THREE.DoubleSide;
+      group.userData.sparkles = [[-.51,.47],[.56,.26],[.44,-.40]].map(([x,y]) =>
+        part(group,ringGeo,goldenSpark,x,y,.04,.19,.19,1));
     } else if (kind === 'shoes') {
       for (const side of [-1,1]) {
         oval(group,0xf5eaff,side*.18,0,0,.13,.2,.075);
@@ -247,9 +256,10 @@ function roadFeature({kind,style,length,wall,trim}) {
 
 function billboardMaterial() {
   const canvas = document.createElement('canvas');
-  canvas.width = 1024;
-  canvas.height = 256;
+  canvas.width = 2048;
+  canvas.height = 512;
   const ctx = canvas.getContext('2d');
+  ctx.scale(2,2);
   ctx.fillStyle = '#122b48';
   ctx.fillRect(0,0,1024,256);
   ctx.strokeStyle = '#ffd37e';
@@ -264,12 +274,15 @@ function billboardMaterial() {
   ctx.fillText(adLines[1],512,199);
   const map = new THREE.CanvasTexture(canvas);
   map.colorSpace = THREE.SRGBColorSpace;
-  return new THREE.MeshBasicMaterial({map});
+  map.anisotropy = 4;
+  return new THREE.MeshBasicMaterial({map,depthTest:false,depthWrite:false,fog:false});
 }
 function makeBillboard(face) {
   const group = new THREE.Group();
-  for (const side of [-1,1]) block(group,0x315063,side*5.16,2.6,0,.25,5.2,.36);
-  part(group,new THREE.PlaneGeometry(10,2.5),face,0,5.65,.05,1,1,1);
+  const {width,height,centerY} = advertisingBoard;
+  const postHeight = centerY-height/2;
+  for (const side of [-1,1]) block(group,0x315063,side*5.16,postHeight/2,0,.25,postHeight,.36);
+  part(group,new THREE.PlaneGeometry(width,height),face,0,centerY,.05,1,1,1).renderOrder = 18;
   return group;
 }
 
@@ -326,19 +339,23 @@ function districtPrototype(index, labels) {
 function panelMaterial(text, roadside) {
   const map = new THREE.CanvasTexture(makeTextPanel(text,roadside));
   map.colorSpace = THREE.SRGBColorSpace;
-  return new THREE.MeshBasicMaterial({map});
+  map.anisotropy = 4;
+  return new THREE.MeshBasicMaterial({map,depthTest:!roadside,depthWrite:!roadside,fog:!roadside});
 }
 function roadPanel() {
   const group = new THREE.Group();
-  for(const side of [-1,1]) block(group,0x425658,side*2.2,1.22,0,.15,2.44,.19);
-  const face = part(group,new THREE.PlaneGeometry(5.65,2.31),
-    new THREE.MeshBasicMaterial({color:0x143b42}),0,2.68,.09,1,1,1);
+  const {width,height,centerY} = roadsideBoard;
+  const postHeight = centerY-height/2;
+  for(const side of [-1,1]) block(group,0x425658,side*width*.38,postHeight/2,0,.15,postHeight,.19);
+  const face = part(group,new THREE.PlaneGeometry(width,height),
+    new THREE.MeshBasicMaterial({color:0x143b42}),0,centerY,.09,1,1,1);
+  face.renderOrder = 20;
   return {group,face,text:''};
 }
 
 export function createWorld(canvas, context) {
   const renderer = new THREE.WebGLRenderer({canvas, context});
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.65));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xa7d9df);
@@ -501,7 +518,13 @@ export function createWorld(canvas, context) {
           group.position.y += (target.y + 1 - group.position.y) * pull;
         }
         group.visible = object.taken !== (1 << racers.length) - 1;
-        group.rotation.y = time * 2.9 + object.distance;
+        group.rotation.y = object.kind==='golden' ? Math.sin(time*2.2)*.31 : time*2.9+object.distance;
+        if (group.userData.sparkles) {
+          group.userData.sparkles.forEach((spark,i)=>{
+            const pulse=.1+.16*Math.pow(.5+.5*Math.sin(time*6+i*1.9),2);
+            spark.scale.set(pulse,pulse,1);
+          });
+        }
         group.position.y += Math.sin(time * 3 + object.distance) * .11;
       }
     }

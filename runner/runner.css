@@ -8,6 +8,7 @@
 #track{position:relative;isolation:isolate;overflow:hidden;border-radius:24px;height:clamp(490px,67svh,700px);background:#174650;box-shadow:0 20px 45px #2838332b;touch-action:none}
 #world,#worldFallback{display:block;width:100%;height:100%;outline:none}
 .scrim{position:absolute;inset:0;display:grid;place-items:center;padding:12px;background:linear-gradient(#1a35443c,#102f3ccf);overflow:auto}
+#overlay{place-items:end center;background:linear-gradient(#1a354418 40%,#102f3ca0)}
 .glass{direction:rtl;width:min(460px,100%);border:1px solid #ebf9ef58;border-radius:22px;padding:clamp(12px,3vw,24px);color:#f1fff8;background:#092b38ed;text-align:center;box-shadow:0 16px 45px #081e315e}
 .glass p{margin:8px 0;line-height:1.5}
 .eyebrow,.overlay-title{font-weight:bold;font-size:clamp(17px,3vw,23px)}

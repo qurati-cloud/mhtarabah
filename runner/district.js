@@ -87,24 +87,37 @@ export function districtModel(index) {
   return shapes;
 }
 
+export const roadsideBoard = {offset:7.45, width:4.9, height:2.36, centerY:4.2};
+export const advertisingBoard = {width:10, height:2.5, centerY:6.78};
+
 export function roadsidePhrases(distance, phrases) {
   if (!phrases?.length) return [];
   const first = Math.max(0,Math.floor((distance-32)/74));
   return [first,first+1].map(index=>({
-    at:51+index*74, x:index%2 ? -5.1 : 5.1, text:phrases[index%phrases.length]
+    at:51+index*74, x:roadsideBoard.offset*(index%2?-1:1), text:phrases[index%phrases.length]
   }));
 }
 
 export function makeTextPanel(text, roadside = true) {
   const canvas = document.createElement('canvas');
-  canvas.width = 768;
-  canvas.height = roadside?316:256;
+  const width = 768;
+  const height = roadside?370:256;
+  const scale = roadside?2:1;
+  canvas.width = width*scale;
+  canvas.height = height*scale;
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = roadside?'#143b42':'#255a5d';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.scale(scale,scale);
+  const background = ctx.createLinearGradient(0,0,0,height);
+  background.addColorStop(0,roadside?'#173f48':'#255a5d');
+  background.addColorStop(1,roadside?'#0c272f':'#173c3e');
+  ctx.fillStyle = background;
+  ctx.fillRect(0,0,width,height);
   ctx.strokeStyle = '#e8c889';
   ctx.lineWidth = 10;
-  ctx.strokeRect(8,8,canvas.width-16,canvas.height-16);
+  ctx.strokeRect(9,9,width-18,height-18);
+  ctx.strokeStyle = '#a77c48';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(19,19,width-38,height-38);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.direction = 'rtl';
@@ -120,11 +133,11 @@ export function makeTextPanel(text, roadside = true) {
       if (lines[last] && ctx.measureText(joined).width>683) lines.push(word);
       else lines[last] = joined;
     }
-    if (lines.length*size*1.2 <= canvas.height-48) break;
+    if (lines.length*size*1.2 <= height-48) break;
   }
-  ctx.fillStyle = '#fff4d7';
+  ctx.fillStyle = '#fff9e9';
   const dy = size*1.2;
-  lines.forEach((line,i)=>ctx.fillText(line,canvas.width/2,
-    canvas.height/2+(i-(lines.length-1)/2)*dy,683));
+  lines.forEach((line,i)=>ctx.fillText(line,width/2,
+    height/2+(i-(lines.length-1)/2)*dy,683));
   return canvas;
 }
