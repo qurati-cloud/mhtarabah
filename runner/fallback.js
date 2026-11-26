@@ -1,6 +1,6 @@
 import {laneWidth, obstacles, powerups, attractedPlayer} from './simulation.js';
 import {trackFeatures, nextSigns, adLines, railwayScene} from './track.js';
-import {districtCount, districtModel, roadsidePhrases, makeTextPanel, roadsideBoard, advertisingBoard} from './district.js';
+import {districtCount, districtModel, roadsidePhrases, makeTextPanel, roadsideBoard, advertisingBoard, advertisingHeight} from './district.js';
 
 // Perspective canvas renderer for devices that cannot open a WebGL context.
 export function createCanvasWorld(canvas) {
@@ -233,7 +233,6 @@ export function createCanvasWorld(canvas) {
         run.distance+item.z+5>=start && run.distance+item.z+5<start+length))
       .map(item=>({...item,draw:()=>segment(item.z,item.index)}));
     const items=[...scenery];
-    const signFaces=[];
     const districtIndex=Math.floor(run.distance/24);
     for(let i=0;i<7;i++){
       const z=13+i*24-run.distance%24;
@@ -248,7 +247,7 @@ export function createCanvasWorld(canvas) {
       items.push({z,draw:()=>{
         for(const side of [-1,1])prism(sign.x+side*width*.38,0,z,.15,centerY-height/2,.19,blue);
       }});
-      signFaces.push({z,draw:()=>panel(sign.text,sign.x,centerY,z-.11,width,height,true)});
+      items.push({z,draw:()=>panel(sign.text,sign.x,centerY,z-.11,width,height,true)});
     }
     for (const side of [-1,1]) quad('#becbd0',-12+side*.73-.041,-12+side*.73+.041,-6.71,135,.06);
     for(let z=122-run.distance%2.5;z>-6.7;z-=2.5) quad('#555459',-13.1,-10.9,z,z+.22,.043);
@@ -334,11 +333,12 @@ export function createCanvasWorld(canvas) {
     for (const distance of nextSigns(run.distance)) {
       const z=distance-run.distance;
       if(z < -5 || z>125) continue;
-      const {height,centerY} = advertisingBoard;
+      const {height} = advertisingBoard;
+      const centerY = advertisingHeight(run.players,z);
       items.push({z,draw:()=>{
         for (const side of [-1,1]) prism(side*5.16,0,z,.23,centerY-height/2,.29,blue);
       }});
-      signFaces.push({z,draw:()=>{
+      items.push({z,draw:()=>{
         const [x,y,s]=project(0,centerY,z);
         ctx.fillStyle='#ffd37e';ctx.fillRect(x-5*s,y-1.25*s,10*s,2.5*s);
         ctx.fillStyle='#122b48';ctx.fillRect(x-4.86*s,y-1.11*s,9.72*s,2.22*s);
@@ -369,7 +369,6 @@ export function createCanvasWorld(canvas) {
       if(!player.out)items.push({z:0,draw:()=>avatar(player,index,time,run.players.length===2)});
     });
     items.sort((a,b)=>b.z-a.z).forEach(item=>item.draw());
-    signFaces.sort((a,b)=>b.z-a.z).forEach(item=>item.draw());
   }
   resize();
   return {resize,reset(){cameraX=lift=0;},draw};

@@ -21,6 +21,13 @@ export function overTunnel(distance) {
     kind === 'tunnel' && distance >= start && distance < start + length);
 }
 
+export function visibleRoadSign(distance, at) {
+  if (at <= distance + 1 || at > distance + 125) return false;
+  const camera = distance - 12;
+  return !trackFeatures(camera).some(({kind,start,length}) =>
+    kind === 'tunnel' && camera < start+length && at >= start);
+}
+
 export function openRoadSign(distance) {
   const tunnel = trackFeatures(distance).find(({kind,start,length}) =>
     kind === 'tunnel' && distance >= start && distance < start + length);
@@ -32,7 +39,7 @@ export const nextSigns = distance => {
   if (overTunnel(distance)) return [];
   const spacing = 236;
   const first = 38 + Math.max(0, Math.floor((distance - 26) / spacing)) * spacing;
-  return [first, first + spacing].map(openRoadSign);
+  return [first, first + spacing].map(openRoadSign).filter(at=>visibleRoadSign(distance,at));
 };
 
 export function railwayScene(distance) {

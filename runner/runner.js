@@ -272,6 +272,9 @@ function frame(time) {
   }
   requestAnimationFrame(frame);
 }
+if (document.fonts) {
+  await document.fonts.load('700 70px "Roadside Arabic"', 'العربية').catch(() => {});
+}
 try {
   const canvas = el('world');
   let context;

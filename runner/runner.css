@@ -1,3 +1,10 @@
+@font-face {
+  font-family:"Roadside Arabic";
+  src:local("Traditional Arabic Bold"),local("Traditional Arabic"),
+      url("fonts/noto-naskh-arabic-bold.woff") format("woff");
+  font-weight:700;
+  font-style:normal;
+}
 :root{font-family:Tahoma,Arial,sans-serif;color:#172e3b;background:#fff5e3}
 *{box-sizing:border-box}
 [hidden]{display:none!important}

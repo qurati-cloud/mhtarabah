@@ -2,7 +2,7 @@ import * as THREE from './vendor/three.module.min.js';
 import { laneWidth, obstacles, powerups, attractedPlayer } from './simulation.js';
 import {trackFeatures, nextSigns, adLines, railwayScene} from './track.js';
 
-import {districtCount, districtModel, roadsidePhrases, makeTextPanel, roadsideBoard, advertisingBoard} from './district.js';
+import {districtCount, districtModel, roadsidePhrases, makeTextPanel, roadsideBoard, advertisingBoard, advertisingHeight} from './district.js';
 
 const box = new THREE.BoxGeometry(1, 1, 1);
 const sphere = new THREE.SphereGeometry(1, 18, 12);
@@ -265,14 +265,15 @@ function billboardMaterial() {
   const map = new THREE.CanvasTexture(canvas);
   map.colorSpace = THREE.SRGBColorSpace;
   map.anisotropy = 4;
-  return new THREE.MeshBasicMaterial({map,depthTest:false,depthWrite:false,fog:false});
+  return new THREE.MeshBasicMaterial({map,fog:false});
 }
 function makeBillboard(face) {
   const group = new THREE.Group();
   const {width,height,centerY} = advertisingBoard;
   const postHeight = centerY-height/2;
-  for (const side of [-1,1]) block(group,0x315063,side*5.16,postHeight/2,0,.25,postHeight,.36);
-  part(group,new THREE.PlaneGeometry(width,height),face,0,centerY,.05,1,1,1).renderOrder = 18;
+  const posts = [-1,1].map(side=>block(group,0x315063,side*5.16,postHeight/2,0,.25,postHeight,.36));
+  const board = part(group,new THREE.PlaneGeometry(width,height),face,0,centerY,.05,1,1,1);
+  group.userData = {posts,board};
   return group;
 }
 
@@ -330,7 +331,7 @@ function panelMaterial(text, roadside) {
   const map = new THREE.CanvasTexture(makeTextPanel(text,roadside));
   map.colorSpace = THREE.SRGBColorSpace;
   map.anisotropy = 4;
-  return new THREE.MeshBasicMaterial({map,depthTest:!roadside,depthWrite:!roadside,fog:!roadside});
+  return new THREE.MeshBasicMaterial({map,fog:!roadside});
 }
 function roadPanel() {
   const group = new THREE.Group();
@@ -339,7 +340,6 @@ function roadPanel() {
   for(const side of [-1,1]) block(group,0x425658,side*width*.38,postHeight/2,0,.15,postHeight,.19);
   const face = part(group,new THREE.PlaneGeometry(width,height),
     new THREE.MeshBasicMaterial({color:0x143b42}),0,centerY,.09,1,1,1);
-  face.renderOrder = 20;
   return {group,face,text:''};
 }
 
@@ -446,7 +446,17 @@ export function createWorld(canvas, context) {
     const ads = nextSigns(run.distance);
     for (const [i,sign] of signs.entries()) {
       sign.visible = ads[i] !== undefined;
-      if (sign.visible) sign.position.z = run.distance-ads[i];
+      if (sign.visible) {
+        const distance = ads[i]-run.distance;
+        const centerY = advertisingHeight(run.players,distance);
+        sign.position.z = -distance;
+        sign.userData.board.position.y = centerY;
+        const postHeight = centerY-advertisingBoard.height/2;
+        for(const post of sign.userData.posts) {
+          post.position.y = postHeight/2;
+          post.scale.y = postHeight;
+        }
+      }
     }
     const offset = run.distance % 24;
     const segment = Math.floor(run.distance / 24);

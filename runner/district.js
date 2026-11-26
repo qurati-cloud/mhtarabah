@@ -1,4 +1,4 @@
-import {openRoadSign, overTunnel} from './track.js';
+import {openRoadSign, overTunnel, visibleRoadSign} from './track.js';
 
 const buildings = [
   ['modest', 2.35, 5.5, 0xc5aa87, 0x8a6657],
@@ -90,13 +90,26 @@ export function districtModel(index) {
 export const roadsideBoard = {offset:7.45, width:4.9, height:2.36, centerY:4.2};
 export const advertisingBoard = {width:10, height:2.5, centerY:6.78};
 
+export function advertisingHeight(players, distance) {
+  const bottom = advertisingBoard.centerY-advertisingBoard.height/2;
+  const clearance = Math.max(0,...players.filter(player=>!player.out).map(player=>player.y+2.18-bottom));
+  return advertisingBoard.centerY+clearance*Math.max(0,Math.min(1,(42-distance)/29));
+}
+
+function districtGap(distance) {
+  const nextGap = at=>1+Math.ceil((at-1)/24)*24;
+  const candidate = nextGap(distance);
+  return overTunnel(candidate) ? nextGap(openRoadSign(candidate)) : candidate;
+}
+
 export function roadsidePhrases(distance, phrases) {
   if (!phrases?.length || overTunnel(distance)) return [];
   const spacing = 148;
   const first = Math.max(0,Math.floor((distance-32)/spacing));
   return [first,first+1].map(index=>({
-    at:openRoadSign(51+index*spacing), x:roadsideBoard.offset*(index%2?-1:1), text:phrases[index%phrases.length]
-  }));
+    at:index%2 ? openRoadSign(51+index*spacing) : districtGap(51+index*spacing),
+    x:roadsideBoard.offset*(index%2?-1:1), text:phrases[index%phrases.length]
+  })).filter(sign=>visibleRoadSign(distance,sign.at));
 }
 
 export function makeTextPanel(text, roadside = true) {
@@ -126,7 +139,7 @@ export function makeTextPanel(text, roadside = true) {
   let lines = [];
   let size = text.length<9&&!roadside ? 155 : 85;
   for (;size>=29;size-=4) {
-    ctx.font = 'bold '+size+'px Tahoma, Arial, sans-serif';
+    ctx.font = '700 '+size+'px '+(roadside?'"Roadside Arabic", "Traditional Arabic", serif':'Tahoma, Arial, sans-serif');
     lines = [''];
     for (const word of words) {
       const last = lines.length-1;
@@ -136,7 +149,8 @@ export function makeTextPanel(text, roadside = true) {
     }
     if (lines.length*size*1.2 <= height-48) break;
   }
-  ctx.fillStyle = '#fff9e9';
+  ctx.fillStyle = '#fffdf3';
+  if (roadside) {ctx.shadowColor='#071b22';ctx.shadowBlur=2;ctx.shadowOffsetY=1;}
   const dy = size*1.2;
   lines.forEach((line,i)=>ctx.fillText(line,width/2,
     height/2+(i-(lines.length-1)/2)*dy,683));
