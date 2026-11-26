@@ -1,4 +1,5 @@
 import { progress, updateProgress } from '../auth/progress.js';
+import { connect } from '../auth/firebase.js';
 import { makeRun, move, step } from './simulation.js';
 import { createWorld } from './world.js';
 import { createCanvasWorld } from './fallback.js';
@@ -16,6 +17,8 @@ let state = 'menu';
 let run, graphics;
 let last = 0, lastSave = 0, saving = Promise.resolve();
 let records = {};
+const globalRecords = {};
+let leaderboard;
 try { records = JSON.parse(progress.getItem(recordKey) || '{}') || {}; } catch {}
 const saved = {};
 const isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
@@ -41,6 +44,9 @@ function showBest() {
   const best = records[mode] || blank;
   el('bestDistance').textContent = number.format(best.distance);
   el('bestStars').textContent = number.format(best.stars);
+  const global = globalRecords[mode];
+  el('worldDistance').textContent = global ? number.format(global.distance) : '—';
+  el('worldStars').textContent = global ? number.format(global.stars) : '—';
 }
 
 function scores() {
@@ -50,6 +56,41 @@ function scores() {
 function maximum(a = blank, b = blank) {
   return {distance: Math.max(a.distance, b.distance), stars: Math.max(a.stars, b.stars)};
 }
+async function publishGlobal(currentMode, score) {
+  const connection = leaderboard;
+  if (!connection?.auth.currentUser?.emailVerified) return;
+  const known = globalRecords[currentMode];
+  if (known && known.distance >= score.distance && known.stars >= score.stars) return;
+  if (!score.distance && !score.stars) return;
+  const {data, db} = connection;
+  await data.runTransaction(db, async transaction => {
+    const ref = data.doc(db, 'runnerWorldRecords', currentMode);
+    const current = (await transaction.get(ref)).data() || blank;
+    const best = maximum(current, score);
+    if (best.distance !== current.distance || best.stars !== current.stars) transaction.set(ref, best);
+  });
+}
+
+connect().then(connection => {
+  if (!connection) return;
+  leaderboard = connection;
+  const {data, db, auth, authApi} = connection;
+  for (const category of ['solo','duo']) {
+    data.onSnapshot(data.doc(db, 'runnerWorldRecords', category), snapshot => {
+      if (!snapshot.metadata.fromCache || snapshot.exists()) {
+        globalRecords[category] = snapshot.data() || blank;
+        showBest();
+      }
+    }, error => console.warn('Runner leaderboard unavailable', error));
+  }
+  authApi.onAuthStateChanged(auth, user => {
+    if (!user?.emailVerified) return;
+    for (const category of ['solo','duo']) {
+      if (records[category]) publishGlobal(category, records[category]).catch(error => console.warn(error));
+    }
+  });
+}).catch(error => console.warn(error));
+
 function saveRecord() {
   if (!run || state === 'menu') return;
   const currentMode = mode;
@@ -57,7 +98,10 @@ function saveRecord() {
   records[currentMode] = next;
   saving = saving.then(async () => {
     const previous = saved[currentMode];
-    if (previous && next.distance <= previous.distance && next.stars <= previous.stars) return;
+    if (previous && next.distance <= previous.distance && next.stars <= previous.stars) {
+      await publishGlobal(currentMode, next).catch(error => console.warn(error));
+      return;
+    }
     if (!next.distance && !next.stars) return;
     try {
       const remote = await updateProgress(recordKey, current => {
@@ -69,6 +113,7 @@ function saveRecord() {
       records[currentMode] = maximum(records[currentMode], best);
       el('recordStatus').hidden = true;
       showBest();
+      await publishGlobal(currentMode, best);
     } catch { el('recordStatus').hidden = false; }
   });
 }
@@ -111,8 +156,7 @@ function overlay(finished) {
   el('result').hidden = !finished;
   if (finished) {
     const total = scores();
-    const metres = document.querySelector('[data-text-key="runner:metres"]').textContent;
-    el('result').textContent = number.format(total.distance) + ' ' + metres + ' · ★ ' + number.format(total.stars);
+    el('result').textContent = number.format(total.distance) + ' · ★ ' + number.format(total.stars);
   }
   (finished ? el('again') : el('resume')).focus({preventScroll: true});
 }

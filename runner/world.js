@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
-import { laneWidth } from './simulation.js';
+import { laneWidth, obstacles, firstTunnel, tunnelLength, tunnelSpacing } from './simulation.js';
 
 const box = new THREE.BoxGeometry(1, 1, 1);
 const sphere = new THREE.SphereGeometry(1, 18, 12);
@@ -140,13 +140,14 @@ function makeHazard(kind) {
     }
     return {group};
   }
-  const bus = kind === 'bus', height = bus ? 2.15 : 1.12, length = bus ? 3.65 : 2.8;
+  const bus = obstacles[kind].roof;
+  const {height, length} = obstacles[kind];
   const width = bus ? 1.96 : 1.76;
-  const paint = bus ? 0xeac158 : 0x24a897;
+  const paint = kind === 'longBus' ? 0xcf7659 : bus ? 0xeac158 : 0x24a897;
   shadow(group, width * .58, length * .57);
   block(group, paint, 0, .52, 0, width, .73, length);
   block(group, paint, 0, (height + .77)/2, bus ? -.04 : -.20, width-.10, height-.77, length-(bus ? .11 : 1.0));
-  block(group, 0x3c5c6c, 0, bus ? 1.43 : .94, bus ? 1.76 : .72, width-.27, bus ? .63 : .23, .055);
+  block(group, 0x3c5c6c, 0, bus ? 1.43 : .94, bus ? length / 2 - .08 : .72, width-.27, bus ? .63 : .23, .055);
   block(group, 0x293d4b, 0, .34, length/2, width*.94, .13, .09);
   for (const side of [-1, 1]) {
     for (const z of [-length*.34, length*.34]) {
@@ -154,12 +155,26 @@ function makeHazard(kind) {
       tire.rotation.z = Math.PI/2;
     }
     block(group, 0xe67367, side*width*.34, .64, length/2+.02, .26, .125, .055);
-    for (const z of bus ? [-1.09, 0, 1.09] : [-.35, .5]) {
+    for (const z of bus ? Array.from({length: Math.floor(length)}, (_,i) => i - (Math.floor(length)-1)/2) : [-.35, .5]) {
       block(group, 0x466c7b, side*(width/2-.04), bus ? 1.46 : .94, z,
         .03, bus ? .58 : .18, bus ? .84 : .63);
     }
   }
   return {group};
+}
+
+function makeTunnel() {
+  const group = new THREE.Group();
+  block(group, 0x354956, 0, 6.9, -tunnelLength/2, 11.2, .6, tunnelLength);
+  for (const side of [-1,1]) {
+    block(group, 0x496473, side*5.28, 3.25, -tunnelLength/2, .6, 6.5, tunnelLength);
+    block(group, 0x78b5ae, side*4.97, 1.25, -tunnelLength/2, .06, .13, tunnelLength);
+  }
+  for (let offset=0; offset<=tunnelLength; offset+=8) {
+    block(group, 0x80989f, 0, 6.52, -offset, 10.8, .27, .3);
+    for (const side of [-1,1]) block(group, 0xffe5a5, side*3.45, 6.34, -offset, 1.6, .07, .34);
+  }
+  return group;
 }
 
 export function createWorld(canvas, context) {
@@ -184,6 +199,8 @@ export function createWorld(canvas, context) {
     scene.add(group);
     return group;
   });
+  const tunnel = makeTunnel();
+  scene.add(tunnel);
   const renderObjects = new Map();
   const pool = new Map();
   let racers = [];
@@ -214,6 +231,9 @@ export function createWorld(canvas, context) {
     renderObjects.delete(object);
   }
   function draw(run, time) {
+    const tunnelIndex = Math.max(0, Math.floor((run.distance - firstTunnel - tunnelLength - 13) / tunnelSpacing) + 1);
+    tunnel.position.z = run.distance - firstTunnel - tunnelIndex * tunnelSpacing;
+    tunnel.visible = tunnel.position.z > -140;
     const offset = run.distance % 24;
     const segment = Math.floor(run.distance / 24);
     for (let i = 0; i < scenery.length; i++) {
@@ -249,14 +269,16 @@ export function createWorld(canvas, context) {
       const phase = run.time * (12 + Math.min(9, run.time*.06)) + index * 1.8;
       const gait = Math.sin(phase);
       const slide = player.slide > 0;
+      const grounded = player.y === 0 || player.support;
+      model.ground.position.y = (player.support ? player.y : 0) + .018;
       model.body.scale.y = slide ? .43 : 1;
-      model.body.position.y = player.y + (!slide && player.y === 0 ? Math.abs(gait) * .062 : 0);
+      model.body.position.y = player.y + (!slide && grounded ? Math.abs(gait) * .062 : 0);
       model.torso.rotation.x = slide ? -0.28 : -.12;
       model.body.rotation.z = (player.x - player.lane * laneWidth) * .16;
       for (let i = 0; i < 2; i++) {
         const swing = gait * (i ? 1 : -1);
-        model.legs[i].rotation.x = slide ? -.47 : player.y > 0 ? -.33 + i*.6 : swing*.74;
-        model.arms[i].rotation.x = slide ? -.62 : player.y > 0 ? -.81 : -swing*.64;
+        model.legs[i].rotation.x = slide ? -.47 : !grounded ? -.33 + i*.6 : swing*.74;
+        model.arms[i].rotation.x = slide ? -.62 : !grounded ? -.81 : -swing*.64;
       }
     });
     renderer.render(scene, camera);

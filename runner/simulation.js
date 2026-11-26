@@ -1,21 +1,27 @@
 export const laneWidth = 2.85;
 const gravity = 27;
-const jumpSpeed = 13.2;
+const jumpSpeed = 14.6;
 const diveSpeed = 26;
 const slideSeconds = 0.78;
-const kinds = ['car', 'bus', 'bar'];
+const kinds = ['car', 'bus', 'longBus', 'bar'];
 export const obstacles = {
   car: {height: 1.12, length: 2.8, halfWidth: 0.88},
-  bus: {height: 2.15, length: 3.65, halfWidth: 0.98},
+  bus: {height: 2.15, length: 5.2, halfWidth: 0.98, roof: true},
+  longBus: {height: 2.35, length: 11.5, halfWidth: 0.98, roof: true},
   bar: {height: 1.72, opening: 1.04, length: 0.5, halfWidth: 1.15}
 };
+
+export const tunnelLength = 64;
+export const tunnelSpacing = 240;
+export const firstTunnel = 132;
+export const runningSpeed = time => 12 + 24 * -Math.expm1(-time / 85);
 
 export function makeRun(avatars, random = Math.random) {
   return {
     distance: 0, time: 0, players: avatars.map((avatar, index) => {
       const lane = avatars.length === 1 ? 0 : index * 2 - 1;
       return {avatar, lane, x: lane * laneWidth, y: 0, vy: 0, slide: 0,
-        diving: false, stars: 0, distance: 0, out: false};
+        support: null, diving: false, stars: 0, distance: 0, out: false};
     }),
     objects: [], nextWave: 26, wave: 0, random
   };
@@ -25,12 +31,13 @@ export function move(player, command) {
   if (!player || player.out) return;
   if (command === 'left' || command === 'right') {
     player.lane = Math.max(-1, Math.min(1, player.lane + (command === 'left' ? -1 : 1)));
-  } else if (command === 'jump' && player.y === 0) {
+  } else if (command === 'jump' && (player.y === 0 || player.support)) {
     player.slide = 0;
     player.vy = jumpSpeed;
-    player.y = 0.001;
+    player.support = null;
+    player.y += 0.001;
   } else if (command === 'down') {
-    if (player.y > 0) {
+    if (player.y > 0 && !player.support) {
       player.vy = -diveSpeed;
       player.diving = true;
     } else player.slide = slideSeconds;
@@ -40,18 +47,23 @@ export function move(player, command) {
 function spawn(run) {
   const first = Math.floor(run.random() * 3) - 1;
   const other = [-1, 0, 1].filter(lane => lane !== first);
-  const kind = kinds[run.wave < 3 ? run.wave : Math.floor(run.random() * kinds.length)];
+  const kind = kinds[run.wave < kinds.length ? run.wave : Math.floor(run.random() * kinds.length)];
   run.objects.push({kind, lane: first, distance: run.nextWave, taken: 0});
   if (run.wave > 4 && run.random() > 0.38) {
     const second = other.splice(Math.floor(run.random() * 2), 1)[0];
-    run.objects.push({kind: kinds[Math.floor(run.random() * 3)], lane: second, distance: run.nextWave, taken: 0});
+    run.objects.push({kind: kinds[Math.floor(run.random() * kinds.length)], lane: second, distance: run.nextWave, taken: 0});
   }
   const route = other[Math.floor(run.random() * other.length)];
   for (const offset of [-5, -2.5, 0, 2.5, 5]) {
     run.objects.push({kind: 'star', lane: route, distance: run.nextWave + offset, y: 1.05, taken: 0});
   }
-  if (kind !== 'bar' && run.wave > 0) {
-    run.objects.push({kind: 'star', lane: first, distance: run.nextWave, y: obstacles[kind].height + 1, taken: 0});
+  if (obstacles[kind].roof) {
+    const roof = obstacles[kind];
+    for (let offset = -roof.length / 2 + 1; offset < roof.length / 2; offset += 1.8) {
+      run.objects.push({kind: 'star', lane: first, distance: run.nextWave + offset, y: roof.height + .9, taken: 0});
+    }
+  } else if (kind === 'car') {
+    run.objects.push({kind: 'star', lane: first, distance: run.nextWave, y: obstacles.car.height + 1, taken: 0});
   }
   run.wave++;
   run.nextWave += 17 + Math.min(10, run.time / 10) + run.random() * 5;
@@ -59,7 +71,7 @@ function spawn(run) {
 
 export function step(run, dt) {
   run.time += dt;
-  run.distance += dt * (13 + Math.min(13, run.time * 0.12));
+  run.distance += dt * runningSpeed(run.time);
   while (run.nextWave < run.distance + 105) spawn(run);
   for (let index = 0; index < run.players.length; index++) {
     const player = run.players[index];
@@ -67,11 +79,26 @@ export function step(run, dt) {
     player.distance = run.distance;
     player.x += (player.lane * laneWidth - player.x) * (1 - Math.exp(-15 * dt));
     player.slide = Math.max(0, player.slide - dt);
-    if (player.y > 0) {
+    const onRoof = object => Math.abs(run.distance - object.distance) <= obstacles[object.kind].length / 2 + .31 &&
+      Math.abs(player.x - object.lane * laneWidth) <= obstacles[object.kind].halfWidth + .23;
+    if (player.support && !onRoof(player.support)) player.support = null;
+    const previousY = player.y;
+    if (!player.support && player.y > 0) {
       player.vy -= gravity * dt;
       player.y += player.vy * dt;
       if (player.y <= 0) {
         player.y = 0;
+        player.vy = 0;
+        if (player.diving) player.slide = slideSeconds;
+        player.diving = false;
+      }
+    }
+    if (!player.support && player.vy <= 0) {
+      const roof = run.objects.find(object => obstacles[object.kind]?.roof && onRoof(object) &&
+        previousY >= obstacles[object.kind].height && player.y <= obstacles[object.kind].height);
+      if (roof) {
+        player.support = roof;
+        player.y = obstacles[roof.kind].height;
         player.vy = 0;
         if (player.diving) player.slide = slideSeconds;
         player.diving = false;
@@ -91,7 +118,7 @@ export function step(run, dt) {
       }
       const hazard = obstacles[object.kind];
       if (depth > hazard.length / 2 + 0.31 || side > hazard.halfWidth + 0.23) continue;
-      const clears = player.y > hazard.height + 0.05 ||
+      const clears = player.y >= hazard.height ||
         (hazard.opening && player.y + height < hazard.opening);
       if (!clears) {
         player.out = true;
@@ -99,5 +126,5 @@ export function step(run, dt) {
       }
     }
   }
-  run.objects = run.objects.filter(object => object.distance > run.distance - 16);
+  run.objects = run.objects.filter(object => object.distance > run.distance - 19);
 }

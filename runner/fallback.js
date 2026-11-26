@@ -1,4 +1,4 @@
-import {laneWidth, obstacles} from './simulation.js';
+import {laneWidth, obstacles, firstTunnel, tunnelLength, tunnelSpacing} from './simulation.js';
 
 // Perspective canvas renderer for devices that cannot open a WebGL context.
 export function createCanvasWorld(canvas) {
@@ -84,7 +84,7 @@ export function createCanvasWorld(canvas) {
       }
       return;
     }
-    const isBus=kind==='bus';
+    const isBus=obstacles[kind].roof;
     prism(x,.17,z,w,.65,length,isBus ? gold : accent);
     prism(x,.79,z+.16,w-.1,height-.79,isBus ? length-.15 : length-.98,isBus ? gold : accent);
     prism(x,isBus ? 1.23 : .90,z-(isBus ? length/2-.045 : length/2-.37),
@@ -172,6 +172,25 @@ export function createCanvasWorld(canvas) {
     const scenery=Array.from({length:9},(_,i)=>({z:i*15-run.distance%15,index:chunk+i}))
       .filter(item=>item.z>-7).map(item=>({...item,draw:()=>segment(item.z,item.index)}));
     const items=[...scenery];
+    const index=Math.max(0,Math.floor((run.distance-firstTunnel-tunnelLength-9)/tunnelSpacing)+1);
+    const entrance=firstTunnel+index*tunnelSpacing-run.distance;
+    if (entrance < 135) {
+      const near=Math.max(-6.7,entrance), far=entrance+tunnelLength;
+      if (far>near) {
+        for (let z=far;z>near;z-=8) {
+          const from=Math.max(near,z-8);
+          items.push({z,draw:()=>{
+            quad('#344752',-5.45,5.45,from,z,6.6);
+            for(const side of [-1,1]) {
+              const x=side*5.2;
+              polygon('#496473',project(x,0,from),project(x,0,z),
+                project(x,6.6,z),project(x,6.6,from));
+              quad('#ffe3a5',side*3.5-.65,side*3.5+.65,from,Math.min(from+.33,z),6.56);
+            }
+          }});
+        }
+      }
+    }
     for(const obj of run.objects) {
       const z=obj.distance-run.distance;
       if(z < -5 || z>113)continue;

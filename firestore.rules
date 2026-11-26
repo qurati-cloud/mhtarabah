@@ -53,6 +53,20 @@ service cloud.firestore {
       allow read: if true;
       allow write: if (admin() || roleIs('editor'));
     }
+    match /runnerWorldRecords/{mode} {
+      function validRecord() {
+        let score = request.resource.data;
+        return mode in ['solo', 'duo']
+          && score.keys().hasOnly(['distance','stars'])
+          && score.distance is int && score.distance >= 1 && score.distance <= 10000000
+          && score.stars is int && score.stars >= 0 && score.stars <= score.distance * 2;
+      }
+      allow get: if mode in ['solo', 'duo'];
+      allow create: if verified() && validRecord();
+      allow update: if verified() && validRecord()
+        && request.resource.data.distance >= resource.data.distance
+        && request.resource.data.stars >= resource.data.stars;
+    }
     function profilePath(uid, profileId) {
       return /databases/$(database)/documents/families/$(uid)/profiles/$(profileId);
     }
