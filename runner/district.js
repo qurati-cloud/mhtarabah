@@ -1,3 +1,5 @@
+import {openRoadSign, overTunnel} from './track.js';
+
 const buildings = [
   ['modest', 2.35, 5.5, 0xc5aa87, 0x8a6657],
   ['tower', 14.2, 8.4, 0x9fc3ca, 0x496b82],
@@ -91,11 +93,11 @@ export const roadsideBoard = {offset:7.45, width:4.9, height:2.36, centerY:4.2};
 export const advertisingBoard = {width:10, height:2.5, centerY:6.78};
 
 export function roadsidePhrases(distance, phrases) {
-  if (!phrases?.length) return [];
+  if (!phrases?.length || overTunnel(distance)) return [];
   const spacing = 148;
   const first = Math.max(0,Math.floor((distance-32)/spacing));
   return [first,first+1].map(index=>({
-    at:51+index*spacing, x:roadsideBoard.offset*(index%2?-1:1), text:phrases[index%phrases.length]
+    at:openRoadSign(51+index*spacing), x:roadsideBoard.offset*(index%2?-1:1), text:phrases[index%phrases.length]
   }));
 }
 

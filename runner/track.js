@@ -21,11 +21,18 @@ export function overTunnel(distance) {
     kind === 'tunnel' && distance >= start && distance < start + length);
 }
 
+export function openRoadSign(distance) {
+  const tunnel = trackFeatures(distance).find(({kind,start,length}) =>
+    kind === 'tunnel' && distance >= start && distance < start + length);
+  return tunnel ? tunnel.start+tunnel.length+8 : distance;
+}
+
 export const adLines = ['Put you add here', '+1 514 446 5664'];
 export const nextSigns = distance => {
+  if (overTunnel(distance)) return [];
   const spacing = 236;
   const first = 38 + Math.max(0, Math.floor((distance - 26) / spacing)) * spacing;
-  return [first, first + spacing];
+  return [first, first + spacing].map(openRoadSign);
 };
 
 export function railwayScene(distance) {

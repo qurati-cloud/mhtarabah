@@ -461,9 +461,11 @@ export function createWorld(canvas, context) {
       group.visible = group.position.z > -145;
       if (group.userData.roof) group.userData.roof.visible = !mixedHeight;
     }
-    nextSigns(run.distance).forEach((distance,i)=>{
-      signs[i].position.z = run.distance-distance;
-    });
+    const ads = nextSigns(run.distance);
+    for (const [i,sign] of signs.entries()) {
+      sign.visible = ads[i] !== undefined;
+      if (sign.visible) sign.position.z = run.distance-ads[i];
+    }
     const offset = run.distance % 24;
     const segment = Math.floor(run.distance / 24);
     for (let i = 0; i < scenery.length; i++) {
