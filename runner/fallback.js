@@ -286,8 +286,6 @@ export function createCanvasWorld(canvas) {
         ellipse('#bc836b',px,py-1.47*s,.145*s,.17*s);
       }});
     }
-    const treasureEnd=Math.max(0,...visible.map(player=>player.treasure))-run.distance;
-    if(treasureEnd>0) quad('#ac773b',-6.25,-5.12,-4,treasureEnd,.12);
     for (const feature of features) {
       const entrance=feature.start-run.distance;
       const start=Math.max(-6.7,entrance), end=Math.min(150,entrance+feature.length);
@@ -363,13 +361,6 @@ export function createCanvasWorld(canvas) {
           const offsetY=target ? (target.y+1-obj.y)*pull : 0;
           items.push({z,draw:()=>star(x+offsetX,obj.y+offsetY,z,time)});
         }
-      } else if (obj.kind==='gate') {
-        if(obj.taken!==(1<<run.players.length)-1) items.push({z,draw:()=>{
-          for(const side of [-1,1]) prism(x+side*1.02,0,z,.17,2.93,.18,gold);
-          prism(x,2.66,z,2.2,.23,.18,gold);
-          const [px,py,s]=project(x,2.28,z);
-          ellipse('#ffbd58',px,py,.18*s,.22*s);
-        }});
       } else if (Object.hasOwn(powerups,obj.kind)) {
         if(obj.taken!==(1<<run.players.length)-1) items.push({z,draw:()=>pickup(obj,z,time)});
       } else items.push({z,draw:()=>vehicle(obj.kind,x,z)});

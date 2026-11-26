@@ -27,7 +27,9 @@
 .portrait.habiba{background-position:100% 13%}
 .personal{color:#ffdc90}
 #hud{direction:ltr;position:absolute;top:12px;left:12px;right:12px;display:grid;grid-template-columns:1fr auto 1fr;align-items:start;gap:8px;pointer-events:none}
-#pause{pointer-events:auto;grid-column:2;background:#103746e8}
+.run-controls{grid-column:2;display:grid;justify-items:center;gap:5px}
+#pause{pointer-events:auto;background:#103746e8}
+#speedFactor{font:bold 12px Tahoma,Arial,sans-serif;font-variant-numeric:tabular-nums;color:#fff5d3;background:#103746e8;border:1px solid #91b4bb88;border-radius:9px;padding:4px 8px}
 .player-stat{width:fit-content;display:grid;grid-template-columns:auto auto;align-items:center;gap:3px 8px;background:#0a3144e8;border:1px solid #9cd1ce85;border-radius:13px;color:white;padding:6px 9px;direction:ltr}
 .player-stat #p1Out,.player-stat #p2Out{grid-column:span 2;direction:rtl}
 .avatar-icon{grid-row:span 2;width:34px;aspect-ratio:1;border-radius:50%;background-size:235% 118%;background-position:0 5%}

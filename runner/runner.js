@@ -1,6 +1,6 @@
 import { progress, updateProgress } from '../auth/progress.js';
 import { connect, connectRunnerGuest } from '../auth/firebase.js';
-import { makeRun, move, step } from './simulation.js';
+import { makeRun, move, runningSpeed, step } from './simulation.js';
 import { createWorld } from './world.js';
 import { createCanvasWorld } from './fallback.js';
 
@@ -126,6 +126,9 @@ function saveRecord() {
 }
 
 function paintHud() {
+  const speedFactor = el('speedFactor');
+  const speed = (runningSpeed(run.time)/runningSpeed(0)).toFixed(1)+'x';
+  if (speedFactor.textContent !== speed) speedFactor.textContent = speed;
   run.players.forEach((player, index) => {
     const id = index + 1;
     el('p' + id + 'Distance').textContent = number.format(Math.floor(player.distance));

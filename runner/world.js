@@ -116,12 +116,6 @@ function makeAvatar(avatar) {
 
 function makeHazard(kind) {
   const group = new THREE.Group();
-  if (kind === 'gate') {
-    for (const side of [-1,1]) block(group,0xf8c67b,side*1.02,.72,0,.17,2.36,.18);
-    block(group,0xfb9e41,0,1.89,0,2.25,.24,.19);
-    part(group,ringGeo,new THREE.MeshBasicMaterial({color:0xffb75b}),0,1.5,.02,.85,.85,1);
-    return {group};
-  }
   if (Object.hasOwn(powerups, kind)) {
     const {color} = powerups[kind];
     const rim = new THREE.MeshBasicMaterial({color});
@@ -150,10 +144,6 @@ function makeHazard(kind) {
         oval(group,0xf5eaff,side*.18,0,0,.13,.2,.075);
         block(group,color,side*.18,-.15,.04,.24,.07,.08);
       }
-    } else if (kind === 'key') {
-      part(group,ringGeo,rim,-.15,.13,0,.38,.38,1);
-      block(group,color,.05,-.07,0,.37,.09,.1).rotation.z=-.68;
-      block(group,color,.19,-.19,0,.09,.15,.09);
     } else {
       const emblem = block(group, color, 0, 0, 0, .47, .47, .12);
       emblem.rotation.z = Math.PI/4;
@@ -380,8 +370,6 @@ export function createWorld(canvas, context) {
   const districtSlots = Array.from({length:7},()=>new THREE.Group());
   const phraseBoards = Array.from({length:2},roadPanel);
   scene.add(...districtSlots,...phraseBoards.map(board=>board.group));
-  const treasurePath = block(scene,0x987549,-5.7,.133,0,1.24,.024,1);
-  treasurePath.visible = false;
   const rail = railway();
   scene.add(rail.track,rail.station,rail.train);
   const features = new Map();
@@ -421,12 +409,6 @@ export function createWorld(canvas, context) {
     renderObjects.delete(object);
   }
   function draw(run, time) {
-    const treasureEnd = Math.max(0,...run.players.filter(player=>!player.out).map(player=>player.treasure))-run.distance;
-    treasurePath.visible = treasureEnd>0;
-    if(treasureEnd>0) {
-      treasurePath.position.z = -treasureEnd/2+2;
-      treasurePath.scale.z = treasureEnd+4;
-    }
     const railway = railwayScene(run.distance);
     rail.track.position.z = -58 + run.distance%2.5;
     rail.station.position.z = run.distance-railway.station;
@@ -511,7 +493,6 @@ export function createWorld(canvas, context) {
       }
       const {group} = renderObjects.get(object);
       group.position.set(object.lane * laneWidth, object.y || 0, run.distance - object.distance);
-      if (object.kind === 'gate') group.visible = object.taken !== (1 << run.players.length) - 1;
       if (object.kind === 'star' || Object.hasOwn(powerups, object.kind)) {
         const target = attractedPlayer(run, object);
         if (target) {

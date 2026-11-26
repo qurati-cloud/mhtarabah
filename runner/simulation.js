@@ -20,8 +20,7 @@ export const powerups = {
   magnet: {color: 0xf57183, symbol: '🧲'},
   shield: {color: 0x84e8af, symbol: '⬡'},
   golden: {color: 0xbc75ff, symbol: '★'},
-  shoes: {color: 0xbfa5fa, symbol: '↑↑'},
-  key: {color: 0xffaf57, symbol: '⚿'}
+  shoes: {color: 0xbfa5fa, symbol: '↑↑'}
 };
 const powerKinds = Object.keys(powerups);
 export function attractedPlayer(run, star) {
@@ -42,45 +41,25 @@ export function makeRun(avatars, random = Math.random) {
     distance: 0, time: 0, players: avatars.map((avatar, index) => {
       const lane = avatars.length === 1 ? 0 : index * 2 - 1;
       return {avatar, lane, x: lane * laneWidth, y: 0, vy: 0, slide: 0,
-        support: null, flight: 0, magnet: 0, shield: 0, golden: 0, shoes: 0, key: 0, combo: 0, comboLane: null, comboTime: 0, airJump: false, treasure: 0, glide: false, protection: 0, ignored: null, diving: false, stars: 0, distance: 0, out: false};
+        support: null, flight: 0, magnet: 0, shield: 0, golden: 0, shoes: 0, combo: 0, comboLane: null, comboTime: 0, airJump: false, glide: false, protection: 0, ignored: null, diving: false, stars: 0, distance: 0, out: false};
     }),
     objects: [], nextWave: 33, wave: 0,
     nextReward: 4 + Math.floor(random()*7), rewardBag: [...powerKinds], random
   };
-  if (random() < .30 && (firstPower !== 'key' || treasureFits(firstDistance))) {
+  if (random() < .30) {
     placeReward(run, firstPower, firstLane, firstDistance);
   }
   return run;
 }
 
-function treasureFits(distance) {
-  return trackFeatures(distance).every(({start,length}) =>
-    distance + 58 < start || distance + 14 > start + length);
-}
-
 function placeReward(run, kind, lane, distance) {
   run.objects.push({kind,lane,distance,y:1.05,taken:0});
-  if (kind === 'key') run.objects.push({kind:'gate',lane,distance:distance+14,y:.95,taken:0});
   run.rewardBag = run.rewardBag.filter(reward=>reward!==kind);
-}
-
-function enterTreasure(run, player, index) {
-  player.key = 0;
-  player.treasure = run.distance + 41;
-  player.lane = -2;
-  player.combo = 0;
-  player.protection = .7;
-  for(let offset=5;offset<38;offset+=2.6) {
-    run.objects.push({kind:'star',lane:-2,distance:run.distance+offset,y:offset>=18&&offset<=24?2.9:1.05,
-      taken:((1<<run.players.length)-1) ^ (1<<index)});
-  }
-  run.objects.push({kind:'roadworks',lane:-2,distance:run.distance+21,only:index});
 }
 
 export function move(player, command) {
   if (!player || player.out) return;
   if (command === 'left' || command === 'right') {
-    if (player.treasure) return;
     const previous = player.lane;
     player.lane = Math.max(-1, Math.min(1, player.lane + (command === 'left' ? -1 : 1)));
     if (previous !== player.lane) player.combo = 0;
@@ -132,11 +111,9 @@ function spawn(run) {
   if (run.wave >= run.nextReward) {
     if (!run.rewardBag.length) run.rewardBag = [...powerKinds];
     const position = run.nextWave - 9 + run.random()*3;
-    const available = run.rewardBag.filter(kind=>kind!=='key' || treasureFits(position));
-    if (available.length) {
-      placeReward(run, available[Math.floor(run.random()*available.length)], route, position);
-      run.nextReward = run.wave + 7 + Math.floor(run.random()*7.5);
-    } else run.nextReward = run.wave + 1;
+    const power = run.rewardBag[Math.floor(run.random()*run.rewardBag.length)];
+    placeReward(run,power,route,position);
+    run.nextReward = run.wave + 7 + Math.floor(run.random()*7.5);
   }
   const airLane = Math.floor(run.random()*3)-1;
   for (const offset of [-5,-2,1,4]) {
@@ -155,11 +132,6 @@ export function step(run, dt) {
     const player = run.players[index];
     if (player.out) continue;
     player.distance = run.distance;
-    if (player.treasure && run.distance >= player.treasure) {
-      player.treasure = 0;
-      player.lane = -1;
-      player.protection = 1;
-    }
     if (player.combo && run.time - player.comboTime > 2.6) player.combo = 0;
     player.x += (player.lane * laneWidth - player.x) * (1 - Math.exp(-15 * dt));
     player.slide = Math.max(0, player.slide - dt);
@@ -205,14 +177,6 @@ export function step(run, dt) {
     for (const object of run.objects) {
       const depth = Math.abs(run.distance - object.distance);
       const side = Math.abs(player.x - object.lane * laneWidth);
-      if (object.only !== undefined && object.only !== index) continue;
-      if (object.kind === 'gate') {
-        if (player.key && depth < 2.25 && side < .9 && player.y < 1.65) {
-          object.taken |= 1 << index;
-          enterTreasure(run,player,index);
-        }
-        continue;
-      }
       if (object.kind === 'star' || Object.hasOwn(powerups, object.kind)) {
         const touch = depth < 1.1 && side < .85 &&
           object.y >= player.y - .25 && object.y <= player.y + height + .45;
