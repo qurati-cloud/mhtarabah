@@ -23,7 +23,7 @@ export const powerups = {
 };
 const powerKinds = Object.keys(powerups);
 export function attractedPlayer(run, star) {
-  if (star.kind !== 'star') return null;
+  if (star.kind !== 'star' || star.taken) return null;
   return run.players.find((player, index) => !player.out && player.magnet > 0 &&
     !(star.taken & (1 << index)) &&
     Math.abs(star.distance - run.distance) < 11 &&
@@ -181,7 +181,7 @@ export function step(run, dt) {
           object.y >= player.y - .25 && object.y <= player.y + height + .45;
         const pull = object.kind === 'star' && player.magnet > 0 && depth < 2.4 &&
           Math.abs(object.y - (player.y + 1)) < 3.8;
-        if (!(object.taken & (1 << index)) && (touch || pull)) {
+        if ((object.kind === 'star' ? !object.taken : !(object.taken & (1 << index))) && (touch || pull)) {
           object.taken |= 1 << index;
           if (object.kind === 'star') {
             player.stars += player.golden ? 2 : 1;
