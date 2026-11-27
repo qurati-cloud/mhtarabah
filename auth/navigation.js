@@ -127,7 +127,7 @@ try {
  }
 
  if (fields.length) {
-  if (isHome || page === 'runner.html' || page === 'neighborhood.html') data.onSnapshot(ref, showTexts, error => console.warn('Text loading failed', error));
+  if (isHome || page === 'runner.html' || page === 'neighborhood.html' || page === 'colors.html') data.onSnapshot(ref, showTexts, error => console.warn('Text loading failed', error));
   else data.getDoc(ref).then(showTexts).catch(error => console.warn('Text loading failed', error));
  }
 
@@ -219,7 +219,7 @@ try {
     nav.insertBefore(signEditor,panel);
     controls.push(signEditor);
    }
-   const editor = button(['runner.html','neighborhood.html'].includes(page) ? 'تحرير نصوص اللعبة' : 'تحرير عناوين الصفحة',
+   const editor = button(['runner.html','neighborhood.html','colors.html'].includes(page) ? 'تحرير نصوص اللعبة' : 'تحرير عناوين الصفحة',
      () => openTextEditor(editable));
    editor.id = 'mh-text-editor';
    nav.insertBefore(editor, panel);

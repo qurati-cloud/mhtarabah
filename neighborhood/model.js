@@ -171,3 +171,5 @@ export function challengeReady(board,marks){
  const origin=coords(start);
  return [end,...stars,...Object.keys(marks).filter(id=>marks[id]==='hurdle')].every(id=>path(board,origin,coords(id)).length);
 }
+
+pieces.harborLantern=['فانوس المرفأ','#efba57'];

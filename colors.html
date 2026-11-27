@@ -1,0 +1,62 @@
+<!doctype html><html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ألوان المرفأ</title><link rel="stylesheet" href="colors/style.css"></head>
+<body><main class="harbor-game">
+ <div class="harbor-title"><a href="games.html" data-text-key="colors:back">كل الألعاب</a><h1 data-text-key="colors:title">ألوان المرفأ</h1></div>
+ <section class="quay">
+  <div class="quay-top">
+   <label><span data-text-key="colors:stage">المرحلة</span> <select id="level"></select></label>
+   <label><span data-text-key="colors:daily">لغز اليوم والأيام السابقة</span> <input type="date" id="daily"></label>
+   <div class="scores"><span>↔ <b id="moves">0</b></span><span>★ <b id="best">—</b></span></div>
+  </div>
+  <div id="lamps" aria-hidden="true"></div>
+  <div id="tubes" aria-label="أوعية الألوان"></div>
+ </section>
+ <div class="quay-actions">
+  <button id="prev" data-text-key="colors:previous">السابقة</button>
+  <button id="next" data-text-key="colors:next">التالية</button>
+  <button id="undo" data-text-key="colors:undo">تراجع</button>
+  <button id="restart" data-text-key="colors:restart">إعادة المرحلة</button>
+  <button id="hint" data-text-key="colors:hint">تلميح</button>
+  <button id="edit-hints" hidden data-text-key="colors:editHints">إدارة وسائط التلميحات</button>
+ </div>
+ <p id="status" role="status"></p>
+ <p class="helper" data-text-key="colors:how">اختر وعاءً ثم وعاءً آخر. صُبّ اللون في وعاء فارغ أو فوق اللون نفسه، حتى تضيء الفوانيس كلها.</p>
+ <p id="goal"></p>
+ <a id="building-reward" href="neighborhood.html" hidden data-text-key="colors:reward">فُتح فانوس المرفأ في لعبة بناء</a>
+ <dialog id="hint-dialog"><h2 data-text-key="colors:hintTitle">تلميح المرفأ</h2><div id="hint-media"></div><p id="hint-message"></p><div class="quay-actions">
+  <button id="show-hint" data-text-key="colors:reveal">اكشف النقلة</button>
+  <button id="close-hint" data-text-key="colors:close">إغلاق</button>
+ </div></dialog>
+ <dialog id="media-admin">
+  <h2 data-text-key="colors:mediaTitle">وسائط التلميحات</h2>
+  <form id="media-form">
+   <label><span data-text-key="colors:mediaName">عنوان العرض</span><input id="media-name" maxlength="100" required></label>
+   <label><span data-text-key="colors:mediaURL">رابط HTTPS</span><input id="media-url" type="url"></label>
+   <label><span data-text-key="colors:mediaKind">نوع الرابط</span><select id="media-kind"><option value="link" data-text-key="colors:link">رابط</option><option value="image" data-text-key="colors:image">صورة</option><option value="video" data-text-key="colors:video">فيديو مباشر</option></select></label>
+   <label><span data-text-key="colors:mediaUpload">أو اختر صورًا وفيديوهات لرفعها</span><input id="media-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" multiple></label>
+   <button id="media-save" data-text-key="colors:mediaSave">إضافة</button>
+  </form>
+  <p id="media-status" role="status"></p><ul id="media-list"></ul>
+  <button id="close-media" data-text-key="colors:close">إغلاق</button>
+ </dialog>
+ <div hidden id="colors-copy">
+  <span data-text-key="colors:ready">أضئ فوانيس المرفأ!</span>
+  <span data-text-key="colors:invalid">لا يمكن الصبّ هنا. جرّب وعاءً آخر.</span>
+  <span data-text-key="colors:finish">أحسنت! أضأت كل الفوانيس.</span>
+  <span data-text-key="colors:thinking">جارٍ البحث عن نقلة…</span>
+  <span data-text-key="colors:noHint">جرّب التراجع خطوة أو إعادة المرحلة.</span>
+  <span data-text-key="colors:look">ابدأ بالوعاء المحدّد، ثم صُبّ في الوعاء ذي الإطار المتقطّع.</span>
+  <span data-text-key="colors:hintOptional">شاهد المادة المرفقة، ثم اكشف النقلة.</span>
+  <span data-text-key="colors:goal">تحدّي عدد النقلات</span>
+  <span data-text-key="colors:loadError">تعذّر تحميل المراحل. أعد فتح الصفحة.</span>
+  <span data-text-key="colors:mediaError">تعذّر تحميل الوسائط. ما زال التلميح متاحًا.</span>
+  <span data-text-key="colors:mediaInvalid">أدخل رابط HTTPS أو اختر ملفًا مدعومًا بحجم ٨ ميغابايت على الأكثر لكل ملف.</span>
+  <span data-text-key="colors:mediaBusy">جارٍ الحفظ…</span>
+  <span data-text-key="colors:mediaOK">حُفظت وسائط التلميحات.</span>
+  <span data-text-key="colors:remove">إزالة</span>
+  <span data-text-key="colors:open">افتح الرابط</span>
+  <span data-text-key="colors:tube">وعاء</span>
+ </div>
+</main>
+<script type="module" src="colors/game.js"></script><script type="module" src="colors/media.js"></script><script type="module" src="auth/navigation.js"></script>
+</body></html>

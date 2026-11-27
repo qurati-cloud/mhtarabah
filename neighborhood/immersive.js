@@ -65,6 +65,12 @@ export function createImmersive(canvas, state, enterCell, useCell){
    }
    return;
   }
+  if(type==='harborLantern'){
+   block('#314e48',x+.5,y+.09,z+.5,.55,.18,.55,cell);
+   block('#ffdc85',x+.5,y+.4,z+.5,.42,.48,.42,cell);
+   mesh(roof,'#3e6054',x+.5,y+.76,z+.5,.43,.3,.43,cell);
+   return;
+  }
   if(type==='roof'){
    mesh(roof,color,x+.5,y+.45,z+.5,1,1,1,cell).rotation.y=rotation*Math.PI/2;return;
   }

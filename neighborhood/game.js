@@ -5,6 +5,8 @@ const el=id=>document.getElementById(id);
 const copy=id=>document.querySelector('[data-text-key="town:'+id+'"]').textContent;
 const canvas=el('town-view'), ctx=canvas.getContext('2d');
 const saveKey='mh-neighborhood-v1';
+let harborReward=false;
+try{harborReward=localStorage.getItem('mh-colors-lantern')==='1';}catch{}
 let saved={};
 try { saved=JSON.parse(localStorage.getItem(saveKey)||'{}')||{}; } catch {}
 let board=loadBoard(saved.board), mission=Number.isInteger(saved.mission)?Math.min(3,Math.max(0,saved.mission)):0;
@@ -104,7 +106,7 @@ function refresh(){
  for(const button of el('treasure-options').children)button.hidden=unlocked.has(button.dataset.treasure);
  for(const button of palette.children){
   const id=button.dataset.piece;
-  button.hidden=island||(islandTreasure.some(t=>t.id===id)&&!unlocked.has(id))||(['bench','fountain'].includes(id)&&!rewards.has(id));
+  button.hidden=island||(id==='harborLantern'&&!harborReward)||(islandTreasure.some(t=>t.id===id)&&!unlocked.has(id))||(['bench','fountain'].includes(id)&&!rewards.has(id));
  }
  palette.hidden=island||Boolean(racing||ride);
  for(const button of document.querySelectorAll('[data-tool]'))button.hidden=(island||Boolean(racing||ride))&&button.dataset.tool!=='walk';
@@ -299,6 +301,12 @@ function piece(x,z,y,type,angle=0){
    ctx.strokeStyle='#685344';ctx.lineWidth=unit*.24;ctx.stroke();
    ctx.strokeStyle='#e2e4d9';ctx.lineWidth=unit*.10;ctx.stroke();
   }
+ } else if(type==='harborLantern'){
+  const [px,py]=project(x+.5,z+.5,y+.56);
+  dot(px,py,unit*.46,unit*.37,'#f5bc5455');
+  ctx.fillStyle='#354b49';ctx.fillRect(px-unit*.23,py-unit*.31,unit*.46,unit*.64);
+  ctx.fillStyle='#ffe29a';ctx.fillRect(px-unit*.16,py-unit*.23,unit*.32,unit*.48);
+  poly([[px-unit*.28,py-unit*.3],[px,py-unit*.5],[px+unit*.28,py-unit*.3]],'#496352');
  } else if(type==='bench'||type==='fountain'){
   const [px,py]=project(x+.5,z+.5,y+.4);
   dot(px,py,unit*.39,unit*.22,color);
