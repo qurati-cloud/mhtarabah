@@ -53,6 +53,13 @@ service cloud.firestore {
       allow read: if admin() || resource.data.published == true;
       allow write: if admin();
     }
+    match /libraryBooks/{bookId}/assets/{assetId} {
+      allow read: if admin() || (get(/databases/$(database)/documents/libraryBooks/$(bookId)).data.published == true
+        && assetId in get(/databases/$(database)/documents/libraryBooks/$(bookId)).data.get('assetIds', []));
+      allow create, update: if admin() && request.resource.data.keys().hasOnly(['payload'])
+        && request.resource.data.payload is string && request.resource.data.payload.size() <= 700000;
+      allow delete: if admin();
+    }
     match /librarySeries/{seriesId} {
       allow read: if admin() || resource.data.published == true;
       allow write: if admin();
