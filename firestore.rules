@@ -122,6 +122,25 @@ service cloud.firestore {
       match /progress/{key} {
         allow delete: if ownsFamily(uid);
         allow read: if ownsFamily(uid);
+        // Private, immutable online match history. Client-reported, not an official leaderboard.
+        allow create: if ownsFamily(uid)
+          && existsAfter(profilePath(uid, profileId))
+          && !existsAfter(deletionPath(uid, profileId))
+          && key.matches('mh-challenge-match:[A-Za-z0-9_-]{20}')
+          && request.resource.data.keys().hasOnly(['value'])
+          && request.resource.data.value.keys().hasOnly(['game','mode','result','distance','stars'])
+          && request.resource.data.value.keys().hasAll(['game','mode','result','distance','stars'])
+          && request.resource.data.value.game == 'obstacles'
+          && ((request.resource.data.value.mode == 'versus'
+                && request.resource.data.value.result in ['win','loss','draw'])
+              || (request.resource.data.value.mode == 'team'
+                && request.resource.data.value.result == 'team'))
+          && request.resource.data.value.distance is int
+          && request.resource.data.value.distance >= 0
+          && request.resource.data.value.distance <= 10000000
+          && request.resource.data.value.stars is int
+          && request.resource.data.value.stars >= 0
+          && request.resource.data.value.stars <= 2000000;
         allow create, update: if ownsFamily(uid)
           && existsAfter(profilePath(uid, profileId))
           && !existsAfter(deletionPath(uid, profileId))
