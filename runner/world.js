@@ -530,7 +530,7 @@ export function createWorld(canvas, context) {
           group.position.x += (target.x - group.position.x) * pull;
           group.position.y += (target.y + 1 - group.position.y) * pull;
         }
-        group.visible = object.taken !== (1 << racers.length) - 1;
+        group.visible = object.kind === 'star' ? !object.taken : run.players.some((p,i)=>!p.out && !(object.taken & (1<<i)));
         group.rotation.y = object.kind==='golden' ? Math.sin(time*2.2)*.31 : time*2.9+object.distance;
         if (group.userData.sparkles) {
           group.userData.sparkles.forEach((spark,i)=>{
@@ -543,14 +543,14 @@ export function createWorld(canvas, context) {
     }
     const active = run.players.filter(player => !player.out);
     const center = active.length ? active.reduce((sum, p) => sum + p.x, 0) / active.length : cameraX;
-    cameraX += (center * .38 - cameraX) * .09;
+    cameraX += (center * (active.length === 1 ? 1 : .38) - cameraX) * .09;
     lift += (Math.max(0, ...active.map(player => player.glide ? player.y : 0)) - lift) * .09;
     camera.position.set(cameraX, 4.65 + lift*.94, 8.2 + lift*.43);
-    camera.lookAt(cameraX * .72, 1.78 + lift*.52, -10);
+    camera.lookAt(active.length === 1 ? cameraX : cameraX * .72, 1.78 + lift*.52, -10);
     run.players.forEach((player,index) => {
       const model = racers[index];
       model.group.visible = !player.out;
-      const offset = racers.length === 1 ? 0 : index === 0 ? -.33 : .33;
+      const offset = active.length === 1 ? 0 : index === 0 ? -.33 : .33;
       model.group.position.x = player.x + offset;
       model.ground.scale.set(.42/(1 + player.y*.3), .59/(1 + player.y*.3), 1);
       const phase = run.time * (12 + Math.min(9, run.time*.06)) + index * 1.8;
