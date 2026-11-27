@@ -208,7 +208,7 @@ export function createCanvasWorld(canvas) {
     if (!width || !height) return;
     const visible=run.players.filter(player=>!player.out);
     const aim=visible.length?visible.reduce((sum,player)=>sum+player.x,0)/visible.length:cameraX;
-    cameraX+=(aim*.37-cameraX)*.11;
+    cameraX+=(aim*(visible.length===1?1:.37)-cameraX)*.11;
     lift+=(Math.max(0,...visible.map(player=>player.glide ? player.y : 0))-lift)*.1;
     ctx.fillStyle=sky;ctx.fillRect(0,0,width,height);
     ellipse('#fff1c2',width*.22,height*.15,Math.min(width,height)*.063,Math.min(width,height)*.063);
@@ -369,7 +369,7 @@ export function createCanvasWorld(canvas) {
       if(z < -5 || z>113)continue;
       const x=obj.lane*laneWidth;
       if(obj.kind==='star') {
-        if(obj.taken!==(1<<run.players.length)-1) {
+        if(!obj.taken) {
           const target=attractedPlayer(run,obj);
           const pull=target ? Math.max(0,1-Math.abs(z)/11) : 0;
           const offsetX=target ? (target.x-x)*pull : 0;
@@ -377,11 +377,11 @@ export function createCanvasWorld(canvas) {
           items.push({z,draw:()=>star(x+offsetX,obj.y+offsetY,z,time)});
         }
       } else if (Object.hasOwn(powerups,obj.kind)) {
-        if(obj.taken!==(1<<run.players.length)-1) items.push({z,draw:()=>pickup(obj,z,time)});
+        if(run.players.some((p,i)=>!p.out && !(obj.taken & (1<<i)))) items.push({z,draw:()=>pickup(obj,z,time)});
       } else items.push({z,draw:()=>vehicle(obj.kind,x,z)});
     }
     run.players.forEach((player,index)=>{
-      if(!player.out)items.push({z:0,draw:()=>avatar(player,index,time,run.players.length===2)});
+      if(!player.out)items.push({z:0,draw:()=>avatar(player,index,time,visible.length===2)});
     });
     items.sort((a,b)=>b.z-a.z).forEach(item=>item.draw());
     signFaces.sort((a,b)=>b.z-a.z).forEach(item=>item.draw());
