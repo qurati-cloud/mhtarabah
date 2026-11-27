@@ -9,7 +9,7 @@ const defaults=['السلام عليكم','هل أنت مستعد؟','هيا ن�
 let api,db,user,room,slot,run,graphics,offset=0,phrases={},remote=null,peer=null,unsub=[],epoch=0,lastSent=0,finished=false,playing=false,frameId=0,clock=0,seen=0,waiting=false,reportedOut=false;
 const path=p=>api.ref(db,p);
 const now=()=>Date.now()+offset;
-const notice=e=>{console.warn(e);status('تعذّر الاتصال أو تنفيذ الطلب. حاول مجددًا.');};
+const notice=e=>{console.warn(e);status(/permission.denied|permission_denied/i.test(String(e?.code)+' '+String(e?.message)) ? 'صلاحيات قاعدة البيانات غير مفعّلة. ينبغي نشر قواعد Realtime Database الجديدة في Firebase.' : 'تعذّر الاتصال أو تنفيذ الطلب: '+(e?.code||'خطأ في الاتصال'));};
 const seeded=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
 const listen=(p,fn)=>unsub.push(api.onValue(path(p),s=>fn(s.val()),notice));
 const button=(label,fn)=>{const b=document.createElement('button');b.textContent=label;b.onclick=fn;return b;};
