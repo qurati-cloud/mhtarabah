@@ -10,7 +10,13 @@ let stages,level=0,board,history,selected,target,worker,look,locked=false;
 const day=86400000, epoch=Date.UTC(2026,10,27);
 const isoToday=()=>{const now=new Date();return new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);};
 const copy=id=>el('status').textContent=text(id);
-let moves=0;
+let moves=0, advanceTimer;
+function scheduleAdvance(){
+ clearTimeout(advanceTimer);
+ if(!won(board)||level>=stages.length-1||level>=unlockedLevel())return;
+ const completed=level;
+ advanceTimer=setTimeout(()=>{if(level===completed&&won(board))setLevel(completed+1);},1000);
+}
 function unlockedLevel(){
  let index=0;
  while(index<stages.length-1&&Number.isInteger(best[index])&&best[index]>0)index++;
@@ -54,6 +60,7 @@ function setLevel(next,resume=false){
   el('level').value=String(level);
   return;
  }
+ clearTimeout(advanceTimer);
  level=next;
  const initial=stages[level].b;
  const prior=saved.board;
@@ -83,6 +90,7 @@ function choose(id){
   best[level]=Math.min(best[level]||Infinity,moves);copy('finish');
  }else el('status').textContent='';
  remember();render();
+ if(won(board))scheduleAdvance();
  const arrival=el('tubes').children[id]?.querySelector('.glass');
  if(!matchMedia('(prefers-reduced-motion: reduce)').matches)
   arrival?.animate?.([{transform:'rotate(-5deg)',filter:'brightness(1.4)'},{transform:'none'}],{duration:230});
@@ -131,7 +139,7 @@ el('show-hint').onclick=()=>{
   setTimeout(()=>finish(null),4200);
  }catch{reveal(null);}
 };
-el('undo').onclick=()=>{const prev=history.pop();if(prev){({board,moves}=prev);selected=target=undefined;copy('ready');remember();render();}};
+el('undo').onclick=()=>{clearTimeout(advanceTimer);const prev=history.pop();if(prev){({board,moves}=prev);selected=target=undefined;copy('ready');remember();render();}};
 el('restart').onclick=()=>setLevel(level);
 el('prev').onclick=()=>setLevel(level-1);
 el('next').onclick=()=>setLevel(level+1);
@@ -149,4 +157,5 @@ try{
  const canResume=Number.isInteger(saved.level)&&saved.level>=0&&saved.level<=unlockedLevel();
  setLevel(canResume?saved.level:unlockedLevel(),canResume);
  remember();
+ if(won(board))scheduleAdvance();
 }catch{copy('loadError');document.querySelectorAll('.quay-actions button:not(#edit-hints),.quay-top select,.quay-top input').forEach(el=>el.disabled=true);}
