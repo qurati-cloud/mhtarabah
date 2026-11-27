@@ -34,7 +34,7 @@ button{border:0;border-radius:13px;padding:14px 22px;background:#ffca4e;font-siz
  <canvas id="game" width="900" height="500"></canvas>
  <div class="arcade-hud">
   <span id="starCount" aria-label="النجوم">0 ⭐</span>
-  <span id="distance" aria-label="المسافة">0 م</span>
+  <span id="distance" aria-label="المسافة">0</span>
   <span id="speed" aria-label="السرعة">×1.0</span>
   <span id="time" aria-label="الوقت">00:00</span>
  </div>
@@ -50,11 +50,11 @@ button{border:0;border-radius:13px;padding:14px 22px;background:#ffca4e;font-siz
 </section>
 <div id="message" aria-live="polite"></div>
 <details class="arcade-records"><summary>الأرقام القياسية</summary><section class="stats">
-<div class="stat"><small>رقمك القياسي في المسافة المقطوعة التقريبية</small><b id="personal">0 م</b></div>
+<div class="stat"><small>رقمك القياسي</small><b id="personal">0</b></div>
 
 <div class="stat"><small>رقمك القياسي في النجوم</small><b id="starRecord">0 ⭐</b></div>
 <div class="stat"><small>الرقم القياسي الدولي لمجموع النجوم</small><b id="globalStars">—</b></div>
-<div class="stat"><small>الرقم القياسي الدولي للمسافة المقطوعة التقريبية</small><b id="global">—</b></div>
+<div class="stat"><small>الرقم القياسي الدولي</small><b id="global">—</b></div>
 </section></details>
 <p class="note">
 الكمبيوتر: الأسهم أو W و S — الهاتف: اسحب إصبعك للأعلى أو للأسفل على شاشة اللعبة.
@@ -109,10 +109,10 @@ function speed(){
  return BASE_SPEED*multiplier();
 }
 function updateStats(){
- $("distance").textContent=Math.floor(distance)+" م";
+ $("distance").textContent=Math.floor(distance);
  $("time").textContent=formatTime(elapsed);
  $("speed").textContent="×"+multiplier().toFixed(1);
- $("personal").textContent=Math.floor(record.distance)+" م";
+ $("personal").textContent=Math.floor(record.distance);
  $("starCount").textContent=score+" ⭐";
  $("starRecord").textContent=record.stars+" ⭐";
  
@@ -166,7 +166,7 @@ function end(reason){
  crashReason=reason;
  const newRecord=saveRecord();
  $("message").textContent=reason+" — قطعت "+
- Math.floor(distance)+" مترًا خلال "+formatTime(elapsed)+
+ Math.floor(distance)+" خلال "+formatTime(elapsed)+
  (newRecord?" — رقم قياسي شخصي جديد!":" — حاول مجددًا!");
  $("start").textContent="↻ حاول مجددًا";
  updateStats();

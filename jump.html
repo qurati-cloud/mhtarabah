@@ -45,7 +45,7 @@ button:disabled{opacity:.5}
  <canvas id="game" width="900" height="500"></canvas>
  <div class="arcade-hud">
   <span id="stars" aria-label="النجوم">0 ⭐</span>
-  <span id="distance" aria-label="المسافة">0 م</span>
+  <span id="distance" aria-label="المسافة">0</span>
   <span id="speed" aria-label="السرعة">×1.0</span>
   <span id="time" aria-label="الوقت">00:00</span>
  </div>
@@ -61,10 +61,10 @@ button:disabled{opacity:.5}
 </section>
 <div id="message" aria-live="polite"></div>
 <details class="arcade-records"><summary>الأرقام القياسية</summary><section class="stats">
-<div class="stat"><small>رقمك القياسي في المسافة المقطوعة التقريبية</small><b id="record">0 م</b></div>
+<div class="stat"><small>رقمك القياسي</small><b id="record">0</b></div>
 <div class="stat"><small>رقمك القياسي في النجوم</small><b id="starRecord">0 ⭐</b></div>
 <div class="stat"><small>الرقم القياسي الدولي لمجموع النجوم</small><b id="globalStars">—</b></div>
-<div class="stat"><small>الرقم القياسي الدولي للمسافة المقطوعة التقريبية</small><b id="global">—</b></div>
+<div class="stat"><small>الرقم القياسي الدولي</small><b id="global">—</b></div>
 <div class="stat"><small>مجموع النجوم</small><b id="totalStars">0</b></div>
 </section></details>
 <p class="note">
@@ -583,14 +583,14 @@ function draw(){
   ctx.fillText(labels[mode]||"",W/2,105);
  }
 
- (($("distance")) || {textContent:""}).textContent=Math.floor(distance)+" م";
+ (($("distance")) || {textContent:""}).textContent=Math.floor(distance);
  (($("stars")) || {textContent:""}).textContent=score+" ⭐";
  (($("speed")) || {textContent:""}).textContent="×"+(speed/235).toFixed(1);
  const seconds=Math.floor(elapsed);
  (($("time")) || {textContent:""}).textContent=
   String(Math.floor(seconds/60)).padStart(2,"0")+":"+
   String(seconds%60).padStart(2,"0");
- (($("record")) || {textContent:""}).textContent=Math.floor(saved.distance)+" م";
+ (($("record")) || {textContent:""}).textContent=Math.floor(saved.distance);
  (($("starRecord")) || {textContent:""}).textContent=saved.starRecord+" ⭐";
  (($("totalStars")) || {textContent:""}).textContent=saved.totalStars+" ⭐";
  $("pause").disabled=mode!=="running"&&mode!=="paused";
