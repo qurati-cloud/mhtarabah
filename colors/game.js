@@ -5,12 +5,17 @@ const text=id=>document.querySelector('[data-text-key="colors:'+id+'"]').textCon
 const store='mh-colors-v1',reward='mh-colors-lantern';
 let saved={};
 try{saved=JSON.parse(localStorage.getItem(store)||'{}')||{};}catch{}
-const best=saved.best&&typeof saved.best==='object'?saved.best:{};
+const best=saved.best&&typeof saved.best==='object'&&!Array.isArray(saved.best)?saved.best:{};
 let stages,level=0,board,history,selected,target,worker,look,locked=false;
 const day=86400000, epoch=Date.UTC(2026,10,27);
 const isoToday=()=>{const now=new Date();return new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);};
 const copy=id=>el('status').textContent=text(id);
 let moves=0;
+function unlockedLevel(){
+ let index=0;
+ while(index<stages.length-1&&Number.isInteger(best[index])&&best[index]>0)index++;
+ return index;
+}
 function render(){
  el('tubes').replaceChildren();el('lamps').replaceChildren();
  const colors=new Set(stages[level].b.flat());
@@ -37,11 +42,19 @@ function render(){
  el('goal').textContent=text('goal')+' · '+stages[level].s.length;
  el('undo').disabled=!history.length;
  el('hint').disabled=won(board);
- el('prev').disabled=level===0;el('next').disabled=level===stages.length-1;
- el('level').value=String(level);
+ const unlocked=unlockedLevel(), picker=el('level');
+ el('prev').disabled=level===0;el('next').disabled=level>=unlocked;
+ for(let i=picker.options.length;i<=unlocked;i++)picker.add(new Option(String(i+1),String(i)));
+ picker.value=String(level);
 }
 function setLevel(next,resume=false){
- level=Math.max(0,Math.min(stages.length-1,next));
+ if(!Number.isInteger(next)||next<0||next>=stages.length)return;
+ if(next>unlockedLevel()){
+  copy('locked');
+  el('level').value=String(level);
+  return;
+ }
+ level=next;
  const initial=stages[level].b;
  const prior=saved.board;
  const signature=b=>b.flat().sort((a,b)=>a-b).join(',');
@@ -133,7 +146,7 @@ try{
  const response=await fetch(new URL('./levels.json',import.meta.url));
  if(!response.ok)throw Error('levels');
  stages=await response.json();
- for(let i=0;i<stages.length;i++)el('level').add(new Option(String(i+1),String(i)));
- setLevel(Number.isInteger(saved.level)?saved.level:0,true);
+ const canResume=Number.isInteger(saved.level)&&saved.level>=0&&saved.level<=unlockedLevel();
+ setLevel(canResume?saved.level:unlockedLevel(),canResume);
  remember();
 }catch{copy('loadError');document.querySelectorAll('.quay-actions button:not(#edit-hints),.quay-top select,.quay-top input').forEach(el=>el.disabled=true);}
