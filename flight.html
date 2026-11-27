@@ -23,30 +23,39 @@ button{border:0;border-radius:13px;padding:14px 22px;background:#ffad47;font-siz
 .note{text-align:center;color:#526d80;font-size:13px;line-height:1.8}
 @media(max-width:550px){.stats{grid-template-columns:repeat(2,1fr)}.stat b{font-size:17px}}
 </style>
+<link rel="stylesheet" href="arcade/arcade.css">
 </head>
-<body>
+<body class="arcade-page">
 <div style="text-align:center;padding:12px 16px"><h1>✈️ تحدي الطيران</h1></div>
 <main>
 <p></p>
-<section class="stats">
-<div class="stat"><small>المسافة المقطوعة التقريبية</small><b id="distance">0</b></div>
-<div class="stat"><small>النجوم المجمّعة</small><b id="starCount">0 ⭐</b></div>
-<div class="stat"><small>الوقت</small><b id="time">00:00</b></div>
-<div class="stat"><small>السرعة</small><b id="speed">×1.0</b></div>
+<section id="arcade-stage" class="arcade-stage">
+ <canvas id="scene-3d" aria-hidden="true"></canvas>
+ <canvas id="game" width="900" height="500"></canvas>
+ <div class="arcade-hud">
+  <span id="starCount" aria-label="النجوم">0 ⭐</span>
+  <span id="distance" aria-label="المسافة">0</span>
+  <span id="speed" aria-label="السرعة">×1.0</span>
+  <span id="time" aria-label="الوقت">00:00</span>
+ </div>
+ <div class="arcade-actions">
+  <button type="button" id="full-game" aria-label="ملء الشاشة" title="ملء الشاشة">⛶</button>
+  <button type="button" id="leave-full" aria-label="الخروج من ملء الشاشة">✕</button>
+  <button id="pause" type="button" aria-label="إيقاف مؤقت">⏸</button>
+ </div>
+ <div class="arcade-controls">
+  <div class="steering"><button id="up" class="control">↑ ارتفاع</button><button id="down" class="control">↓ انخفاض</button></div>
+  <button id="start">▶ ابدأ</button>
+ </div>
+</section>
+<div id="message" aria-live="polite"></div>
+<details class="arcade-records"><summary>الأرقام القياسية</summary><section class="stats">
 <div class="stat"><small>رقمك القياسي</small><b id="personal">0</b></div>
 
 <div class="stat"><small>رقمك القياسي في النجوم</small><b id="starRecord">0 ⭐</b></div>
-<div class="stat"><small>الرقم القياسي الدولي لمجموع النجوم</small><b id="globalStars">بانتظار الربط</b></div>
-<div class="stat"><small>الرقم القياسي الدولي</small><b id="global">بانتظار الربط</b></div>
-</section>
-<canvas id="game" width="900" height="500"></canvas>
-<div id="message">اضغط ابدأ، وتجنّب الجدران والسقف والأرض!</div>
-<div class="controls">
-<button id="up" class="control">⬆ ارتفاع</button>
-<button id="down" class="control">⬇ انخفاض</button>
-<button id="start">▶ ابدأ</button>
-<button id="pause">⏸ إيقاف</button>
-</div>
+<div class="stat"><small>الرقم القياسي الدولي لمجموع النجوم</small><b id="globalStars">—</b></div>
+<div class="stat"><small>الرقم القياسي الدولي</small><b id="global">—</b></div>
+</section></details>
 <p class="note">
 الكمبيوتر: الأسهم أو W و S — الهاتف: اسحب إصبعك للأعلى أو للأسفل على شاشة اللعبة.
 <br>
@@ -54,8 +63,10 @@ button{border:0;border-radius:13px;padding:14px 22px;background:#ffad47;font-siz
 </p>
 </main>
 <script type="module">
+import { installArcade } from "./arcade/scene.js";
 import { progress as progressStorage } from "./auth/progress.js";
 "use strict";
+const view3d=installArcade("sky");
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
 const $=id=>document.getElementById(id);
@@ -165,7 +176,7 @@ function spawn(){
  const top=Math.max(48,center-gap/2);
  const bottom=Math.min(452,center+gap/2);
  const width=40+rand()*18;
- const o={x:W+35,top,bottom,width};
+ const o={x:W+35,top,bottom,width,kind:Math.floor(rand()*4),baseTop:top,baseBottom:bottom,phase:rand()*Math.PI*2};
  obstacles.push(o);
  if(rand()>.3){
   stars.push({
@@ -181,6 +192,7 @@ function update(dt){
  const v=speed();
  const direction=(input.down?1:0)-(input.up?1:0);
  const control=900;
+ if(direction>0)plane.vy=Math.max(plane.vy,215);
  plane.vy+=direction*control*s;
  if(!direction)plane.vy*=Math.pow(.03,s);
  plane.vy=Math.max(-380,Math.min(380,plane.vy));
@@ -200,6 +212,10 @@ function update(dt){
  }
  for(const o of obstacles){
   o.x-=v*s;
+  if(o.kind===3){
+   const offset=Math.sin(elapsed*1.1+o.phase)*13;
+   o.top=o.baseTop+offset;o.bottom=o.baseBottom+offset;
+  }
   if(plane.x+19>o.x&&plane.x-19<o.x+o.width&&
      (plane.y-14<o.top||plane.y+14>o.bottom)){
    end("اصطدمت بالحائط");return;
@@ -256,6 +272,10 @@ function drawStar(x,y){
  ctx.closePath();ctx.fill();ctx.stroke();
 }
 function draw(){
+ if(view3d){
+  view3d.render(obstacles,stars,distance*10,elapsed,plane);
+  ctx.clearRect(0,0,W,H);
+ } else {
  const sky=ctx.createLinearGradient(0,0,0,H);
  sky.addColorStop(0,"#72caff");
  sky.addColorStop(1,"#e2f7ff");
@@ -291,13 +311,7 @@ function draw(){
  for(const star of stars)drawStar(star.x,star.y);
  drawPlane();
 
- ctx.fillStyle="rgba(16,51,73,.75)";
- ctx.fillRect(15,15,215,40);
- ctx.fillStyle="white";
- ctx.font="bold 20px Tahoma";
- ctx.textAlign="left";
- ctx.fillText("⭐ "+score+"   ×"+multiplier().toFixed(1),30,42);
-
+ }
  if(mode!=="flying"){
   ctx.fillStyle="rgba(16,46,69,.18)";
   ctx.fillRect(0,0,W,H);
@@ -315,7 +329,7 @@ function draw(){
 function loop(now){
  const dt=last?Math.min(.04,(now-last)/1000):0;
  last=now;
- update(dt);
+ for(let left=dt;left>0;left-=1/120)update(Math.min(left,1/120));
  draw();
  requestAnimationFrame(loop);
 }

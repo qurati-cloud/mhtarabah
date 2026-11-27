@@ -1,11 +1,12 @@
 import * as T from '../runner/vendor/three.module.min.js';
 
-export function createArcadeScene(canvas, ocean){
+export function createArcadeScene(canvas, mode){
+ const ocean=mode==='ocean', sky=mode==='sky';
  const renderer=new T.WebGLRenderer({canvas,antialias:true,alpha:false});
  renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
  renderer.outputColorSpace=T.SRGBColorSpace;
  const scene=new T.Scene();
- scene.background=new T.Color(ocean?0x105879:0xb4e2da);
+ scene.background=new T.Color(ocean?0x105879:sky?0x9bd0ed:0xb4e2da);
  scene.add(new T.HemisphereLight(ocean?0x8fdbff:0xfff3cb,0x536381,2.3));
  const sun=new T.DirectionalLight(ocean?0xa9efff:0xffe4ad,2.4);
  sun.position.set(-4,7,6);scene.add(sun);
@@ -44,6 +45,16 @@ export function createArcadeScene(canvas, ocean){
    mesh(fish,sphere,[0x65c5bb,0xe0ab66,0x8fb9dc][depth],0,0,-90,14,6,4);
    mesh(fish,spike,0x609ea4,-13,0,-90,6,8,3).rotation.z=-Math.PI/2;
    ornaments.push({object:fish,phase:phase+80,depth:depth+1,y:30+(i*58)%163-55});
+  }else if(sky){
+   const ridge=mesh(backdrop,rock,[0x5a879a,0x769fac,0x82a0aa][depth],0,-207,-170,115,82+depth*30,38);
+   ornaments.push({object:ridge,phase,depth:depth+2,y:-230+depth*5});
+   if(i%2===0){
+    const cloud=new T.Group();backdrop.add(cloud);
+    for(const [x,y,w] of [[-29,-3,25],[0,10,36],[30,1,25]]){
+     mesh(cloud,sphere,0xeaf3f9,x,y,-170,w,18+depth*3,12);
+    }
+    ornaments.push({object:cloud,phase:phase+80,depth:depth+2,y:46+i*31%140});
+   }
   }else{
    const hill=mesh(backdrop,rock,[0x6f9d8e,0x91b4a0,0x83a8a0][depth],0,-133-depth*6,-115,155,70+depth*15,35);
    ornaments.push({object:hill,phase,depth:depth+2,y:-135-depth*5});
@@ -55,10 +66,12 @@ export function createArcadeScene(canvas, ocean){
    }
   }
  }
- const ground=mesh(scene,cube,ocean?0x28627d:0x647c69,0,ocean?-245:-203,-80,1090,ocean?39:87,140);
+ const ground=mesh(scene,cube,ocean?0x28627d:0x647c69,0,ocean?-245:sky?-258:-203,-80,1090,ocean?39:87,140);
  ground.rotation.x=-.27;
+ ground.visible=!sky;
  const stripes=Array.from({length:12},(_,i)=>{
   const mark=mesh(scene,cube,ocean?0x38809a:0xd5c19a,0,ocean?-227:-177,-10,39,2,5);
+  mark.visible=!sky;
   return {mark,i};
  });
  const craft=new T.Group();scene.add(craft);
@@ -73,6 +86,17 @@ export function createArcadeScene(canvas, ocean){
   propeller=new T.Group();craft.add(propeller);propeller.position.x=-69;
   for(const y of [-12,12])mesh(propeller,sphere,0xe1703d,0,y,0,7,16,5);
  }
+ if(sky){
+  mesh(craft,sphere,0xffeed2,0,0,0,33,12,11);
+  mesh(craft,sphere,0xff8c55,-26,0,0,13,8,6);
+  mesh(craft,sphere,0x65b8e9,11,5,6,12,7,7);
+  const wings=mesh(craft,cube,0x347eb9,-7,-2,0,19,4,57);
+  wings.rotation.x=.17;wings.rotation.y=-.25;
+  mesh(craft,cube,0x3888b4,-25,6,0,11,17,3).rotation.z=.30;
+  mesh(craft,cube,0xff934e,-24,0,0,9,3,26);
+  propeller=new T.Group();craft.add(propeller);propeller.position.x=31;
+  for(const sign of [-1,1])mesh(propeller,sphere,0x425975,0,sign*8,0,2.4,9,2.9);
+ }
  const markers=Array.from({length:18},()=>mesh(scene,star,0xffd36b,0,0,50,16,16,16));
  const hazards=Array.from({length:9},()=>{
   const group=new T.Group();scene.add(group);
@@ -80,9 +104,9 @@ export function createArcadeScene(canvas, ocean){
   for(let kind=0;kind<4;kind++){
    const style=new T.Group();group.add(style);forms.push(style);
    const palette=ocean?[0x477885,0x487083,0x676287,0x6b7c70]:[0xb97942,0x3c8e96,0x7c659b,0xd38e47];
-   for(let cap=0;cap<(ocean?2:1);cap++){
+   for(let cap=0;cap<(ocean||sky?2:1);cap++){
     const half=new T.Group();style.add(half);
-    if(!ocean){
+    if(!ocean&&!sky){
      const direction=kind>=2?-1:1;
      for(const side of [-1,1]){
       const chevron=mesh(half,cube,0xfff0ba,side*.095,direction*.06,.49,.24,.075,.036);
@@ -97,6 +121,16 @@ export function createArcadeScene(canvas, ocean){
       mesh(half,sphere,0xd38dbd,side*.28,cap?.34:-.34,.43,.18,.11,.11);
       mesh(half,strut,0xb688ad,side*.30,cap?.29:-.29,.45,.024,.16,.022).rotation.z=side*.27;
      }
+    }
+    if(sky){
+     const colors=[0x72899a,0x4a697b,0x8396a1,0x885c82];
+     mesh(half,cube,colors[kind],0,0,0,.9,1,.7);
+     for(const side of [-1,1]){
+      mesh(half,cube,kind===2?0xbeeef3:0xfac17e,side*.36,0,.37,.075,.85,.08);
+      mesh(half,sphere,kind===3?0xffa970:0xffdd9e,side*.32,cap?.44:-.44,.38,.11,.06,.12);
+     }
+     mesh(half,cube,kind===1?0x88cfd0:0xdce5e3,0,cap?.445:-.445,.18,1,.105,.75);
+     continue;
     }
     mesh(half,(ocean&&kind!==3)?rock:cube,palette[kind],0,0,0,ocean&&kind!==3?.58:1,ocean&&kind!==3?.58:1,.72);
     for(const sign of [-1,1]){
@@ -132,7 +166,7 @@ export function createArcadeScene(canvas, ocean){
    group.position.x=o.x-450+(o.width??o.w)/2;
    for(const [index,form] of forms.entries())form.visible=index===kind;
    const form=forms[kind];
-   const spans=ocean?[[0,o.top],[o.bottom,500]]:[[o.y,o.y+o.h]];
+   const spans=ocean||sky?[[0,o.top],[o.bottom,500]]:[[o.y,o.y+o.h]];
    form.children.forEach((half,j)=>{
     const [a,b]=spans[j],h=b-a;
     half.position.set(0,250-(a+b)/2,42);
@@ -172,7 +206,7 @@ export function installArcade(mode){
  });
  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&stage.classList.contains('arcade-expanded'))leave.click();});
  try{
-  const player=createArcadeScene(document.getElementById('scene-3d'),mode==='ocean');
+  const player=createArcadeScene(document.getElementById('scene-3d'),mode);
   stage.classList.add('arcade-webgl');return player;
  }catch{
   document.getElementById('scene-3d').hidden=true;
