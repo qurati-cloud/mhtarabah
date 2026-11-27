@@ -28,19 +28,22 @@
       ],
       "$id": {
         ".write": "auth != null && auth.token.email_verified == true && (root.child('races').child($id).child('host').val() == auth.uid || root.child('races').child($id).child('guest/uid').val() == auth.uid) && (!newData.exists() || (root.child('races').child($id).child('host').val() == auth.uid && !root.child('races').child($id).child('guest').exists() && !root.child('races').child($id).child('left/host').exists() && !data.exists()))",
-        ".validate": "newData.hasChildren(['created'])",
+        ".validate": "newData.hasChildren(['created','mode'])",
         "created": {
           ".validate": "newData.isNumber() && newData.val() <= now + 1000 && newData.val() >= now - 15000"
         },
         "$other": {
           ".validate": false
+        },
+        "mode": {
+          ".validate": "(newData.val() == 'team' || newData.val() == 'versus') && newData.val() == root.child('races').child($id).child('mode').val()"
         }
       }
     },
     "races": {
       "$id": {
         ".read": "auth != null && auth.token.email_verified == true && (root.child('races').child($id).child('host').val() == auth.uid || root.child('races').child($id).child('guest/uid').val() == auth.uid)",
-        ".write": "auth != null && auth.token.email_verified == true && !data.exists() && newData.child('host').val() == auth.uid && newData.hasChildren(['host','seed','created']) && !newData.child('guest').exists() && !newData.child('state').exists() && !newData.child('chat').exists() && !newData.child('left').exists()",
+        ".write": "auth != null && auth.token.email_verified == true && !data.exists() && newData.child('host').val() == auth.uid && newData.hasChildren(['host','seed','created','mode']) && !newData.child('guest').exists() && !newData.child('state').exists() && !newData.child('chat').exists() && !newData.child('left').exists()",
         "host": {
           ".validate": "newData.isString() && newData.val() == auth.uid"
         },
@@ -116,6 +119,31 @@
             ".write": "auth != null && auth.token.email_verified == true && (($side == 'host' && root.child('races').child($id).child('host').val() == auth.uid) || ($side == 'guest' && root.child('races').child($id).child('guest/uid').val() == auth.uid)) && newData.val() == true",
             ".validate": "newData.val() == true"
           }
+        },
+        "$other": {
+          ".validate": false
+        },
+        "mode": {
+          ".validate": "newData.val() == 'team' || newData.val() == 'versus'"
+        }
+      }
+    },
+    "challengeRanks": {
+      ".read": "auth != null && auth.token.email_verified == true",
+      ".write": "auth != null && auth.token.email_verified == true && auth.token.email == 'quraaty@gmail.com'",
+      "$rank": {
+        ".validate": "$rank.matches(/^[0-6]$/) && newData.hasChildren(['min','label','color','icon'])",
+        "min": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000"
+        },
+        "label": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40"
+        },
+        "color": {
+          ".validate": "newData.isString() && newData.val().matches(/^#[0-9a-fA-F]{6}$/)"
+        },
+        "icon": {
+          ".validate": "newData.isString() && newData.val().length <= 12"
         },
         "$other": {
           ".validate": false
