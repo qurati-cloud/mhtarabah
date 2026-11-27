@@ -6,7 +6,7 @@ import {createCanvasWorld} from './fallback.js';
 const el=id=>document.getElementById(id);
 const status=t=>el('status').textContent=t;
 const defaults=['السلام عليكم','هل أنت مستعد؟','هيا نبدأ','أحسنت!','مبارك الفوز','نلعب مرة أخرى؟','شكرًا لك','إلى اللقاء'];
-let api,db,user,room,slot,run,graphics,offset=0,phrases={},remote=null,peer=null,unsub=[],epoch=0,lastSent=0,finished=false,playing=false,frameId=0,clock=0,seen=0,waiting=false;
+let api,db,user,room,slot,run,graphics,offset=0,phrases={},remote=null,peer=null,unsub=[],epoch=0,lastSent=0,finished=false,playing=false,frameId=0,clock=0,seen=0,waiting=false,reportedOut=false;
 const path=p=>api.ref(db,p);
 const now=()=>Date.now()+offset;
 const notice=e=>{console.warn(e);status('تعذّر الاتصال أو تنفيذ الطلب. حاول مجددًا.');};
@@ -29,7 +29,7 @@ function editRows(){
 }
 function addRow(){const row=document.createElement('div');row.dataset.id=crypto.randomUUID();const input=document.createElement('input');input.maxLength=80;input.placeholder='العبارة';const enabled=document.createElement('input');enabled.type='checkbox';enabled.checked=true;row.append(input,enabled,button('↑',()=>{if(row.previousElementSibling)row.parentNode.insertBefore(row,row.previousElementSibling);}),button('↓',()=>{if(row.nextElementSibling)row.parentNode.insertBefore(row.nextElementSibling,row);}),button('حذف',()=>row.remove()));el('phraseRows').append(row);}
 async function leave(){
- const old=room,side=slot;room=null;slot=null;waiting=false;playing=false;cancelAnimationFrame(frameId);unsub.splice(0).forEach(fn=>fn());
+ const old=room,side=slot;room=null;slot=null;waiting=false;playing=false;finished=false;cancelAnimationFrame(frameId);unsub.splice(0).forEach(fn=>fn());
  el('track').hidden=el('chat').hidden=true;el('lobby').hidden=false;el('invite').disabled=false;el('cancel').hidden=true;el('messages').replaceChildren();remote=peer=null;
  if(old){if(side==='host')await api.remove(path('raceLobby/'+old)).catch(()=>{});await api.set(path('races/'+old+'/left/'+side),true).catch(()=>{});}
  status('اختر منافسًا للعب.');
@@ -65,7 +65,7 @@ function watchRoom(){
  });
 }
 function start(seed){
- playing=true;finished=false;seen=0;clock=0;lastSent=0;remote=null;
+ playing=true;finished=false;seen=0;clock=0;lastSent=0;remote=null;reportedOut=false;
  el('lobby').hidden=true;el('track').hidden=el('chat').hidden=false;
  try{if(!graphics){const c=el('world');let ctx;try{ctx=c.getContext('webgl2',{antialias:true});}catch{}if(ctx)try{graphics=createWorld(c,ctx);}catch{}if(!graphics){c.hidden=true;el('worldFallback').hidden=false;graphics=createCanvasWorld(el('worldFallback'));}}graphics.resize();
  run=makeRun(['mohammad','habiba'],seeded(seed));run.players.forEach(p=>{p.x=0;p.lane=0;});run.players[slot==='host'?1:0].out=true;graphics.reset(run);
@@ -80,7 +80,7 @@ function tick(){
  if(elapsed-clock>3){leave();status('انقطع الاتصال أو توقفت اللعبة. ابدأ جولة جديدة.');return;}
  while(clock+1/90<=elapsed){step(run,1/90);clock+=1/90;}
  const snapshot={x:p.x,y:p.y,slide:p.slide,glide:p.glide,out:p.out,stars:p.stars,distance:p.distance,at:api.serverTimestamp()};
- if(now()-lastSent>=200){lastSent=now();api.set(path('races/'+room+'/state/'+slot),snapshot).catch(notice);}
+ if((p.out&&!reportedOut)||now()-lastSent>=200){lastSent=now();if(p.out)reportedOut=true;api.set(path('races/'+room+'/state/'+slot),snapshot).catch(e=>{reportedOut=false;notice(e);});}
  const ghost=run.players[other];
  if(peer){const original={...ghost};Object.assign(ghost,peer,{avatar:original.avatar,shield:0,support:null});graphics.draw(run,run.time);Object.assign(ghost,original);}else graphics.draw(run,run.time);
  el('onlineHud').textContent='أنت: '+Math.floor(p.distance)+' م · ★ '+p.stars+' | المنافس: '+Math.floor(peer?.distance||0)+' م · ★ '+(peer?.stars||0);
@@ -101,7 +101,7 @@ try{
  api=await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js');db=api.getDatabase(conn.auth.app,firebaseConfig.databaseURL);
  api.onValue(path('.info/serverTimeOffset'),s=>offset=s.val()||0);
  api.onValue(path('racePhrases'),s=>{phrases=s.val()||{};renderPhrases();if(!el('editor').hidden)editRows();},notice);
- api.onValue(api.query(path('raceLobby'),api.orderByChild('created'),api.startAt(now()-120000),api.limitToLast(30)),s=>{el('offers').replaceChildren();s.forEach(c=>{if(c.key===room)return;const row=document.createElement('div');row.append(document.createTextNode('لاعب ينتظر منافسًا'),button('أنا!',()=>{finished=false;join(c.key);}));el('offers').append(row);});},notice);
+ api.onValue(api.query(path('raceLobby'),api.orderByChild('created'),api.startAt(now()-120000),api.limitToLast(30)),s=>{el('offers').replaceChildren();s.forEach(c=>{if(c.key===room||c.val().created<now()-120000)return;const row=document.createElement('div');row.append(document.createTextNode('لاعب ينتظر منافسًا'),button('أنا!',()=>{finished=false;join(c.key);}));el('offers').append(row);});},notice);
  el('lobby').hidden=false;status('اختر منافسًا للعب.');
  if(user.email==='quraaty@gmail.com'){el('editor').hidden=false;editRows();const snap=await api.get(path('racePhrases'));if(!snap.exists()){const initial={};defaults.forEach((text,order)=>initial['p'+order]={text,order,enabled:true});await api.set(path('racePhrases'),initial);}}
  }
