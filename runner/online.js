@@ -1,3 +1,4 @@
+import {defaultRanks,rankFor,summarize,teamScore} from '../challenge/ranks.js';
 import {connect} from '../auth/firebase.js';
 import {firebaseConfig} from '../auth/firebase-config.js';
 import {makeRun,move,step} from './simulation.js';
@@ -7,7 +8,47 @@ const el=id=>document.getElementById(id);
 const status=t=>el('status').textContent=t;
 const defaults=['السلام عليكم','هل أنت مستعد؟','هيا نبدأ','أحسنت!','مبارك الفوز','نلعب مرة أخرى؟','شكرًا لك','إلى اللقاء'];
 let api,db,user,room,slot,run,graphics,offset=0,phrases={},remote=null,peer=null,unsub=[],epoch=0,lastSent=0,finished=false,playing=false,frameId=0,clock=0,seen=0,waiting=false,reportedOut=false;
+let selectedMode='versus', matchMode='versus', ranks=defaultRanks, statsKey=null, history=[], teamBest={distance:0,stars:0}, ownFinal=null, peerLeft=false;
 const path=p=>api.ref(db,p);
+const modeName=m=>m==='team'?'تحدي الفريق':'تحدي المنافس';
+function selectMode(m){if(room)return;selectedMode=m;el('versusMode').setAttribute('aria-pressed',String(m==='versus'));el('teamMode').setAttribute('aria-pressed',String(m==='team'));el('modeInfo').textContent=m==='team'?'اجمعا النجوم وحققا رقمًا مشتركًا.':'يفوز من يصمد مدة أطول.';}
+el('versusMode').onclick=()=>selectMode('versus');el('teamMode').onclick=()=>selectMode('team');
+function refreshCard(){
+ const card=el('playerCard');card.hidden=false;card.replaceChildren();
+ if(!statsKey){card.textContent='اختر ملف الطفل أولًا لحفظ إحصاءات التجربة.';return;}
+ const s=summarize(history),rank=rankFor(s.wins,ranks);
+ const title=document.createElement('strong');title.textContent=rank.icon+' '+rank.label;title.style.color=rank.color;
+ const details=document.createElement('p');details.textContent='عدد المباريات: '+s.matches+' | المباريات الرابحة: '+s.wins+' | نسبة الفوز: '+s.rate+'٪';
+ const best=document.createElement('p');best.textContent='أفضل نتيجة للفريق: '+Math.floor(teamBest.distance)+' م · ★ '+teamBest.stars;
+ const note=document.createElement('small');note.textContent='إحصاءات تجريبية على هذا الجهاز، غير معتمدة للتصنيف العام.';
+ card.append(title,details,best,note);
+}
+function loadStats(conn){
+ const profile=localStorage.getItem('mh-selected-profile');
+ if(!profile||localStorage.getItem('mh-selected-owner')!==user.uid){refreshCard();return;}
+ return conn.data.getDoc(conn.data.doc(conn.db,'families',user.uid,'profiles',profile)).then(s=>{
+ if(!s.exists()||s.data().deleting){refreshCard();return;}
+ statsKey='mh-challenge-preview:'+user.uid+':'+profile;
+ try{const data=JSON.parse(localStorage.getItem(statsKey)||'{}');history=Array.isArray(data.history)?data.history:[];teamBest=data.teamBest||teamBest;}catch{}
+ refreshCard();
+ }).catch(()=>refreshCard());
+}
+function saveOutcome(result,p,other){
+ if(!statsKey||!room||peerLeft)return;
+ if(matchMode==='team'){const score=teamScore(p,other);teamBest={distance:Math.max(teamBest.distance,score.distance),stars:Math.max(teamBest.stars,score.stars)};}
+ else if(!history.some(r=>r.id===room))history.push({id:room,mode:'versus',result,game:'obstacles'});
+ try{localStorage.setItem(statsKey,JSON.stringify({history,teamBest}));}catch{}
+ refreshCard();
+}
+function renderRanks(){
+ const rows=el('rankRows');rows.replaceChildren();
+ for(const r of ranks){const row=document.createElement('div');row.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin:8px 0';for(const [type,value,label] of [['text',r.label,'اسم المستوى'],['number',r.min,'عدد الانتصارات'],['color',r.color,'اللون']]){const i=document.createElement('input');i.type=type;i.value=value;i.setAttribute('aria-label',label);if(type==='number'){i.min=0;i.max=1000000;i.step=1;}if(type==='text')i.maxLength=40;row.append(i);}rows.append(row);}
+}
+el('saveRanks').onclick=async()=>{
+ const next=[...el('rankRows').children].map((row,i)=>{const [label,min,color]=row.querySelectorAll('input');return {label:label.value.trim(),min:Number(min.value),color:color.value,icon:defaultRanks[i].icon};});
+ if(next.length!==7||next[0].min!==0||next.some((r,i)=>!r.label||!Number.isInteger(r.min)||r.min<0||r.min>1000000||(i>0&&r.min<=next[i-1].min))){status('ينبغي أن يبدأ المستوى الأول بصفر، وأن تزيد الحدود تدريجيًا.');return;}
+ try{await api.set(path('challengeRanks'),Object.fromEntries(next.map((r,i)=>[String(i),r])));status('حُفظت المستويات.');}catch(e){notice(e);}
+};
 const now=()=>Date.now()+offset;
 const notice=e=>{console.warn(e);status(/permission.denied|permission_denied/i.test(String(e?.code)+' '+String(e?.message)) ? 'صلاحيات قاعدة البيانات غير مفعّلة. ينبغي نشر قواعد Realtime Database الجديدة في Firebase.' : 'تعذّر الاتصال أو تنفيذ الطلب: '+(e?.code||'خطأ في الاتصال'));};
 const seeded=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
@@ -30,18 +71,18 @@ function editRows(){
 function addRow(){const row=document.createElement('div');row.dataset.id=crypto.randomUUID();const input=document.createElement('input');input.maxLength=80;input.placeholder='العبارة';const enabled=document.createElement('input');enabled.type='checkbox';enabled.checked=true;row.append(input,enabled,button('↑',()=>{if(row.previousElementSibling)row.parentNode.insertBefore(row,row.previousElementSibling);}),button('↓',()=>{if(row.nextElementSibling)row.parentNode.insertBefore(row.nextElementSibling,row);}),button('حذف',()=>row.remove()));el('phraseRows').append(row);}
 async function leave(){
  const old=room,side=slot;room=null;slot=null;waiting=false;playing=false;finished=false;cancelAnimationFrame(frameId);unsub.splice(0).forEach(fn=>fn());
- el('track').hidden=el('chat').hidden=true;el('lobby').hidden=false;el('invite').disabled=false;el('cancel').hidden=true;el('messages').replaceChildren();remote=peer=null;
+ el('track').hidden=el('chat').hidden=true;el('lobby').hidden=false;el('invite').disabled=false;el('cancel').hidden=true;el('messages').replaceChildren();remote=peer=null;peerLeft=false;ownFinal=null;
  if(old){if(side==='host')await api.remove(path('raceLobby/'+old)).catch(()=>{});await api.set(path('races/'+old+'/left/'+side),true).catch(()=>{});}
  status('اختر منافسًا للعب.');
 }
 async function invite(){
  if(room)return;el('invite').disabled=true;
  const id=api.push(path('races')).key;const seed=crypto.getRandomValues(new Uint32Array(1))[0];
- try{await api.set(path('races/'+id),{host:user.uid,seed,created:api.serverTimestamp()});
- room=id;slot='host';waiting=true;
+ try{await api.set(path('races/'+id),{host:user.uid,seed,mode:selectedMode,created:api.serverTimestamp()});
+ room=id;slot='host';waiting=true;matchMode=selectedMode;
  await api.onDisconnect(path('races/'+id+'/left/host')).set(true);
+ await api.set(path('raceLobby/'+id),{created:api.serverTimestamp(),mode:matchMode});
  await api.onDisconnect(path('raceLobby/'+id)).remove();
- await api.set(path('raceLobby/'+id),{created:api.serverTimestamp()});
  el('cancel').hidden=false;status('بانتظار منافس...');
  watchRoom();
  }catch(e){await leave();notice(e);}
@@ -58,14 +99,14 @@ function watchRoom(){
  const id=room,other=slot==='host'?'guest':'host';
  listen('races/'+id,v=>{
  if(!v||room!==id)return;
- if(v.left?.[other]){if(!playing){leave();status('غادر المنافس.');return;}peer={...(peer||{}),out:true};}
- if(v.guest&&!playing&&!finished&&!v.left?.[other]){waiting=false;epoch=v.guest.at+5000;start(v.seed);}
+ if(v.left?.[other]){peerLeft=true;if(!playing){leave();status('غادر المنافس.');return;}peer={...(peer||{}),out:true};}
+ if(v.guest&&!playing&&!finished&&!v.left?.[other]){waiting=false;matchMode=v.mode==='team'?'team':'versus';epoch=v.guest.at+5000;start(v.seed);}
  peer=v.left?.[other]?{...(v.state?.[other]||{}),out:true}:v.state?.[other]||null;
  const msg=v.chat?.[other];if(msg&&msg.at>seen){seen=msg.at;const phrase=phrases[msg.phrase];if(phrase?.enabled){const p=document.createElement('p');p.textContent='المنافس: '+phrase.text;el('messages').append(p);while(el('messages').children.length>8)el('messages').firstChild.remove();}}
  });
 }
 function start(seed){
- playing=true;finished=false;seen=0;clock=0;lastSent=0;remote=null;reportedOut=false;
+ playing=true;finished=false;seen=0;clock=0;lastSent=0;remote=null;reportedOut=false;ownFinal=null;peerLeft=false;
  el('lobby').hidden=true;el('track').hidden=el('chat').hidden=false;
  try{if(!graphics){const c=el('world');let ctx;try{ctx=c.getContext('webgl2',{antialias:true});}catch{}if(ctx)try{graphics=createWorld(c,ctx);}catch{}if(!graphics){c.hidden=true;el('worldFallback').hidden=false;graphics=createCanvasWorld(el('worldFallback'));}}graphics.resize();
  run=makeRun(['mohammad','habiba'],seeded(seed));run.players.forEach(p=>{p.x=0;p.lane=0;});run.players[slot==='host'?1:0].out=true;graphics.reset(run);
@@ -80,11 +121,11 @@ function tick(){
  if(elapsed-clock>3){leave();status('انقطع الاتصال أو توقفت اللعبة. ابدأ جولة جديدة.');return;}
  while(clock+1/90<=elapsed){step(run,1/90);clock+=1/90;}
  const snapshot={x:p.x,y:p.y,slide:p.slide,glide:p.glide,out:p.out,stars:p.stars,distance:p.distance,at:api.serverTimestamp()};
- if((p.out&&!reportedOut)||now()-lastSent>=200){lastSent=now();if(p.out)reportedOut=true;api.set(path('races/'+room+'/state/'+slot),snapshot).catch(e=>{reportedOut=false;notice(e);});}
+ if(!reportedOut&&now()-lastSent>=200||p.out&&!reportedOut){lastSent=now();if(p.out)reportedOut=true;const isFinal=p.out;api.set(path('races/'+room+'/state/'+slot),snapshot).then(()=>{if(isFinal)ownFinal=true;}).catch(e=>{if(isFinal)reportedOut=false;notice(e);});}
  const ghost=run.players[other];
  if(peer){const original={...ghost};Object.assign(ghost,peer,{avatar:original.avatar,shield:0,support:null});graphics.draw(run,run.time);Object.assign(ghost,original);}else graphics.draw(run,run.time);
  el('onlineHud').textContent='أنت: '+Math.floor(p.distance)+' م · ★ '+p.stars+' | المنافس: '+Math.floor(peer?.distance||0)+' م · ★ '+(peer?.stars||0);
- if(p.out&&peer?.out){finished=true;playing=false;const a=p.distance,b=peer.distance||0;status(a>b?'فزت بالسباق!':a<b?'فاز المنافس!':'تعادل اللاعبان!');return;}
+ if(p.out&&peer?.out&&ownFinal){finished=true;playing=false;const a=p.distance,b=peer.distance||0;const result=a>b?'win':a<b?'loss':'draw';if(peerLeft){status('انتهت الجولة بعد انقطاع المنافس، دون احتساب نتيجة.');return;}saveOutcome(result,p,peer);if(matchMode==='team'){const score=teamScore(p,peer);status('نتيجة الفريق: '+Math.floor(score.distance)+' م · ★ '+score.stars);}else status(result==='win'?'فزت بالسباق!':result==='loss'?'فاز المنافس!':'تعادل اللاعبان!');return;}
  status(p.out?'خرجت من السباق، بانتظار نتيجة المنافس.':'السباق جارٍ');
  frameId=requestAnimationFrame(tick);
 }
@@ -100,9 +141,11 @@ try{
  else{
  api=await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js');db=api.getDatabase(conn.auth.app,firebaseConfig.databaseURL);
  api.onValue(path('.info/serverTimeOffset'),s=>offset=s.val()||0);
+ await loadStats(conn);
+ api.onValue(path('challengeRanks'),s=>{const value=s.val();const list=value?Object.values(value):defaultRanks; ranks=list.length===7&&list[0].min===0&&list.every((r,i)=>r.label&&Number.isInteger(r.min)&&(!i||r.min>list[i-1].min))?list:defaultRanks;refreshCard();if(!el('rankEditor').hidden)renderRanks();},notice);
  api.onValue(path('racePhrases'),s=>{phrases=s.val()||{};renderPhrases();if(!el('editor').hidden)editRows();},notice);
- api.onValue(api.query(path('raceLobby'),api.orderByChild('created'),api.startAt(now()-120000),api.limitToLast(30)),s=>{el('offers').replaceChildren();s.forEach(c=>{if(c.key===room||c.val().created<now()-120000)return;const row=document.createElement('div');row.append(document.createTextNode('لاعب ينتظر منافسًا'),button('أنا!',()=>{finished=false;join(c.key);}));el('offers').append(row);});},notice);
+ api.onValue(api.query(path('raceLobby'),api.orderByChild('created'),api.startAt(now()-120000),api.limitToLast(30)),s=>{el('offers').replaceChildren();s.forEach(c=>{if(c.key===room||c.val().created<now()-120000)return;const row=document.createElement('div');row.append(document.createTextNode('لاعب ينتظر · '+modeName(c.val().mode)),button('أنا!',()=>{finished=false;join(c.key);}));el('offers').append(row);});},notice);
  el('lobby').hidden=false;status('اختر منافسًا للعب.');
- if(user.email==='quraaty@gmail.com'){el('editor').hidden=false;editRows();const snap=await api.get(path('racePhrases'));if(!snap.exists()){const initial={};defaults.forEach((text,order)=>initial['p'+order]={text,order,enabled:true});await api.set(path('racePhrases'),initial);}}
+ if(user.email==='quraaty@gmail.com'){el('editor').hidden=false;el('rankEditor').hidden=false;renderRanks();editRows();const snap=await api.get(path('racePhrases'));if(!snap.exists()){const initial={};defaults.forEach((text,order)=>initial['p'+order]={text,order,enabled:true});await api.set(path('racePhrases'),initial);}}
  }
 }catch(e){notice(e);}
