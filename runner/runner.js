@@ -227,7 +227,7 @@ for (const [index, id] of ['pad1','pad2'].entries()) {
   });
   pad.addEventListener('click', event => {
     const button = event.target.closest('[data-command]');
-    if (state === 'playing' && event.detail === 0 && button) move(run.players[index], button.dataset.command);
+    if (state === 'playing' && event.detail === 0 && !event.pointerType && button) move(run.players[index], button.dataset.command);
   });
 }
 let swipe;
@@ -238,13 +238,12 @@ canvas.addEventListener('pointerdown', event => {
   event.currentTarget.setPointerCapture(event.pointerId);
 });
 canvas.addEventListener('pointermove', event => {
-  if (!swipe || event.pointerId !== swipe.id) return;
+  if (!swipe || swipe.used || event.pointerId !== swipe.id) return;
   const dx = event.clientX - swipe.x, dy = event.clientY - swipe.y;
   if (Math.max(Math.abs(dx),Math.abs(dy)) < 24) return;
   if (state === 'playing') move(run.players[0], Math.abs(dx) > Math.abs(dy)
     ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'jump' : 'down'));
-  swipe.x = event.clientX;
-  swipe.y = event.clientY;
+  swipe.used = true;
 });
 for (const type of ['pointerup','pointercancel']) {
   canvas.addEventListener(type, () => { swipe = undefined; });
