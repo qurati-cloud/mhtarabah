@@ -119,13 +119,14 @@ footer{text-align:center;padding:25px;color:#8b715b}
  .top{justify-content:center}
 }
 </style>
+<link rel="stylesheet" href="arcade/quiz.css">
 </head>
 <body>
 
 <div style="text-align:center;padding:12px 16px"><h1>عمليات حسابية</h1></div>
 
 <main>
-<section class="panel">
+<section class="panel quiz-panel" data-theme="math">
 <div class="top">
 
 <strong class="badge" id="level">السؤال 1 من 200</strong>
@@ -223,7 +224,11 @@ function render(){
  q.options.forEach((option,index)=>{
   const button = document.createElement("button");
   button.className = "choice";
-  button.textContent = "أبجد"[index]+") "+option;
+  const letter=document.createElement("span");
+  letter.className="choice-letter";
+  letter.textContent="أبجد"[index] || String(index+1);
+  letter.setAttribute("aria-hidden","true");
+  button.append(letter,document.createTextNode(String(option)));
 
   if(answered){
    button.disabled = true;

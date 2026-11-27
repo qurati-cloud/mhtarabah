@@ -23,30 +23,39 @@ button{border:0;border-radius:13px;padding:14px 22px;background:#ffca4e;font-siz
 .note{text-align:center;color:#526d80;font-size:13px;line-height:1.8}
 @media(max-width:550px){.stats{grid-template-columns:repeat(2,1fr)}.stat b{font-size:17px}}
 </style>
+<link rel="stylesheet" href="arcade/arcade.css">
 </head>
-<body>
+<body class="arcade-page">
 <div style="text-align:center;padding:12px 16px"><h1>🚢 تحدي الغواصة</h1></div>
 <main>
 <p></p>
-<section class="stats">
-<div class="stat"><small>المسافة المقطوعة التقريبية</small><b id="distance">0 م</b></div>
-<div class="stat"><small>النجوم المجمّعة</small><b id="starCount">0 ⭐</b></div>
-<div class="stat"><small>الوقت</small><b id="time">00:00</b></div>
-<div class="stat"><small>السرعة</small><b id="speed">×1.0</b></div>
+<section id="arcade-stage" class="arcade-stage">
+ <canvas id="scene-3d" aria-hidden="true"></canvas>
+ <canvas id="game" width="900" height="500"></canvas>
+ <div class="arcade-hud">
+  <span id="starCount" aria-label="النجوم">0 ⭐</span>
+  <span id="distance" aria-label="المسافة">0 م</span>
+  <span id="speed" aria-label="السرعة">×1.0</span>
+  <span id="time" aria-label="الوقت">00:00</span>
+ </div>
+ <div class="arcade-actions">
+  <button type="button" id="full-game" aria-label="ملء الشاشة" title="ملء الشاشة">⛶</button>
+  <button type="button" id="leave-full" aria-label="الخروج من ملء الشاشة">✕</button>
+  <button id="pause" type="button" aria-label="إيقاف مؤقت">⏸</button>
+ </div>
+ <div class="arcade-controls">
+  <div class="steering"><button id="up" class="control">↑ ارتفاع</button><button id="down" class="control">↓ انخفاض</button></div>
+  <button id="start">▶ ابدأ</button>
+ </div>
+</section>
+<div id="message" aria-live="polite"></div>
+<details class="arcade-records"><summary>الأرقام القياسية</summary><section class="stats">
 <div class="stat"><small>رقمك القياسي في المسافة المقطوعة التقريبية</small><b id="personal">0 م</b></div>
 
 <div class="stat"><small>رقمك القياسي في النجوم</small><b id="starRecord">0 ⭐</b></div>
-<div class="stat"><small>الرقم القياسي الدولي لمجموع النجوم</small><b id="globalStars">بانتظار الربط</b></div>
-<div class="stat"><small>الرقم القياسي الدولي للمسافة المقطوعة التقريبية</small><b id="global">بانتظار الربط</b></div>
-</section>
-<canvas id="game" width="900" height="500"></canvas>
-<div id="message">اضغط ابدأ، واجمع النجوم وتجنّب عوائق البحر!</div>
-<div class="controls">
-<button id="up" class="control">⬆ ارتفاع</button>
-<button id="down" class="control">⬇ انخفاض</button>
-<button id="start">▶ ابدأ</button>
-<button id="pause">⏸ إيقاف</button>
-</div>
+<div class="stat"><small>الرقم القياسي الدولي لمجموع النجوم</small><b id="globalStars">—</b></div>
+<div class="stat"><small>الرقم القياسي الدولي للمسافة المقطوعة التقريبية</small><b id="global">—</b></div>
+</section></details>
 <p class="note">
 الكمبيوتر: الأسهم أو W و S — الهاتف: اسحب إصبعك للأعلى أو للأسفل على شاشة اللعبة.
 <br>
@@ -54,8 +63,10 @@ button{border:0;border-radius:13px;padding:14px 22px;background:#ffca4e;font-siz
 </p>
 </main>
 <script type="module">
+import { installArcade } from "./arcade/scene.js";
 import { progress as progressStorage } from "./auth/progress.js";
 "use strict";
+const view3d=installArcade("ocean");
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
 const $=id=>document.getElementById(id);
@@ -168,7 +179,8 @@ function spawn(){
  const top=Math.max(60,center-gap/2);
  const bottom=Math.min(430,center+gap/2);
  const width=48+rand()*22;
- const o={x:W+35,top,bottom,width,kind:Math.floor(rand()*4)};
+ const kind=Math.floor(rand()*4);
+ const o={x:W+35,top,bottom,width,kind,baseTop:top,baseBottom:bottom,phase:rand()*Math.PI*2};
  obstacles.push(o);
  if(rand()>.3){
   stars.push({
@@ -203,6 +215,10 @@ function update(dt){
  }
  for(const o of obstacles){
   o.x-=v*s;
+  if(o.kind===3){
+   const tide=Math.sin(elapsed*.95+o.phase)*16;
+   o.top=o.baseTop+tide;o.bottom=o.baseBottom+tide;
+  }
   if(plane.x+38>o.x&&plane.x-38<o.x+o.width&&
      (plane.y-22<o.top||plane.y+22>o.bottom)){
    end("اصطدمت بعائق بحري");return;
@@ -349,6 +365,7 @@ function drawSubmarine(){
  ctx.save();ctx.translate(plane.x,plane.y);
  ctx.rotate(Math.max(-.17,Math.min(.17,plane.vy/1500)));
  const tick=performance.now()/1000;
+ if(!view3d){
  // propeller and bubbles
  for(let i=0;i<3;i++){
   circle(-73-(i*22+tick*24)%75,-3+Math.sin(tick*2+i)*8,3+i%2*2,"#d8ffff44","#c9ffff88");
@@ -361,6 +378,7 @@ function drawSubmarine(){
  const hull=ctx.createLinearGradient(0,-35,0,39);
  hull.addColorStop(0,"#fff28a");hull.addColorStop(.36,"#ffcd3c");hull.addColorStop(.75,"#f69a17");hull.addColorStop(1,"#ce571e");
  ellipse(0,8,72,33,hull,"#b65b13",3);
+ }
  // cabin window: Habiba drawn inside
  ctx.save();ctx.beginPath();ctx.ellipse(-1,-16,39,37,0,0,Math.PI*2);ctx.clip();
  ctx.fillStyle="#7fd7ed";ctx.fillRect(-42,-55,85,80);
@@ -384,21 +402,25 @@ function drawSubmarine(){
  ctx.restore();
  ellipse(-1,-16,39,37,"#ffffff14","#fff8dd",5);
  ellipse(-15,-34,15,6,"#ffffff65");
+ if(!view3d){
  for(const x of [-36,20,47]){
   circle(x,19,7,"#2b99bd","#fff0a4",3);circle(x-2,17,2,"#dcffff");
  }
  ellipse(70,8,10,15,"#e67d20","#ffdc6a",4);
  ctx.fillStyle="#fff6ac77";poly([[77,2],[117,-13],[117,29],[77,14]],"#e9ffff22");
+ }
  ctx.restore();
 }
 function draw(){
- drawBackground();
- for(const o of obstacles)drawObstacle(o);
- for(const star of stars)drawStar(star.x,star.y);
+ if(view3d){
+  view3d.render(obstacles,stars,distance*10,elapsed,plane);
+  ctx.clearRect(0,0,W,H);
+ }else{
+  drawBackground();
+  for(const o of obstacles)drawObstacle(o);
+  for(const star of stars)drawStar(star.x,star.y);
+ }
  drawSubmarine();
- ctx.fillStyle="rgba(4,49,83,.74)";ctx.beginPath();ctx.roundRect(15,15,220,43,13);ctx.fill();
- ctx.fillStyle="white";ctx.font="bold 20px Tahoma";ctx.textAlign="left";
- ctx.fillText("⭐ "+score+"   ×"+multiplier().toFixed(1),29,43);
  if(mode!=="flying"){
   ctx.fillStyle="rgba(4,31,60,.30)";ctx.fillRect(0,0,W,H);
   ctx.fillStyle="white";ctx.font="bold 31px Tahoma";ctx.textAlign="center";
@@ -410,7 +432,7 @@ function draw(){
 function loop(now){
  const dt=last?Math.min(.04,(now-last)/1000):0;
  last=now;
- update(dt);
+ for(let left=dt;left>0;left-=1/120)update(Math.min(left,1/120));
  draw();
  requestAnimationFrame(loop);
 }

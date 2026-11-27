@@ -331,6 +331,7 @@ body > main {
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="stylesheet" href="arcade/quiz.css">
 </head>
 <body>
 
@@ -403,7 +404,7 @@ body > main {
 </div>
 </section>
 
-<section id="play" class="panel hidden">
+<section id="play" class="panel quiz-panel hidden" data-theme="capitals">
 <div class="top">
 <button onclick="goHome()">العودة إلى الألعاب</button>
 <h2>عواصم</h2>
@@ -545,7 +546,11 @@ function render(){
  q.options.forEach((option,index)=>{
   const button = document.createElement("button");
   button.className = "choice";
-  button.textContent = "أبجد"[index]+") "+option;
+  const letter=document.createElement("span");
+  letter.className="choice-letter";
+  letter.textContent="أبجد"[index] || String(index+1);
+  letter.setAttribute("aria-hidden","true");
+  button.append(letter,document.createTextNode(String(option)));
 
   if(answered){
    button.disabled = true;

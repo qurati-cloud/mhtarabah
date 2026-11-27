@@ -59,11 +59,12 @@ button:disabled{opacity:.5;cursor:default}
  .choice{min-height:75px}
 }
 </style>
+<link rel="stylesheet" href="arcade/quiz.css">
 </head>
 <body>
 <div style="text-align:center;padding:12px 16px"><h1>مسائل حسابية</h1></div>
 <main>
-<section class="panel">
+<section class="panel quiz-panel" data-theme="story">
 <div class="top">
 
 <h2>مسائل حسابية</h2>
@@ -153,7 +154,11 @@ function render(){
  q.options.forEach((option,index)=>{
   const b=document.createElement("button");
   b.className="choice";
-  b.textContent="أبجد"[index]+") "+option;
+  const letter=document.createElement("span");
+  letter.className="choice-letter";
+  letter.textContent="أبجد"[index] || String(index+1);
+  letter.setAttribute("aria-hidden","true");
+  b.append(letter,document.createTextNode(String(option)));
 
   if(answered){
    b.disabled=true;

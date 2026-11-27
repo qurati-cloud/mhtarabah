@@ -31,34 +31,42 @@ button:disabled{opacity:.5}
 .control{min-width:100px}
 }
 </style>
+<link rel="stylesheet" href="arcade/arcade.css">
 </head>
-<body>
+<body class="arcade-page">
 <div style="text-align:center;padding:12px 16px"><h1>🏃 الحواجز</h1></div>
 <main>
 <div class="top">
 
 <strong>ساعد محمدًا على جمع النجوم وتجاوز الحواجز!</strong>
 </div>
-<section class="stats">
-<div class="stat"><small>المسافة المقطوعة التقريبية</small><b id="distance">0 م</b></div>
-<div class="stat"><small>النجوم المجمّعة</small><b id="stars">0 ⭐</b></div>
-<div class="stat"><small>الوقت</small><b id="time">00:00</b></div>
-<div class="stat"><small>السرعة</small><b id="speed">×1.0</b></div>
+<section id="arcade-stage" class="arcade-stage">
+ <canvas id="scene-3d" aria-hidden="true"></canvas>
+ <canvas id="game" width="900" height="500"></canvas>
+ <div class="arcade-hud">
+  <span id="stars" aria-label="النجوم">0 ⭐</span>
+  <span id="distance" aria-label="المسافة">0 م</span>
+  <span id="speed" aria-label="السرعة">×1.0</span>
+  <span id="time" aria-label="الوقت">00:00</span>
+ </div>
+ <div class="arcade-actions">
+  <button type="button" id="full-game" aria-label="ملء الشاشة" title="ملء الشاشة">⛶</button>
+  <button type="button" id="leave-full" aria-label="الخروج من ملء الشاشة">✕</button>
+  <button id="pause" type="button" aria-label="إيقاف مؤقت">⏸</button>
+ </div>
+ <div class="arcade-controls">
+  <div class="steering"><button id="up" class="control">↑ قفز</button><button id="down" class="control">↓ انحناء</button></div>
+  <button id="start">▶ ابدأ</button>
+ </div>
+</section>
+<div id="message" aria-live="polite"></div>
+<details class="arcade-records"><summary>الأرقام القياسية</summary><section class="stats">
 <div class="stat"><small>رقمك القياسي في المسافة المقطوعة التقريبية</small><b id="record">0 م</b></div>
 <div class="stat"><small>رقمك القياسي في النجوم</small><b id="starRecord">0 ⭐</b></div>
-<div class="stat"><small>الرقم القياسي الدولي لمجموع النجوم</small><b id="globalStars">بانتظار الربط</b></div>
-<div class="stat"><small>الرقم القياسي الدولي للمسافة المقطوعة التقريبية</small><b id="global">بانتظار الربط</b></div>
-<div class="stat"><small>totalStars</small><b id="totalStars">0</b></div>
-</section>
-
-<canvas id="game" width="900" height="500"></canvas>
-<div id="message" aria-live="polite">اضغط ابدأ واجمع النجوم وتجاوز الحواجز!</div>
-<div class="controls">
-<button id="up" class="control">⬆ قفز</button>
-<button id="down" class="control">⬇ انحناء</button>
-<button id="start">▶ ابدأ</button>
-<button id="pause">⏸ إيقاف</button>
-</div>
+<div class="stat"><small>الرقم القياسي الدولي لمجموع النجوم</small><b id="globalStars">—</b></div>
+<div class="stat"><small>الرقم القياسي الدولي للمسافة المقطوعة التقريبية</small><b id="global">—</b></div>
+<div class="stat"><small>مجموع النجوم</small><b id="totalStars">0</b></div>
+</section></details>
 <p class="note">
 الكمبيوتر: السهم ↑ للقفز، والسهم ↓ للانحناء.
 الهاتف: اسحب للأعلى للقفز، وللأسفل للانحناء.
@@ -66,8 +74,10 @@ button:disabled{opacity:.5}
 </main>
 
 <script type="module">
+import { installArcade } from "./arcade/scene.js";
 import { progress as progressStorage } from "./auth/progress.js";
 "use strict";
+const view3d=installArcade("land");
 
 const $=id=>document.getElementById(id);
 const canvas=$("game"),ctx=canvas.getContext("2d");
@@ -227,12 +237,12 @@ function spawnObstacle(){
  if(high){
   // حاجز معلّق: المرور من تحته يحتاج انحناء
   obstacles.push({
-   type:"high",
+   type:"high",kind:Math.random()<.5?2:3,
    x:W+20,y:GROUND-115,w:65,h:40
   });
  }else{
   obstacles.push({
-   type:"ground",
+   type:"ground",kind:Math.random()<.5?0:1,
    x:W+20,y:GROUND-52,w:48,h:52
   });
  }
@@ -547,10 +557,14 @@ function drawObstacle(o){
 }
 
 function draw(){
- background();
-
- for(const s of stars)starShape(s.x,s.y,s.r);
- for(const o of obstacles)drawObstacle(o);
+ if(view3d){
+  view3d.render(obstacles,stars,distance*15,elapsed);
+  ctx.clearRect(0,0,W,H);
+ }else{
+  background();
+  for(const s of stars)starShape(s.x,s.y,s.r);
+  for(const o of obstacles)drawObstacle(o);
+ }
  drawMohammad();
 
  if(mode!=="running"){
@@ -586,7 +600,7 @@ function loop(now){
  try{
   const dt=last?Math.min(.04,(now-last)/1000):0;
   last=now;
-  update(dt);
+  for(let left=dt;left>0;left-=1/120)update(Math.min(left,1/120));
   draw();
  }catch(error){
   console.error("Game loop error:",error);

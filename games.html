@@ -197,6 +197,7 @@ button:focus-visible,a:focus-visible{
  background:linear-gradient(145deg,#e1ffdf,#8ce6a1);
 }
 </style>
+<link rel="stylesheet" href="arcade/quiz.css">
 </head>
 <body>
 
@@ -255,7 +256,7 @@ button:focus-visible,a:focus-visible{
 </div>
 </section>
 
-<section id="play" class="panel hidden">
+<section id="play" class="panel quiz-panel hidden" data-theme="capitals">
 <div class="top">
 <button onclick="goHome()">العودة إلى الألعاب</button>
 <h2>عواصم</h2>
@@ -403,7 +404,11 @@ function render(){
  q.options.forEach((option,index)=>{
   const button = document.createElement("button");
   button.className = "choice";
-  button.textContent = "أبجد"[index]+") "+option;
+  const letter=document.createElement("span");
+  letter.className="choice-letter";
+  letter.textContent="أبجد"[index] || String(index+1);
+  letter.setAttribute("aria-hidden","true");
+  button.append(letter,document.createTextNode(String(option)));
 
   if(answered){
    button.disabled = true;
