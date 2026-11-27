@@ -192,7 +192,6 @@ function update(dt){
  const v=speed();
  const direction=(input.down?1:0)-(input.up?1:0);
  const control=900;
- if(direction>0)plane.vy=Math.max(plane.vy,215);
  plane.vy+=direction*control*s;
  if(!direction)plane.vy*=Math.pow(.03,s);
  plane.vy=Math.max(-380,Math.min(380,plane.vy));
@@ -233,12 +232,15 @@ function update(dt){
  updateStats();
 }
 function cloud(x,y,size){
- ctx.fillStyle="rgba(255,255,255,.75)";
- for(const [dx,dy,r] of [[0,0,22],[22,-9,28],[48,0,22]]){
-  ctx.beginPath();
-  ctx.arc(x+dx*size,y+dy*size,r*size,0,Math.PI*2);
-  ctx.fill();
- }
+ ctx.save();ctx.translate(x,y);ctx.scale(size,size);
+ ctx.fillStyle="rgba(249,253,255,.83)";
+ ctx.beginPath();ctx.moveTo(-57,9);
+ ctx.bezierCurveTo(-63,-2,-49,-10,-34,-9);
+ ctx.bezierCurveTo(-34,-23,-10,-27,4,-15);
+ ctx.bezierCurveTo(17,-26,40,-16,40,-6);
+ ctx.bezierCurveTo(61,-8,65,7,53,13);
+ ctx.bezierCurveTo(25,19,-27,20,-57,9);
+ ctx.fill();ctx.restore();
 }
 function drawPlane(){
  ctx.save();
@@ -281,9 +283,9 @@ function draw(){
  sky.addColorStop(1,"#e2f7ff");
  ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
 
- for(let i=0;i<9;i++){
-  const x=((i*167-distance*1.7)%(W+250)+(W+250))%(W+250)-100;
-  cloud(x,65+(i*83)%300,.7+(i%3)*.2);
+ for(let i=0;i<4;i++){
+  const x=((i*294-distance*1.4)%(W+250)+(W+250))%(W+250)-100;
+  cloud(x,65+(i*47)%154,[.79,1.04,.57,.86][i]);
  }
  ctx.fillStyle="#9bd2a4";
  for(let i=0;i<12;i++){

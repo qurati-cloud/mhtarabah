@@ -48,13 +48,7 @@ export function createArcadeScene(canvas, mode){
   }else if(sky){
    const ridge=mesh(backdrop,rock,[0x5a879a,0x769fac,0x82a0aa][depth],0,-207,-170,115,82+depth*30,38);
    ornaments.push({object:ridge,phase,depth:depth+2,y:-230+depth*5});
-   if(i%2===0){
-    const cloud=new T.Group();backdrop.add(cloud);
-    for(const [x,y,w] of [[-29,-3,25],[0,10,36],[30,1,25]]){
-     mesh(cloud,sphere,0xeaf3f9,x,y,-170,w,18+depth*3,12);
-    }
-    ornaments.push({object:cloud,phase:phase+80,depth:depth+2,y:46+i*31%140});
-   }
+
   }else{
    const hill=mesh(backdrop,rock,[0x6f9d8e,0x91b4a0,0x83a8a0][depth],0,-133-depth*6,-115,155,70+depth*15,35);
    ornaments.push({object:hill,phase,depth:depth+2,y:-135-depth*5});
@@ -64,6 +58,23 @@ export function createArcadeScene(canvas, mode){
     mesh(tree,rock,0x3d846a,0,61,-20,31,47,23);
     ornaments.push({object:tree,phase,depth:1,y:-155});
    }
+  }
+ }
+ if(sky){
+  const material=new T.MeshBasicMaterial({color:0xf9fdff,transparent:true,opacity:.86,depthWrite:false});
+  for(let i=0;i<4;i++){
+   const shape=new T.Shape();
+   shape.moveTo(-57,-9);
+   shape.bezierCurveTo(-63,2,-49,10,-34,9);
+   shape.bezierCurveTo(-34,23,-10,27,4,15);
+   shape.bezierCurveTo(17,26,40,16,40,6);
+   shape.bezierCurveTo(61,8,65,-7,53,-13);
+   shape.bezierCurveTo(25,-19,-27,-20,-57,-9);
+   const cloud=new T.Mesh(new T.ShapeGeometry(shape,12),material);
+   cloud.position.z=-280;
+   cloud.scale.set([.79,1.04,.57,.86][i],[.85,.92,.6,1.13][i],1);
+   backdrop.add(cloud);
+   ornaments.push({object:cloud,phase:120+i*260,depth:3,y:92+(i*47)%120});
   }
  }
  const ground=mesh(scene,cube,ocean?0x28627d:0x647c69,0,ocean?-245:sky?-258:-203,-80,1090,ocean?39:87,140);
