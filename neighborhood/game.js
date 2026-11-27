@@ -1,5 +1,5 @@
 import {createImmersive} from './immersive.js';
-import {size,levels,pieces,key,water,start,dock,garden,square,loadBoard,height,surface,path,bridgeReady,gardenReady,squareReady,scenery,pier,pierReady,islandStart,islandGround,islandTreasure,households,marketRoute,market} from './model.js';
+import {size,levels,pieces,key,water,start,dock,garden,square,loadBoard,height,surface,path,bridgeReady,gardenReady,squareReady,scenery,pier,pierReady,islandStart,islandGround,islandTreasure,households,marketRoute,market,stations,isRail,railPorts,trainRoute,challengeReady,pointId,valid} from './model.js';
 
 const el=id=>document.getElementById(id);
 const copy=id=>document.querySelector('[data-text-key="town:'+id+'"]').textContent;
@@ -20,6 +20,16 @@ const rooms=Object.create(null);
 for(const [id,choice] of Object.entries(saved.rooms||{})){
  if(['rug','plant','lamp'].includes(choice))rooms[id]=choice;
 }
+const rotations=Object.create(null), marks=Object.create(null);
+for(const [id,value] of Object.entries(saved.rotations||{}))if(board.has(id)&&Number.isInteger(value))rotations[id]=((value%4)+4)%4;
+for(const [id,value] of Object.entries(saved.marks||{})){
+ const point=id.split(',').map(Number);
+ if(point.length===2&&valid(...point,0)&&pointId(point)===id&&['start','finish','star','hurdle'].includes(value))marks[id]=value;
+}
+const rewards=new Set(Array.isArray(saved.rewards)?saved.rewards.filter(id=>['bench','fountain'].includes(id)):[]);
+const rotatable=['rail','curve','roof','arch','steps'];
+const markColors={start:'#66ca8d',finish:'#b788e8',star:'#ffcf57',hurdle:'#d56c4f'};
+let rotation=0, markTool, racing, ride, tracks=[], fixedStep=0, mapJump=false;
 let homes=[], activeHome, residents=[], lastResidentFrame=0;
 let immersive, firstPerson=false;
 const roomIcons={rug:'▰',plant:'🪴',lamp:'🏮'};
@@ -33,7 +43,7 @@ for(const [type,[label,color]] of Object.entries(pieces)){
  const swatch=document.createElement('i');swatch.style.setProperty('--piece',color);
  const name=document.createElement('span');name.dataset.textKey='town:piece:'+type;name.textContent=label;
  button.append(swatch,name);palette.append(button);
- button.onclick=()=>{selected=type;setTool('build');};
+ button.onclick=()=>{selected=type;rotation=0;setTool('build');};
 }
 for(const {id,piece:[label]} of islandTreasure){
  const button=document.createElement('button');
@@ -50,7 +60,7 @@ for(const {id,piece:[label]} of islandTreasure){
 }
 function persist(){
  try {
-  localStorage.setItem(saveKey,JSON.stringify({board:[...board],mission,player,avatar,mode,island,islandPosition,found:[...found],unlocked:[...unlocked],rooms}));
+  localStorage.setItem(saveKey,JSON.stringify({board:[...board],mission,player,avatar,mode,island,islandPosition,found:[...found],unlocked:[...unlocked],rooms,rotations,marks,rewards:[...rewards]}));
   el('status').textContent=copy('saved');
  } catch { el('status').textContent=copy('storage'); }
 }
@@ -59,14 +69,29 @@ function syncHomes(){
  immersive?.invalidate();
  homes=households(board);
  residents=homes.slice(0,16).map((home,index)=>({...home,index,route:marketRoute(board,home.entrance)}));
+ tracks=trainRoute(board,rotations);
+ if(homes.some(home=>marketRoute(board,home.entrance).length))rewards.add('bench');
+ if(gardenReady(board))rewards.add('fountain');
 }
 function refresh(){
  immersive?.invalidate();
  const id=missionIds[mission];
  el('mission-card').hidden=mode==='free'||island;
  el('village-card').hidden=island;
+ for(const id of ['rail-card','course-card','requests-card'])el(id).hidden=island;
+ el('rail-status').textContent=copy(tracks.length?'railReady':'railHelp');
+ el('ride-rail').disabled=Boolean(ride||racing)||!tracks.length||!stations.some(p=>same(p,player));
+ el('race-start').disabled=Boolean(racing||ride)||!challengeReady(board,marks);
+ el('race-stop').hidden=!racing;
+ el('map-jump').hidden=!racing||firstPerson;
+ el('request-road').textContent=copy(rewards.has('bench')?'roadDone':'roadRequest');
+ el('request-garden').textContent=copy(rewards.has('fountain')?'gardenDone':'gardenRequest');
+ el('rotate-piece').hidden=island||Boolean(racing||ride)||tool!=='build'||!rotatable.includes(selected);
+ for(const button of document.querySelectorAll('[data-mark]'))button.disabled=Boolean(racing||ride);
+
  el('home-count').textContent=new Intl.NumberFormat('ar').format(homes.length);
- el('visit-home').disabled=!homes.some(home=>same(home.entrance,player));
+ el('visit-home').disabled=Boolean(ride||racing)||!homes.some(home=>same(home.entrance,player));
+ el('sail').disabled=Boolean(ride||racing);
  el('harbor-card').hidden=mission<1;
  const complete=found.size===islandTreasure.length;
  const all=unlocked.size===islandTreasure.length;
@@ -79,12 +104,12 @@ function refresh(){
  for(const button of el('treasure-options').children)button.hidden=unlocked.has(button.dataset.treasure);
  for(const button of palette.children){
   const id=button.dataset.piece;
-  button.hidden=island||(islandTreasure.some(t=>t.id===id)&&!unlocked.has(id));
+  button.hidden=island||(islandTreasure.some(t=>t.id===id)&&!unlocked.has(id))||(['bench','fountain'].includes(id)&&!rewards.has(id));
  }
- palette.hidden=island;
- for(const button of document.querySelectorAll('[data-tool]'))button.hidden=island&&button.dataset.tool!=='walk';
- el('reset').hidden=island;
- el('undo').hidden=el('redo').hidden=island;
+ palette.hidden=island||Boolean(racing||ride);
+ for(const button of document.querySelectorAll('[data-tool]'))button.hidden=(island||Boolean(racing||ride))&&button.dataset.tool!=='walk';
+ el('reset').hidden=island||Boolean(racing||ride);
+ el('undo').hidden=el('redo').hidden=island||Boolean(racing||ride);
  el('mission-title').textContent=copy(id+'Title');
  el('mission-description').textContent=copy(id+'Body');
  el('mission-count').textContent=mission<3?(mission+1)+' / 3':'✓';
@@ -107,16 +132,18 @@ function update(){
  refresh();
 }
 function setTool(value){
- tool=value;
+ tool=value;markTool=undefined;
+ for(const button of document.querySelectorAll('[data-mark]'))button.setAttribute('aria-pressed','false');
+ immersive?.invalidate();
  for(const button of document.querySelectorAll('[data-tool]'))button.setAttribute('aria-pressed',String(button.dataset.tool===tool));
  for(const button of palette.children)button.setAttribute('aria-pressed',String(button.dataset.piece===selected&&tool==='build'));
- draw();
+ refresh();
 }
 document.querySelectorAll('[data-tool]').forEach(button=>button.onclick=()=>setTool(button.dataset.tool));
 for(const id of ['mohammad','habiba'])el(id).onclick=()=>{avatar=id;update();};
 for(const id of ['missions','free'])el(id).onclick=()=>{mode=id;update();};
 function visit(home){
- if(!home||island||!same(home.entrance,player)||el('home-room').open)return;
+ if(!home||island||ride||racing||!same(home.entrance,player)||el('home-room').open)return;
  activeHome=home.id;route=[];
  showRoom();
  el('home-room').showModal();
@@ -136,9 +163,11 @@ for(const button of document.querySelectorAll('[data-furniture]'))button.onclick
  rooms[activeHome]=button.dataset.furniture;
  showRoom();persist();
 };
-function apply({id,before,after},reverse){
+function apply({id,before,after,beforeRotation,afterRotation},reverse){
  const type=reverse?before:after;
  if(type)board.set(id,type);else board.delete(id);
+ const angle=reverse?beforeRotation:afterRotation;
+ if(type&&angle)rotations[id]=angle;else delete rotations[id];
  if(surface(board,...player)===null)player=[...start];
  route=[];
  syncHomes();
@@ -148,7 +177,7 @@ el('undo').onclick=()=>{const edit=undo.pop();if(edit){redo.push(edit);apply(edi
 el('redo').onclick=()=>{const edit=redo.pop();if(edit){undo.push(edit);apply(edit,false);}};
 el('reset').onclick=()=>{
  if(!confirm(copy('confirm')))return;
- board.clear();for(const id of Object.keys(rooms))delete rooms[id];syncHomes();mission=0;island=false;found.clear();player=[...start];undo.length=redo.length=0;route=[];panX=panY=0;immersive?.reset();update();
+ board.clear();for(const store of [rotations,marks])for(const id of Object.keys(store))delete store[id];rewards.clear();for(const id of Object.keys(rooms))delete rooms[id];syncHomes();mission=0;island=false;found.clear();player=[...start];undo.length=redo.length=0;route=[];panX=panY=0;immersive?.reset();update();
 };
 function returnHome(){
  island=false;route=[];panX=panY=0;
@@ -156,10 +185,45 @@ function returnHome(){
 }
 el('return-home').onclick=returnHome;
 el('sail').onclick=()=>{
- if(mission<1||!same(player,dock)||!pierReady(board))return;
+ if(ride||racing||mission<1||!same(player,dock)||!pierReady(board))return;
  island=true;route=[];found.clear();islandPosition=[...islandStart];
  setTool('walk');immersive?.reset();center();update();
 };
+el('rotate-piece').onclick=()=>{rotation=(rotation+1)%4;immersive?.invalidate();draw();};
+for(const button of document.querySelectorAll('[data-mark]')){
+ button.onclick=()=>{
+  setTool('walk');markTool=button.dataset.mark;
+  for(const option of document.querySelectorAll('[data-mark]'))option.setAttribute('aria-pressed',String(option===button));
+ };
+}
+el('ride-rail').onclick=()=>{
+ if(ride||racing||!tracks.length||!stations.some(p=>same(p,player)))return;
+ const cells=same(player,stations[0])?tracks:[...tracks].reverse();
+ ride={cells,frame:undefined,point:[...cells[0],surface(board,...cells[0])??0],heading:0};route=[];
+ setTool('walk');
+};
+el('race-start').onclick=()=>{
+ if(ride||racing||!challengeReady(board,marks))return;
+ player=Object.keys(marks).find(id=>marks[id]==='start').split(',').map(Number);
+ racing={start:undefined,found:new Set(),lastTime:0};
+ route=[];mapJump=false;setTool('walk');immersive?.reset();center();
+};
+el('race-stop').onclick=()=>{racing=undefined;route=[];refresh();};
+el('map-jump').onclick=()=>{mapJump=true;};
+function canCross(point,jump){
+ if(!racing||marks[pointId(point)]!=='hurdle'||jump)return true;
+ racing.notice='courseBump';
+ el('course-status').textContent=copy('courseBump');
+ return false;
+}
+function showRace(time){
+ if(!racing)return;
+ racing.start??=time;
+ const elapsed=Math.floor((time-racing.start)/1000);
+ racing.lastTime=elapsed;
+ const count=Object.values(marks).filter(value=>value==='star').length;
+ el('course-status').textContent='★ '+racing.found.size+'/'+count+' · '+elapsed+ ' '+copy('courseTime')+(racing.notice?' · '+copy(racing.notice):'');
+}
 function walk(to){
  const here=island?islandPosition:player;
  if(same(here,to))return;
@@ -167,24 +231,41 @@ function walk(to){
  if(!route.length)el('status').textContent=copy('blocked');
  else nextStep=0;
 }
-function interact(cell){
- if(!cell)return;
- const [x,z]=cell;
+function candidate(cell,faceCell){
+ if(!cell||ride||racing||island||markTool||!['build','remove'].includes(tool))return null;
+ const [x,z]=tool==='build'&&faceCell?faceCell:cell;
+ if(!valid(x,z,0)||scenery.has(x+','+z)||same([x,z],player)||same([x,z],start))return null;
+ const y=height(board,x,z), roof=board.get(key(x,z,y-1));
+ if(tool==='remove')return y?[x,z,y-1]:null;
+ if(y>=levels||roof==='tree'||isRail(roof)||selected==='tree'&&water(x,z)||
+    isRail(selected)&&water(x,z)&&!y)return null;
+ return [x,z,y];
+}
+function interact(cell,faceCell){
+ if(!cell||ride)return;
+ if(markTool&&!island&&!racing){
+  if(surface(board,...cell)===null)return;
+  const id=pointId(cell);
+  if(markTool==='erase')delete marks[id];
+  else {
+   if(markTool==='start'||markTool==='finish')for(const key of Object.keys(marks))if(marks[key]===markTool)delete marks[key];
+   marks[id]=markTool;
+  }
+  update();return;
+ }
  if(island||tool==='walk'){
-  const home=!island&&homes.find(home=>same(home.at,cell));
+  const home=!island&&!racing&&homes.find(home=>same(home.at,cell));
   if(home){
    if(same(home.entrance,player))visit(home);
    else walk(home.entrance);
   } else walk(cell);
   return;
  }
- const y=height(board,x,z);
- if(same(cell,player)||same(cell,start)||tool==='remove'&&!y||
-    scenery.has(x+','+z)||tool==='build'&&(y>=levels||board.get(key(x,z,y-1))==='tree'||selected==='tree'&&water(x,z))){
-  el('status').textContent=copy('placement');return;
- }
- const id=key(x,z,tool==='remove'?y-1:y);
- const edit={id,before:board.get(id),after:tool==='build'?selected:undefined};
+ const placement=candidate(cell,faceCell);
+ if(!placement){el('status').textContent=copy('placement');return;}
+ const id=key(...placement);
+ const edit={id,before:board.get(id),after:tool==='build'?selected:undefined,
+  beforeRotation:rotations[id],afterRotation:rotatable.includes(selected)?rotation:0};
  undo.push(edit);redo.length=0;apply(edit,false);
 }
 function project(x,z,y=0){
@@ -207,15 +288,28 @@ function box(x,z,y,color){
 function dot(x,y,rx,ry,color){
  ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill();
 }
-function piece(x,z,y,type){
+function piece(x,z,y,type,angle=0){
  const color=pieces[type][1];
- if(type==='tree'){
+ if(isRail(type)){
+  const [px,py]=project(x+.5,z+.5,y+.08);
+  const endpoints=[[1,.5],[.5,1],[0,.5],[.5,0]];
+  for(const port of railPorts(type,angle)){
+   const [dx,dz]=endpoints[port], [ex,ey]=project(x+dx,z+dz,y+.08);
+   ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(ex,ey);
+   ctx.strokeStyle='#685344';ctx.lineWidth=unit*.24;ctx.stroke();
+   ctx.strokeStyle='#e2e4d9';ctx.lineWidth=unit*.10;ctx.stroke();
+  }
+ } else if(type==='bench'||type==='fountain'){
+  const [px,py]=project(x+.5,z+.5,y+.4);
+  dot(px,py,unit*.39,unit*.22,color);
+  dot(px,py-unit*.13,unit*.28,unit*.14,type==='fountain'?'#8ed0ce':'#b88152');
+ } else if(type==='tree'){
   const [px,py]=project(x+.5,z+.5,y);
   ctx.fillStyle='#805f41';ctx.fillRect(px-unit*.08,py-unit*.7,unit*.16,unit*.7);
   dot(px,py-unit*.73,unit*.42,unit*.48,color);
   dot(px-unit*.12,py-unit*.88,unit*.24,unit*.26,'#79a16b');
  } else if(type==='roof'){
-  const base=tile(x,z,y), ridge=[project(x+.5,z,y+1),project(x+.5,z+1,y+1)];
+  const base=tile(x,z,y), ridge=angle%2?[project(x,z+.5,y+1),project(x+1,z+.5,y+1)]:[project(x+.5,z,y+1),project(x+.5,z+1,y+1)];
   poly([base[1],base[2],ridge[1],ridge[0]],color,'#744336');
   poly([base[2],base[3],ridge[1]],'#8b4838');
  } else if(type==='arch'){
@@ -304,7 +398,22 @@ function draw(){
   if(!y&&highlighted)poly(tile(x,z,0),'#ffe0887c','#f8d56b');
   const decor=scenery.get(x+','+z);
   if(decor&&!y)decor.forEach((type,level)=>piece(x,z,level,type));
-  for(let level=0;level<y;level++)piece(x,z,level,board.get(key(x,z,level)));
+  for(let level=0;level<y;level++){
+   const id=key(x,z,level);piece(x,z,level,board.get(id),rotations[id]);
+  }
+  if(stations.some(point=>same(point,[x,z]))){
+   const [px,py]=project(x+.5,z+.5,.08);
+   dot(px,py,unit*.37,unit*.18,'#306968');
+   ctx.fillStyle='#fff7d4';ctx.textAlign='center';ctx.font='bold '+Math.max(8,unit*.32)+'px Tahoma';
+   ctx.fillText(copy(same(stations[0],[x,z])?'stationMarket':'stationHarbor'),px,py,unit*1.8);
+  }
+  const mark=marks[x+','+z];
+  if(mark&&!racing?.found.has(x+','+z)){
+   const [px,py]=project(x+.5,z+.5,surface(board,x,z)??y);
+   if(mark==='hurdle')poly([[px-unit*.36,py-unit*.22],[px+unit*.36,py-unit*.22],
+     [px+unit*.36,py-unit*.42],[px-unit*.36,py-unit*.42]],markColors.hurdle);
+   else dot(px,py,unit*.22,unit*.15,markColors[mark]);
+  }
   if(same(hover,[x,z]))poly(tile(x,z,tool==='build'&&y<levels?y+.05:y),'#fff1a368','#fff0a0');
   if(same(dock,[x,z])&&!y){const [px,py]=project(x+.5,z+.5);dot(px,py,unit*.52,unit*.21,'#c77c42');}
   if(x===8&&z===5&&pierReady(board)){
@@ -321,7 +430,14 @@ function draw(){
    ctx.fillText(copy('market'),px,py+unit*.06,unit*.76);
   }
   for(const resident of people.get(x+','+z)||[])drawResident(resident);
-  if(same(player,[x,z]))character(x,z,y);
+  if(!ride&&same(player,[x,z]))character(x,z,surface(board,x,z)??y);
+ }
+ if(ride){
+  const [x,z,y]=ride.point;
+  const [px,py]=project(x+.5,z+.5,y+.36);
+  poly([[px-unit*.55,py],[px,py-unit*.46],[px+unit*.55,py],[px,py+unit*.34]],'#b14f3a','#763c33');
+  dot(px,py-unit*.23,unit*.24,unit*.13,'#f0cb76');
+  character(x,z,y+.48);
  }
 }
 function pick(x,y){
@@ -374,10 +490,23 @@ window.addEventListener('keydown',e=>{
   else if(e.code==='KeyR')immersive.turn(24,0);
   return;
  }
+ if(e.code==='Space'&&racing){e.preventDefault();mapJump=true;return;}
  const direction={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,1],ArrowRight:[0,-1]}[e.key];
  if(direction){e.preventDefault();const p=island?islandPosition:player;walk([p[0]+direction[0],p[1]+direction[1]]);}
 });
 function enterCell(point){
+ if(racing){
+  racing.notice=undefined;
+  const id=pointId(point);
+  if(marks[id]==='star')racing.found.add(id);
+  if(marks[id]==='finish'){
+   const goal=Object.values(marks).filter(value=>value==='star').length;
+   if(racing.found.size===goal){
+    el('course-status').textContent=copy('courseFinish')+' '+racing.lastTime+' '+copy('courseTime');
+    racing=undefined;route=[];
+   } else racing.notice='courseMissing';
+  }
+ }
  if(island){
   islandPosition=point;
   const treasure=islandTreasure.find(t=>same(t.at,point));
@@ -393,22 +522,26 @@ function setPerspective(enabled){
  for(const id of ['town-3d','town-aim','motion'])el(id).hidden=!firstPerson;
  for(const id of ['town-view','zoom-in','zoom-out','center'])el(id).hidden=firstPerson;
  el('perspective').setAttribute('aria-pressed',String(firstPerson));
+ el('map-jump').hidden=!racing||firstPerson;
  if(firstPerson)immersive.reset();
  else {immersive?.keys.clear();resize();center();}
 }
 function startImmersive(){
  try {
   immersive=createImmersive(el('town-3d'),()=>({
-   board,island,found,hasPier:pierReady(board),residents:[...residentPositions().values()].flat(),point:island?islandPosition:player,ground:island?islandGround:(x,z)=>surface(board,x,z),
+   board,island,found,rotations,marks:island?{}:marks,markColors, collected:racing?.found,
+   ride, selected, rotation, preview:(cell,adjacent)=>tool==='build'?candidate(cell,adjacent):null,
+   canCross, hasPier:pierReady(board),residents:[...residentPositions().values()].flat(),point:island?islandPosition:player,ground:island?islandGround:(x,z)=>surface(board,x,z),
    paused:Boolean(document.querySelector('dialog[open]')),
    targets:island?[]:[
     ...(mode==='missions'?[[[7,8],[8,8],[9,8]],garden,square,[]][mission]:[]),
     ...(mission>=1&&!pierReady(board)?pier:[])
    ]
-  }),enterCell,cell=>{
+  }),enterCell,(cell,adjacent)=>{
+   if(markTool&&!island){interact(cell);return;}
    if(tool==='walk'||island){
     if(!island)visit(homes.find(home=>same(home.at,cell)&&same(home.entrance,player)));
-   } else interact(cell);
+   } else interact(cell,adjacent);
   });
  } catch {el('view-message').hidden=false;el('perspective').disabled=true;return;}
  el('perspective').onclick=()=>setPerspective(!firstPerson);
@@ -425,19 +558,31 @@ function startImmersive(){
 const commands={KeyW:'forward',ArrowUp:'forward',KeyS:'back',ArrowDown:'back',KeyA:'left',ArrowLeft:'left',KeyD:'right',ArrowRight:'right',ShiftLeft:'run',ShiftRight:'run',Space:'jump'};
 window.addEventListener('keyup',e=>immersive?.keys.delete(commands[e.code]));
 window.addEventListener('blur',()=>immersive?.keys.clear());
+function animateRail(time){
+ if(!ride)return;
+ ride.frame??=time;
+ const index=Math.max(0,(time-ride.frame)/430);
+ if(index>=ride.cells.length-1){
+  player=ride.cells.at(-1);ride=undefined;immersive?.reset();center();update();
+  el('status').textContent=copy('railArrival');return;
+ }
+ const a=ride.cells[Math.floor(index)],b=ride.cells[Math.floor(index)+1],t=index%1;
+ const ay=surface(board,...a)??0,by=surface(board,...b)??0;
+ ride.point=[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,ay+(by-ay)*t];
+ ride.heading=Math.atan2(a[0]-b[0],a[1]-b[1]);
+}
 function frame(time){
+ animateRail(time);showRace(time);
  if(firstPerson){lastResidentFrame=time;immersive.frame(time);requestAnimationFrame(frame);return;}
+ if(ride)draw();
  if(!island&&residents.some(resident=>resident.route.length)&&time-lastResidentFrame>=45){
   lastResidentFrame=time;draw();
  }
  if(route.length&&time>=nextStep){
   const point=route.shift();nextStep=time+105;
-  if(island){
-   islandPosition=point;
-   const treasure=islandTreasure.find(t=>same(t.at,point));
-   if(treasure)found.add(treasure.id);
-  } else player=point;
-  const won=checkMission();persist();if(won)el('status').textContent=copy('complete');refresh();
+  if(!canCross(point,mapJump)){route=[];requestAnimationFrame(frame);return;}
+  mapJump=false;
+  enterCell(point);
   const [x,y]=project(...point);
   if(x<30||x>width-30||y<35||y>heightPx-40)center();
  }

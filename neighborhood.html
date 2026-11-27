@@ -39,6 +39,30 @@
     <p><b id="home-count">٠</b> <span data-text-key="town:homeCount">بيوت مأهولة</span></p>
     <button type="button" id="visit-home" disabled data-text-key="town:visitHome">ادخل البيت</button>
    </section>
+   <section class="town-extra" id="rail-card">
+    <h2 data-text-key="town:railTitle">قطار الحارة</h2>
+    <p id="rail-status"></p>
+    <button id="ride-rail" type="button" disabled data-text-key="town:rideRail">اركب القطار</button>
+   </section>
+   <section class="town-extra" id="course-card">
+    <h2 data-text-key="town:courseTitle">ابنِ طريقك والعب فيه</h2>
+    <p data-text-key="town:courseHelp">اختر علامة ثم ضعها على الخريطة أو عند التصويب. ضع بداية ونهاية ونجمة واحدة على الأقل.</p>
+    <div class="tabs">
+     <button type="button" data-mark="start" data-text-key="town:courseStart">بداية</button>
+     <button type="button" data-mark="finish" data-text-key="town:courseEnd">نهاية</button>
+     <button type="button" data-mark="star" data-text-key="town:courseStar">نجمة</button>
+     <button type="button" data-mark="hurdle" data-text-key="town:courseHurdle">حاجز</button>
+     <button type="button" data-mark="erase" data-text-key="town:courseErase">مسح علامة</button>
+    </div>
+    <button type="button" id="race-start" disabled data-text-key="town:coursePlay">ابدأ التحدي</button>
+    <button type="button" id="race-stop" hidden data-text-key="town:courseStop">أوقف التحدي</button>
+    <button type="button" id="map-jump" hidden data-text-key="town:jumpMap">اقفز</button>
+    <p id="course-status" role="status"></p>
+   </section>
+   <section class="town-extra" id="requests-card">
+    <h2 data-text-key="town:requestsTitle">طلبات السكان</h2>
+    <p id="request-road"></p><p id="request-garden"></p>
+   </section>
    <section id="harbor-card" hidden>
     <h2 data-text-key="town:harbor">مغامرة المرفأ</h2>
     <p id="harbor-instruction"></p>
@@ -56,6 +80,7 @@
     <button type="button" data-tool="remove" aria-pressed="false" data-text-key="town:remove">إزالة</button>
     <button type="button" data-tool="walk" aria-pressed="false" data-text-key="town:walk">مشي</button>
    </div>
+   <button type="button" id="rotate-piece" data-text-key="town:rotate">تدوير القطعة ↻</button>
    <div id="palette" aria-label="قطع البناء"></div>
    <div class="tabs">
     <button type="button" id="undo" disabled data-text-key="town:undo">تراجع</button>
@@ -79,6 +104,19 @@
   </div>
  </dialog>
  <div id="town-copy" hidden>
+  <span data-text-key="town:railHelp">صِل محطة السوق بمحطة المرفأ بسكك مستقيمة ومنعطفات. ابنِ الجسر أولًا لعبور النهر، ودوّر السكة لتلتقي أطرافها.</span>
+  <span data-text-key="town:railReady">السكّة متصلة. قف في إحدى المحطتين للركوب.</span>
+  <span data-text-key="town:railArrival">وصل القطار إلى المحطة.</span>
+  <span data-text-key="town:stationMarket">محطة السوق</span>
+  <span data-text-key="town:stationHarbor">محطة المرفأ</span>
+  <span data-text-key="town:courseFinish">أكملت التحدي!</span>
+  <span data-text-key="town:courseMissing">اجمع النجوم المتبقية ثم عد إلى خط النهاية.</span>
+  <span data-text-key="town:courseBump">اقفز فوق الحاجز للمتابعة.</span>
+  <span data-text-key="town:courseTime">ثانية</span>
+  <span data-text-key="town:roadRequest">يريد ساكن الحارة طريقًا حجريًا يربط بيته بالسوق.</span>
+  <span data-text-key="town:roadDone">وصل السكان إلى السوق. فُتح المقعد الخشبي.</span>
+  <span data-text-key="town:gardenRequest">ازرع ثلاث أشجار في حديقة المرفأ لفتح النافورة.</span>
+  <span data-text-key="town:gardenDone">أصبحت الحديقة جاهزة. فُتحت النافورة.</span>
   <span data-text-key="town:market">السوق</span>
   <span data-text-key="town:bridgeTitle">جسر إلى المرفأ</span>
   <span data-text-key="town:bridgeBody">ابنِ طبقة واحدة فوق الخانات الثلاث المضيئة في الماء، ثم اختر «مشي» واضغط على المرفأ لعبور الجسر.</span>

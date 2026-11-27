@@ -15,3 +15,7 @@
 .move-pad [data-motion=forward]{grid-column:2}
 .move-pad [data-motion=left]{grid-column:1}
 .move-actions{display:flex;flex-wrap:wrap;justify-content:end;gap:4px;max-width:51%}
+
+.town-extra{margin:9px 0;padding:9px;border:1px solid #cad6bd;border-radius:10px;background:#f4f7e9}
+.town-extra h2{font-size:15px;margin:0}
+#rotate-piece{margin-bottom:4px} #course-status:empty{display:none}

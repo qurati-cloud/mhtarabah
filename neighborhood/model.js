@@ -37,7 +37,8 @@ export function height(board,x,z){
 export function surface(board,x,z){
  const top=height(board,x,z);
  if(!valid(x,z,0)||scenery.has(x+','+z)||(!top&&water(x,z)))return null;
- return board.get(key(x,z,top-1))==='tree'?null:top;
+ const type=board.get(key(x,z,top-1));
+ return type==='tree'?null:isRail(type)?(!water(x,z)||top>1?top-1:null):top;
 }
 export function path(board,from,to,at=(x,z)=>surface(board,x,z)){
  if(at(...from)===null||at(...to)===null)return [];
@@ -115,4 +116,58 @@ export function marketRoute(board,entrance){
     board.get(key(x,z,0))==='road'&&height(board,x,z)===1 ? 0 : null;
  });
  return route.length?[entrance,...route]:[];
+}
+
+pieces.rail=['سكّة مستقيمة','#646d72'];
+pieces.curve=['منعطف سكّة','#727a81'];
+pieces.bench=['مقعد خشبي','#9d5841'];
+pieces.fountain=['نافورة','#428d9d'];
+export const isRail=type=>type==='rail'||type==='curve';
+export const stations=[[6,4],dock];
+export const pointId=point=>point.join(',');
+const directions=[[1,0],[0,1],[-1,0],[0,-1]];
+export function railPorts(type,rotation=0){
+ return (type==='curve'?[0,1]:[0,2]).map(port=>(port+rotation)%4);
+}
+export function railAt(board,x,z){
+ const y=height(board,x,z)-1;
+ const id=key(x,z,y),type=board.get(id);
+ return isRail(type)?{id,type,y}:null;
+}
+export function trainRoute(board,rotations){
+ const [from,to]=stations;
+ if(surface(board,...from)!==0||surface(board,...to)!==0)return [];
+ const previous=new Map([[pointId(from),null]]), queue=[from];
+ const same=(a,b)=>pointId(a)===pointId(b);
+ for(let i=0;i<queue.length;i++){
+  const p=queue[i];
+  if(same(p,to)){
+   const route=[];
+   for(let cell=p;cell;cell=previous.get(pointId(cell)))route.push(cell);
+   return route.reverse();
+  }
+  const rail=railAt(board,...p);
+  const ports=rail?railPorts(rail.type,rotations[rail.id]):same(p,from)?[0,1,2,3]:[0,2];
+  for(const port of ports){
+   const [dx,dz]=directions[port],next=[p[0]+dx,p[1]+dz];
+   if(previous.has(pointId(next))||same(next,from))continue;
+   const other=railAt(board,...next);
+   // The existing one-block bridge serves as the rail bed across the river.
+   const bridge=bridgeReady(board)&&next[1]===8&&water(...next);
+   if(!same(next,to)&&!other&&(!bridge||port%2!==0))continue;
+   if(other&&!railPorts(other.type,rotations[other.id]).includes((port+2)%4))continue;
+   if(Math.abs((surface(board,...p)??0)-(surface(board,...next)??0))>1)continue;
+   previous.set(pointId(next),p);queue.push(next);
+  }
+ }
+ return [];
+}
+export function challengeReady(board,marks){
+ const start=Object.keys(marks).find(id=>marks[id]==='start');
+ const end=Object.keys(marks).find(id=>marks[id]==='finish');
+ const stars=Object.keys(marks).filter(id=>marks[id]==='star');
+ if(!start||!end||!stars.length)return false;
+ const coords=id=>id.split(',').map(Number);
+ const origin=coords(start);
+ return [end,...stars,...Object.keys(marks).filter(id=>marks[id]==='hurdle')].every(id=>path(board,origin,coords(id)).length);
 }
