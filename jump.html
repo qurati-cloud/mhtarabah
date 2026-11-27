@@ -203,7 +203,9 @@ function jump(){
 
 function duck(){
  if(mode!=="running")return;
- if(runner.y===0)duckUntil=clock+.75;
+ runner.y=0;
+ runner.vy=0;
+ duckUntil=clock+.75;
 }
 
 function crash(){
@@ -686,12 +688,14 @@ canvas.addEventListener("pointermove",e=>{
    downHeld=false;
    jump();
    touchDirection="up";
+   touchY=e.clientY;
   }
  }else if(delta > 22){
   if(touchDirection!=="down"){
    downHeld=true;
    duck();
    touchDirection="down";
+   touchY=e.clientY;
   }
  }
 });

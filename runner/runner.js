@@ -243,7 +243,8 @@ canvas.addEventListener('pointermove', event => {
   if (Math.max(Math.abs(dx),Math.abs(dy)) < 24) return;
   if (state === 'playing') move(run.players[0], Math.abs(dx) > Math.abs(dy)
     ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'jump' : 'down'));
-  swipe = undefined;
+  swipe.x = event.clientX;
+  swipe.y = event.clientY;
 });
 for (const type of ['pointerup','pointercancel']) {
   canvas.addEventListener(type, () => { swipe = undefined; });

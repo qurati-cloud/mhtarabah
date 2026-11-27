@@ -2,7 +2,6 @@ import {overTunnel, trackFeatures} from './track.js';
 export const laneWidth = 2.85;
 const gravity = 27;
 const jumpSpeed = 14.6;
-const diveSpeed = 26;
 const slideSeconds = 0.78;
 const kinds = ['car', 'bus', 'longBus', 'bar', 'roadworks'];
 export const obstacles = {
@@ -76,7 +75,7 @@ export function move(player, command) {
     player.diving = false;
   } else if (command === 'down') {
     if (player.y > 0 && !player.support) {
-      player.vy = -diveSpeed;
+      player.vy = 0;
       player.diving = true;
     } else player.slide = slideSeconds;
   }
@@ -153,7 +152,7 @@ export function step(run, dt) {
     const previousY = player.y;
     if (!player.glide && !player.support && player.y > 0) {
       player.vy -= gravity * dt;
-      player.y += player.vy * dt;
+      player.y = player.diving ? 0 : player.y + player.vy * dt;
       if (player.y <= 0) {
         player.y = 0;
         player.vy = 0;
