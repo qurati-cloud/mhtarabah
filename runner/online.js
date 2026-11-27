@@ -19,7 +19,7 @@ function refreshCard(){
  const s=summarize(history),rank=rankFor(s.wins,ranks);
  const title=document.createElement('strong');title.textContent=rank.icon+' '+rank.label;title.style.color=rank.color;
  const details=document.createElement('p');details.textContent='عدد المباريات: '+s.matches+' | المباريات الرابحة: '+s.wins+' | نسبة الفوز: '+s.rate+'٪';
- const best=document.createElement('p');best.textContent='أفضل نتيجة للفريق: '+Math.floor(teamBest.distance)+' م · ★ '+teamBest.stars;
+ const best=document.createElement('p');best.textContent='أعلى نتيجة للفريق: '+Math.floor(teamBest.distance)+' · ★ '+teamBest.stars;
  const note=document.createElement('small');note.textContent='إحصاءات تجريبية على هذا الجهاز، غير معتمدة للتصنيف العام.';
  card.append(title,details,best,note);
 }
