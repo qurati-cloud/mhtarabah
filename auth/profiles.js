@@ -36,5 +36,6 @@ export async function deleteProfile(data, db, profile) {
     for (const entry of snapshot.docs) batch.delete(entry.ref);
     await batch.commit();
   }
+  await data.deleteDoc(data.doc(profile.parent.parent, 'avatars', profile.id));
   await data.deleteDoc(profile);
 }
