@@ -80,7 +80,7 @@ service cloud.firestore {
     }
     match /siteContent/{key} {
       allow read: if true;
-      allow write: if (admin() || roleIs('editor'));
+      allow write: if admin() || (key != 'library-order-v1' && roleIs('editor'));
     }
     match /runnerWorldRecords/{mode} {
       function validRecord() {
