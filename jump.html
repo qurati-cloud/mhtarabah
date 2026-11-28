@@ -73,6 +73,9 @@ button:disabled{opacity:.5}
 </main>
 
 <script type="module">
+window.mhGameTextDefaults={"m1":"انتهت المحاولة! جمعت {score} نجوم. اضغط ابدأ للمحاولة من جديد.","m2":"اجمع النجوم وتجاوز الحواجز!","m3":"اللعبة متوقفة مؤقتًا","m4":"تابع المغامرة!","m5":"جاهز للمغامرة؟","m6":"اللعبة متوقفة","m7":"انتهت المحاولة!","m8":"حدث خطأ أثناء تشغيل اللعبة: ","m9":"▶ متابعة","m10":"⏸ إيقاف"};
+function gameText(id){const key=location.pathname.split('/').pop()+':message:'+id;return window.mhGameTextValues?.[key] ?? window.mhGameTextDefaults[id];}
+
 import { installArcade } from "./arcade/scene.js";
 import { progress as progressStorage } from "./auth/progress.js";
 "use strict";
@@ -191,7 +194,7 @@ function reset(){
 function start(){
  reset();
  mode="running";
- (($("message")) || {textContent:""}).textContent="اجمع النجوم وتجاوز الحواجز!";
+ (($("message")) || {textContent:""}).textContent=gameText("m2");
 }
 
 function jump(){
@@ -217,17 +220,16 @@ function crash(){
  saved.totalStars+=score;
  save();
  (($("message")) || {textContent:""}).textContent=
-  "انتهت المحاولة! جمعت "+score+
-  " نجوم. اضغط ابدأ للمحاولة من جديد.";
+  gameText("m1").replace("{score}",score);
 }
 
 function pause(){
  if(mode==="running"){
   mode="paused";
-  (($("message")) || {textContent:""}).textContent="اللعبة متوقفة مؤقتًا";
+  (($("message")) || {textContent:""}).textContent=gameText("m3");
  }else if(mode==="paused"){
   mode="running";
-  (($("message")) || {textContent:""}).textContent="تابع المغامرة!";
+  (($("message")) || {textContent:""}).textContent=gameText("m4");
  }
 }
 
@@ -596,9 +598,9 @@ function draw(){
   ctx.fillStyle="white";
   ctx.font="bold 40px Tahoma,Arial";
   const labels={
-   ready:"جاهز للمغامرة؟",
-   paused:"اللعبة متوقفة",
-   crashed:"انتهت المحاولة!"
+   ready:gameText("m5"),
+   paused:gameText("m6"),
+   crashed:gameText("m7")
   };
   ctx.fillText(labels[mode]||"",W/2,105);
  }
@@ -615,7 +617,7 @@ function draw(){
  (($("totalStars")) || {textContent:""}).textContent=saved.totalStars+" ⭐";
  document.querySelectorAll("[data-character]").forEach(b=>b.disabled=mode==="running"||mode==="paused");
  $("pause").disabled=mode!=="running"&&mode!=="paused";
- (($("pause")) || {textContent:""}).textContent=mode==="paused"?"▶ متابعة":"⏸ إيقاف";
+ (($("pause")) || {textContent:""}).textContent=mode==="paused"?gameText("m9"):gameText("m10");
 }
 
 function loop(now){
@@ -629,7 +631,7 @@ function loop(now){
   console.error("Game loop error:",error);
   const message=document.getElementById("message");
   if(message){
-   message.textContent="حدث خطأ أثناء تشغيل اللعبة: "+error.message;
+   message.textContent=gameText("m8")+error.message;
   }
  }
 }
@@ -745,6 +747,6 @@ window.addEventListener("blur",()=>{
 
 requestAnimationFrame(loop);
 </script>
-<script type="module" src="auth/navigation.js?v=20261125b"></script>
+<script type="module" src="auth/navigation.js?v=20261128texts"></script>
 </body>
 </html>
