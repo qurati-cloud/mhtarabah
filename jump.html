@@ -267,11 +267,12 @@ function buildLevel(n){
    const kind=(n>=2&&j===0&&(i%2===0||i===1))||(n>=12&&random()<.30+d*.18)?"bar":n>3&&random()<.18+d*.16?"spikes":"walker";
    foes.push({x:at,origin:at,y:kind==="bar"?GROUND-112:GROUND-(kind==="spikes"?30:42),w:kind==="bar"?Math.round(85+d*45):kind==="spikes"?48:42,h:kind==="bar"?52:kind==="spikes"?30:42,phase:random()*6.28,kind,hp:kind!=="walker"?1:n>=15&&(i+j)%5===0?3:n>=3&&(i+j)%2===0?2:1,pace:1.2+d*3.8+random()*.5,range:16+d*30});
   }
+  for(const h of foes.filter(h=>h.x>=x&&h.x<x+w)){if(h.kind==="spikes"&&n>=60&&Math.round(h.x)%3===0){h.motion=n>=80&&Math.round(h.x)%2===0?"vertical":"horizontal";h.baseY=h.y;h.travel=18+d*18;}}
   const pc=2+Math.floor(random()*3);
   for(let j=0;j<pc;j++){
    const px=x+90+j*(w-210)/pc,py=GROUND-Math.round(pick(70,150)+d*25),pw=Math.round(pick(95,145)-d*25);
-   if(foes.some(h=>h.kind==="bar"&&px<h.x+h.w+35&&px+pw>h.x-35))continue;ground.push({x:px,y:py,w:pw,h:24});
-   gems.push({x:px+pw/2,y:py-32,r:15});
+   if(foes.some(h=>h.kind==="bar"&&px<h.x+h.w+35&&px+pw>h.x-35))continue;const motion=n>=120&&(i+j)%7===0?"fall":n>=40&&(i+j)%4===0?"vertical":n>=20&&(i+j)%3===0?"horizontal":"";const p={x:px,y:py,w:pw,h:24,baseX:px,baseY:py,motion,travel:20+d*22,pace:.8+d*1.8,phase:0};ground.push(p);
+   const gem={x:px+pw/2,y:py-32,r:15,platform:p};gems.push(gem);
   }
   gems.push({x:x+w-65,y:GROUND-38,r:15});
   if(n%3!==0&&(i===1||(n>=40&&i===3&&i<sections-1)||(n>=150&&n%2===0&&i===5&&i<sections-1)))bonuses.push({x:x+110,y:GROUND-40,kind:"fire",id:i});if(i===0&&n%4===0)bonuses.push({x:x+220,y:GROUND-40,kind:"shield",id:i});
@@ -307,9 +308,12 @@ function finish(){mode="won";held.clear();saved.distance=Math.max(saved.distance
 function update(dt){
  if(mode!=="running")return;clock+=dt;elapsed+=dt;
  const dir=Number(held.has("right"))-Number(held.has("left"));if(dir)facing=dir;
+ for(const h of hazards){if(h.motion==="horizontal")h.x=h.origin+Math.sin(clock*h.pace+h.phase)*h.travel;else if(h.motion==="vertical")h.y=h.baseY-(1+Math.sin(clock*h.pace+h.phase))*h.travel/2;}
+ for(const p of terrain){if(!p.motion)continue;const ox=p.x,oy=p.y;const riding=grounded&&Math.abs(feet-oy)<2&&worldX+23>ox&&worldX-23<ox+p.w;if(p.motion==="horizontal")p.x=p.baseX+Math.sin(clock*p.pace)*p.travel;else if(p.motion==="vertical")p.y=p.baseY+Math.sin(clock*p.pace)*p.travel;else if(p.motion==="fall"){if(riding&&p.trigger==null)p.trigger=clock;if(p.trigger!=null){const t=clock-p.trigger;if(t>3){p.trigger=null;p.y=p.baseY;}else p.y=p.baseY+Math.max(0,t-.65)**2*240;}}if(riding&&Math.abs(p.y-oy)<30){worldX+=p.x-ox;feet+=p.y-oy;}}
+ for(const g of stars){if(g.platform){g.x=g.platform.x+g.platform.w/2;g.y=g.platform.y-32;}}
  const oldFeet=feet;if(held.has("down")&&!grounded)vy=Math.max(vy,650);worldX=Math.max(25,Math.min(goal+40,worldX+dir*(worldTheme[0]==="water"?245:310)*dt));vy+=(worldTheme[0]==="water"?850:1550)*dt;feet+=vy*dt;grounded=false;
  for(const h of hazards){if(h.kind==="bar"&&vy>=0&&oldFeet<=h.y+1&&feet>=h.y&&worldX+23>h.x&&worldX-23<h.x+h.w){feet=h.y;vy=0;grounded=true;}}
- for(const p of terrain){if(vy>=0&&oldFeet<=p.y+1&&feet>=p.y&&worldX+23>p.x&&worldX-23<p.x+p.w){feet=p.y;vy=0;grounded=true;}}
+ for(const p of terrain){if(p.motion==="fall"&&p.y>=GROUND)continue;if(vy>=0&&oldFeet<=p.y+1&&feet>=p.y&&worldX+23>p.x&&worldX-23<p.x+p.w){feet=p.y;vy=0;grounded=true;}}
  const bh=isDuck()?48:95;const box={x:worldX-23,y:feet-bh,w:46,h:bh};
  if(feet>H+100){crash();return;}
  for(const h of hazards){if(h.dead)continue;if(h.kind==="walker")h.x=h.origin+Math.sin(clock*h.pace+h.phase)*h.range;if(!overlap(box,h))continue;if(h.kind==="bar"&&feet<=h.y+1)continue;if(h.kind==="walker"&&vy>=0&&oldFeet<=h.y+9){h.hp=Math.max(0,(h.hp||1)-1);if(!h.hp){h.dead=true;score+=2;}feet=h.y;vy=-470;burst(h.x+21,h.y+20,"#ffd970");}else if(clock<armorUntil){continue;}else if(shield){shield=false;h.dead=h.kind==="walker";worldX=Math.max(25,worldX-facing*65);vy=-330;burst(worldX,feet-55,"#72dfff");}else{crash();return;}}
