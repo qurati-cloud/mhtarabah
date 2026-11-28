@@ -35,6 +35,8 @@ document.querySelectorAll('img').forEach(img=>{if(/mohammad-habiba-logo/i.test(i
 // Start account setup without delaying cached public text rendering.
 void (async()=>{try {
   const {auth, authApi, data, db} = await connect();
+  const {mountFamilyAvatar}=await import('./family-avatar.js');
+  mountFamilyAvatar({brand,nav,panel,button,auth,authApi,data,db});
   let stopProfiles;
   authApi.onAuthStateChanged(auth, async user => {
     stopProfiles?.();
