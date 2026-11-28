@@ -119,6 +119,18 @@ try {
   .filter(node => !cardFields.some(field => field.node === node))
   .map(node => ({node, key: node.dataset.textKey, label: node.dataset.editorLabel}));
  fields.push(...cardFields, ...explicit);
+ // Additional fixed labels: never capture changing scores, user information or quiz answers.
+ const fixedSelectors='main button,main summary,main .note,main .stat small,main .top strong,main label,main h3,main h4,main legend,main [data-static-text]';
+ const additional=[...document.querySelectorAll(fixedSelectors)].filter(node=>
+  !node.dataset.textKey && !node.id && !node.closest('#mh-shared-nav,#mh-brand-header,#daily-editor,#question-editor,#users,#content,#choices,#question,#message,#stats,#offers,#messages,#phrases,#editor,#rankEditor,#playerCard,dialog') &&
+  node.children.length===0 && /[\u0600-\u06ff]/.test(node.textContent) && !fields.some(f=>f.node===node));
+ const occurrences=new Map();
+ for(const node of additional){
+  const base=node.tagName+':'+node.textContent.trim();
+  const n=(occurrences.get(base)||0)+1;occurrences.set(base,n);
+  fields.push({node,key:page+':fixed:'+base+':'+n});
+ }
+
  for (const field of fields) field.defaultText = field.node.textContent;
 
  function applyTexts(values) {
@@ -237,7 +249,8 @@ const ai=button('إزالة الخلفية بـ AI',()=>{}),undo=button('ترا�
    const input = document.createElement('textarea');
    input.value = node.textContent;
    input.required = !fieldLabel;
-   if (fieldLabel) input.maxLength = 110;
+   if (fieldLabel && key.includes('roadPhrase')) input.maxLength = 110;
+   else input.maxLength = 500;
    input.style.cssText = 'display:block;width:100%;box-sizing:border-box;margin:8px 0';
    input.oninput = () => input.setCustomValidity('');
    label.append(input);
@@ -303,8 +316,8 @@ const ai=button('إزالة الخلفية بـ AI',()=>{}),undo=button('ترا�
     : (await data.getDoc(data.doc(db, 'roles', user.uid))).data()?.role;
    if (change !== authChange || !['admin', 'editor'].includes(role)) return;
 
-   const editable = [...new Map(fields.filter(field=>!field.label).map(field => [field.key, field])).values()];
-   const signs = fields.filter(field=>field.label);
+   const editable = [...new Map(fields.filter(field=>!field.label || !field.key.includes('roadPhrase')).map(field => [field.key, field])).values()];
+   const signs = fields.filter(field=>field.label && field.key.includes('roadPhrase'));
    if (signs.length) {
     const signEditor = button('لافتات الطريق (٣٠)', () => openTextEditor(signs));
     nav.insertBefore(signEditor,panel);
