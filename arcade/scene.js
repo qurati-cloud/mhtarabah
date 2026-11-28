@@ -154,7 +154,7 @@ export function createArcadeScene(canvas, mode){
   return {group,forms};
  });
  const viewSize=new T.Vector2();
- return {render(obstacles,stars,travel,time,plane){
+ return {render(obstacles,stars,travel,time,plane,hideCraft=false){
   const rect=canvas.getBoundingClientRect();
   if(!rect.width||!rect.height)return;
   renderer.getSize(viewSize);
@@ -185,6 +185,7 @@ export function createArcadeScene(canvas, mode){
     half.rotation.y=-.2;
    });
   });
+  craft.visible=!hideCraft;
   if(plane){
    craft.position.set(plane.x-450,250-plane.y,68);
    craft.rotation.z=-Math.max(-.17,Math.min(.17,plane.vy/1500));
