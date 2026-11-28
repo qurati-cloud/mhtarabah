@@ -49,12 +49,16 @@ export function mountFamilyAvatar({brand,nav,panel,button,auth,authApi,data,db})
   const zoomLabel=document.createElement('label');zoomLabel.append('تكبير وتصغير ',zoom);
   const erase=document.createElement('input');erase.type='checkbox';const eraseLabel=document.createElement('label');eraseLabel.append(erase,' ممحاة الخلفية (مرّر إصبعك على الخلفية)');
   const size=document.createElement('input');size.type='range';size.min='5';size.max='65';size.value='24';const sizeLabel=document.createElement('label');sizeLabel.append('حجم الممحاة ',size);
+  const strength=document.createElement('input');strength.type='range';strength.min='5';strength.max='100';strength.value='100';
+  const strengthLabel=document.createElement('label');strengthLabel.append('قوة المحو ',strength);
+  const softness=document.createElement('input');softness.type='range';softness.min='0';softness.max='100';softness.value='30';
+  const softnessLabel=document.createElement('label');softnessLabel.append('نعومة الحواف ',softness);
   const status=document.createElement('p');status.setAttribute('role','status');
   let source=null,dx=0,dy=0,drag=null,strokes=[],loadId=0,loaded=false,busy=false;
-  function draw(){ctx.clearRect(0,0,360,360);if(source){const scale=Math.min(360/source.naturalWidth,360/source.naturalHeight)*Number(zoom.value);const w=source.naturalWidth*scale,h=source.naturalHeight*scale;ctx.drawImage(source,(360-w)/2+dx,(360-h)/2+dy,w,h);ctx.save();ctx.globalCompositeOperation='destination-out';ctx.lineCap='round';for(const p of strokes){ctx.beginPath();ctx.lineWidth=p.r*2;ctx.moveTo(p.x,p.y);ctx.lineTo(p.tx+.01,p.ty);ctx.stroke();}ctx.restore();}}
+  function draw(){ctx.clearRect(0,0,360,360);if(source){const scale=Math.min(360/source.naturalWidth,360/source.naturalHeight)*Number(zoom.value);const w=source.naturalWidth*scale,h=source.naturalHeight*scale;ctx.drawImage(source,(360-w)/2+dx,(360-h)/2+dy,w,h);ctx.save();ctx.globalCompositeOperation='destination-out';ctx.lineCap='round';for(const p of strokes){const steps=Math.max(1,Math.ceil(Math.hypot(p.tx-p.x,p.ty-p.y)/Math.max(1,p.r*.3)));for(let j=0;j<=steps;j++){const x=p.x+(p.tx-p.x)*j/steps,y=p.y+(p.ty-p.y)*j/steps;const a=p.a??1;const soft=p.soft??0;ctx.globalAlpha=1;const g=ctx.createRadialGradient(x,y,p.r*(1-soft*.99),x,y,p.r);g.addColorStop(0,'rgba(0,0,0,'+a+')');g.addColorStop(1,'rgba(0,0,0,'+(soft?0:a)+')');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,p.r,0,Math.PI*2);ctx.fill();}}ctx.restore();}}
   function point(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*360/r.width,y:(e.clientY-r.top)*360/r.height};}
-  canvas.onpointerdown=e=>{if(!source||drag)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);drag={...point(e),id:e.pointerId,erase:erase.checked};if(drag.erase){strokes.push({x:drag.x,y:drag.y,tx:drag.x,ty:drag.y,r:Number(size.value)});draw();}};
-  canvas.onpointermove=e=>{if(!drag||drag.id!==e.pointerId)return;const p=point(e);if(drag.erase)strokes.push({x:drag.x,y:drag.y,tx:p.x,ty:p.y,r:Number(size.value)});else{dx+=p.x-drag.x;dy+=p.y-drag.y;strokes=[];}Object.assign(drag,p);draw();};
+  canvas.onpointerdown=e=>{if(!source||drag||busy)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);drag={...point(e),id:e.pointerId,erase:erase.checked};if(drag.erase){strokes.push({x:drag.x,y:drag.y,tx:drag.x,ty:drag.y,r:Number(size.value),a:Number(strength.value)/100,soft:Number(softness.value)/100});draw();}};
+  canvas.onpointermove=e=>{if(!drag||drag.id!==e.pointerId)return;const p=point(e);if(drag.erase)strokes.push({x:drag.x,y:drag.y,tx:p.x,ty:p.y,r:Number(size.value),a:Number(strength.value)/100,soft:Number(softness.value)/100});else{dx+=p.x-drag.x;dy+=p.y-drag.y;strokes=[];}Object.assign(drag,p);draw();};
   for(const ev of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(ev,()=>drag=null);
   zoom.oninput=()=>{strokes=[];draw();};
   const undo=button('تراجع عن المسح',()=>{strokes.pop();draw();});
@@ -64,7 +68,27 @@ export function mountFamilyAvatar({brand,nav,panel,button,auth,authApi,data,db})
   file.onchange=async()=>{if(!loaded||busy)return;const f=file.files[0];if(!f)return;if(!['image/png','image/jpeg','image/webp'].includes(f.type)||f.size>15*1024*1024){status.textContent='اختر PNG أو JPG أو WebP بحجم لا يتجاوز ١٥ ميغابايت.';return;}const seq=++loadId;save.disabled=true;const url=URL.createObjectURL(f);try{const im=new Image();im.src=url;await im.decode();if(seq!==loadId||token!==revision)return;source=im;dx=dy=0;zoom.value='1';strokes=[];draw();status.textContent='حرّك الصورة أو قصّها ثم احفظ.';}catch{status.textContent='تعذّر فتح الصورة.';}finally{URL.revokeObjectURL(url);if(seq===loadId)save.disabled=false;}};
   const save=button('حفظ',async()=>{if(!loaded||busy||token!==revision)return;busy=true;save.disabled=remove.disabled=target.disabled=file.disabled=true;try{draw();const value=source?canvas.toDataURL('image/webp',.86):'';if(value.length>600000)throw Error('حجم الصورة كبير');await data.setDoc(ref(),{name:nameInput.value.trim(),image:value});status.textContent='حُفظت الصورة والاسم.';}catch(e){status.textContent='تعذّر الحفظ: '+(e.code||e.message);}finally{busy=false;save.disabled=remove.disabled=target.disabled=file.disabled=false;}});
   const remove=button('حذف الصورة والاسم',async()=>{if(!loaded||busy||token!==revision||!confirm('حذف الصورة والاسم من هذا الملف؟'))return;busy=true;save.disabled=remove.disabled=target.disabled=file.disabled=true;try{await data.deleteDoc(ref());source=null;nameInput.value='';strokes=[];draw();status.textContent='حُذفت الصورة.';}catch{status.textContent='تعذّر الحذف.';}finally{busy=false;save.disabled=remove.disabled=target.disabled=file.disabled=false;}});
-  target.onchange=load;
-  d.append(title,target,label,file,canvas,zoomLabel,eraseLabel,sizeLabel,undo,reset,save,remove,button('إغلاق',()=>{if(!busy)d.close();}),status);document.body.append(d);d.onclose=()=>{++loadId;d.remove();if(dialog===d)dialog=null;};d.showModal();load();
+  let beforeAI=null;
+  const ai=button('إزالة الخلفية بـ AI',async()=>{
+   if(!source||!loaded||busy)return;
+   busy=true;ai.disabled=save.disabled=remove.disabled=target.disabled=file.disabled=true;
+   const seq=loadId;
+   try{
+    draw();const previous={source,dx,dy,zoom:zoom.value,strokes:strokes.slice()};
+    const {removeImageBackground}=await import('./background-removal.js');
+    const value=await removeImageBackground(canvas.toDataURL('image/png'),t=>{status.textContent=t;});
+    const im=new Image();im.src=value;await im.decode();
+    if(seq!==loadId||token!==revision)return;
+    beforeAI=previous;source=im;dx=dy=0;zoom.value='1';strokes=[];draw();status.textContent='أُزيلت الخلفية. يمكنك تعديلها أو حفظها.';
+   }catch(e){status.textContent='تعذّرت إزالة الخلفية. حاول مجددًا.';console.warn(e);}
+   finally{busy=false;ai.disabled=save.disabled=remove.disabled=target.disabled=file.disabled=false;}
+  });
+  const undoAI=button('تراجع عن AI',()=>{if(!beforeAI||busy)return;source=beforeAI.source;dx=beforeAI.dx;dy=beforeAI.dy;zoom.value=beforeAI.zoom;strokes=beforeAI.strokes;beforeAI=null;draw();});
+  const download=button('حفظ الصورة على الجهاز',()=>{
+   if(!source||!loaded||busy){status.textContent='اختر صورة أولًا.';return;}
+   draw();canvas.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='my-avatar.png';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);},'image/png');
+  });
+  file.addEventListener('change',()=>{beforeAI=null;});target.onchange=()=>{beforeAI=null;load();};
+  d.append(title,target,label,file,ai,undoAI,canvas,zoomLabel,eraseLabel,sizeLabel,strengthLabel,softnessLabel,undo,reset,save,download,remove,button('إغلاق',()=>{if(!busy)d.close();}),status);document.body.append(d);d.onclose=()=>{++loadId;d.remove();if(dialog===d)dialog=null;};d.showModal();load();
  };
 }
