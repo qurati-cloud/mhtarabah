@@ -45,7 +45,7 @@ button:disabled{opacity:.5}
  <canvas id="scene-3d" aria-hidden="true"></canvas>
  <canvas id="game" width="900" height="500"></canvas>
  <div class="arcade-hud">
-  <span id="stars" aria-label="النجوم">0 ⭐</span>
+  <span id="stars" aria-label="النجوم">0 ⭐</span><span id="stageKeys" aria-label="مفاتيح المرحلة">🔑 0</span><span id="rewardHud" aria-live="polite" style="display:none;background:#fff3c4;color:#493000;padding:5px 9px;border-radius:8px"></span>
   <span id="distance" aria-label="المسافة">0</span>
   <span id="speed" aria-label="المرحلة">1 / 500</span>
   <span id="time" aria-label="الوقت">00:00</span>
@@ -273,7 +273,7 @@ function buildLevel(n){
    gems.push({x:px+pw/2,y:py-32,r:15});
   }
   gems.push({x:x+w-65,y:GROUND-38,r:15});
-  if(i===0||i%Math.max(2,4-Math.floor(d*2))===0)bonuses.push({x:x+85,y:GROUND-40,kind:i%2?"shield":"fire",id:i});
+  if(i===1&&n%3!==0)bonuses.push({x:x+110,y:GROUND-40,kind:"fire",id:i});if(i===0&&n%4===0)bonuses.push({x:x+220,y:GROUND-40,kind:"shield",id:i});
   if(i>0){bonuses.push({x:x+60,y:GROUND-40,kind:"key",id:i});} if(i===sections-2){chests.push({x:x+w-80,y:GROUND-48,cost:n%10===0?5:n%3===0?3:1});}
   const gap=i===sections-1?0:Math.round(pick(65,95)+d*35);
   x+=w+gap;
@@ -282,7 +282,7 @@ function buildLevel(n){
 }
 
 function reset(){
- level=Math.max(1,Math.min(MAX_LEVEL,Math.floor(saved.level||1)));worldX=100;feet=GROUND;vy=0;grounded=true;camera=0;clock=elapsed=score=distance=0;held.clear();shots=[];particles=[];fireUntil=0;shield=false;lastFire=-10;keysFound=saved.keys;magnetUntil=flightUntil=armorUntil=0;
+ level=Math.max(1,Math.min(MAX_LEVEL,Math.floor(saved.level||1)));worldX=100;feet=GROUND;vy=0;grounded=true;camera=0;clock=elapsed=score=distance=0;held.clear();shots=[];particles=[];fireUntil=0;shield=false;lastFire=-10;keysFound=saved.keys;saved.ammo=0;saved.ammoMask=0;rewardUntil=0;$("rewardHud").style.display="none";save();magnetUntil=flightUntil=armorUntil=0;
  if(saved.claimedLevel!==level){saved.claimedLevel=level;saved.claimedMask=0;saved.ammoMask=0;save();}
  const map=buildLevel(level);worldTheme=map.theme;night=map.night;terrain=map.ground;hazards=map.foes;stars=map.gems;powerups=map.bonuses;treasures=map.chests;goal=map.goal;runner.x=worldX-55;runner.y=0;
 }
@@ -291,9 +291,9 @@ function jump(){if(mode==="running"&&grounded){vy=worldTheme[0]==="water"?-560:-
 function pause(){if(mode==="running"){mode="paused";held.clear();}else if(mode==="paused")mode="running";}
 function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
 function crash(){if(saved.extra>0){saved.extra--;save();worldX=100;feet=GROUND;vy=0;grounded=true;held.clear();armorUntil=clock+3;$("message").textContent="استعملت فرصة إضافية";return;}mode="crashed";held.clear();$("message").textContent="حاول مجددًا!";}
-let magnetUntil=0,flightUntil=0,armorUntil=0;
+let magnetUntil=0,flightUntil=0,armorUntil=0,rewardUntil=0;
 const items=[["extra","فرصة إضافية"],["armor","درع"],["magnet","مغناطيس"],["ammo","ذخيرة"],["flight","طيران"],["jewels","جواهر"]];
-function renderBag(){ $("bagKeys").textContent="🔑 "+saved.keys; for(const [k,label] of items){let b=$("bag-"+k);if(!b){b=document.createElement("button");b.id="bag-"+k;b.type="button";$("bag").append(b);b.onclick=()=>useItem(k);}b.textContent=label+" : "+saved[k];b.disabled=!saved[k]||k==="extra"||k==="jewels"||k==="ammo";}}
+function renderBag(){ $("stageKeys").textContent="🔑 "+(saved.claimedMask&1048575).toString(2).replace(/0/g,"").length; if(clock>=rewardUntil)$("rewardHud").style.display="none"; $("bagKeys").textContent="🔑 "+saved.keys; for(const [k,label] of items){let b=$("bag-"+k);if(!b){b=document.createElement("button");b.id="bag-"+k;b.type="button";$("bag").append(b);b.onclick=()=>useItem(k);}b.textContent=label+" : "+saved[k];b.disabled=!saved[k]||k==="extra"||k==="jewels"||k==="ammo";}}
 function useItem(k){if(mode!=="running"||!saved[k]||k==="ammo")return;saved[k]--;if(k==="armor")armorUntil=clock+15;if(k==="magnet")magnetUntil=clock+20;if(k==="flight")flightUntil=clock+10;save();renderBag();}
 $("buyArmor").onclick=()=>{if(saved.jewels>=2){saved.jewels-=2;saved.armor++;save();renderBag();}};
 function burst(x,y,color,n=16){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,v=60+Math.random()*180;particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.6,color});}}
@@ -308,7 +308,7 @@ function update(dt){
  if(feet>H+100){crash();return;}
  for(const h of hazards){if(h.dead)continue;if(h.kind==="walker")h.x=h.origin+Math.sin(clock*h.pace+h.phase)*h.range;if(!overlap(box,h))continue;if(h.kind==="walker"&&vy>=0&&oldFeet<=h.y+9){h.dead=true;feet=h.y;vy=-470;score+=2;burst(h.x+21,h.y+20,"#ffd970");}else if(clock<armorUntil){continue;}else if(shield){shield=false;h.dead=h.kind==="walker";worldX=Math.max(25,worldX-facing*65);vy=-330;burst(worldX,feet-55,"#72dfff");}else{crash();return;}}
  for(const p of powerups){if(p.used||!overlap(box,{x:p.x-18,y:p.y-18,w:36,h:36}))continue;p.used=true;if(p.kind==="fire"){if(!(saved.ammoMask&(1<<p.id))){saved.ammoMask|=1<<p.id;saved.ammo+=5;save();$("message").textContent="حصلت على ٥ كرات نار!";}}else if(p.kind==="shield"){shield=true;$("message").textContent="درع يحميك من اصطدام واحد!";}else{if(!(saved.claimedMask&(1<<p.id))){saved.claimedMask|=1<<p.id;saved.keys++;keysFound=saved.keys;save();renderBag();}$("message").textContent="وجدت مفتاح الكنز!";}burst(p.x,p.y,"#ffd970",22);}
- for(const t of treasures){if(!t.open&&overlap(box,{x:t.x,y:t.y,w:56,h:48})){if(saved.claimedMask&(1<<20)){t.open=true;continue;}if(saved.keys<t.cost){$("message").textContent="يحتاج الصندوق إلى "+t.cost+" مفاتيح";continue;}t.open=true;saved.keys-=t.cost;keysFound=saved.keys;saved.claimedMask|=1<<20;const rewards=["extra","armor","magnet","ammo","flight","jewels"];const k=rewards[(level-1)%rewards.length];saved[k]+=k==="ammo"?5*t.cost:t.cost===5?2:1;score+=10*t.cost;save();renderBag();$("message").textContent="مكافأة: "+items.find(a=>a[0]===k)[1];burst(t.x+28,t.y,"#ffd970",28);}}
+ for(const t of treasures){if(!t.open&&overlap(box,{x:t.x,y:t.y,w:56,h:48})){if(saved.claimedMask&(1<<20)){t.open=true;continue;}if(saved.keys<t.cost){$("message").textContent="يحتاج الصندوق إلى "+t.cost+" مفاتيح";continue;}t.open=true;saved.keys-=t.cost;keysFound=saved.keys;saved.claimedMask|=1<<20;const rewards=["extra","armor","magnet","flight","jewels"];const k=rewards[(level-1)%rewards.length];saved[k]+=k==="ammo"?5*t.cost:t.cost===5?2:1;score+=10*t.cost;save();renderBag();const reward="🎁 "+items.find(a=>a[0]===k)[1]+" × "+(t.cost===5?2:1)+" + "+(10*t.cost)+" ⭐";$("message").textContent=reward;$("rewardHud").textContent=reward;$("rewardHud").style.display="inline-block";rewardUntil=clock+8;burst(t.x+28,t.y,"#ffd970",28);}}
  for(const b of shots){const oldX=b.x;b.x+=b.vx*dt;b.y=Math.min(GROUND-21,b.y+260*dt);b.life-=dt;for(const h of hazards){if(!h.dead&&h.kind==="walker"&&overlap({x:Math.min(oldX,b.x)-12,y:b.y-12,w:Math.abs(b.x-oldX)+24,h:24},h)){h.dead=true;b.life=0;score+=2;burst(h.x+21,h.y+20,"#ff923d");break;}}}shots=shots.filter(b=>b.life>0);for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=260*dt;p.life-=dt;}particles=particles.filter(p=>p.life>0);
  for(const star of stars)if(!star.collected&&(overlap(box,{x:star.x-15,y:star.y-15,w:30,h:30})||(clock<magnetUntil&&Math.hypot(star.x-worldX,star.y-feet+50)<180))){star.collected=true;score++;}
  camera=Math.max(0,Math.min(goal-W+130,worldX-260));distance=Math.max(distance,worldX/15);runner.x=worldX-camera-55;runner.y=GROUND-feet;
@@ -587,7 +587,7 @@ function draw(){
   for(const s of stars)if(!s.collected)starShape(s.x-camera,s.y,s.r);
   for(const h of hazards){if(h.dead)continue;const x=h.x-camera;if(h.kind==="bar"){const type=(Math.floor(h.origin/100)+level)%3;round(x,h.y,h.w,h.h,8,type===0?"#79513b":type===1?"#647d89":"#d69836");for(let k=8;k<h.w-8;k+=22)rect(x+k,h.y+8,8,h.h-16,type===0?"#a98159":"#ffffff35");rect(x,h.y+h.h-8,h.w,8,"#f5c94a");ctx.fillStyle="#fff";ctx.font="bold 24px Arial";ctx.textAlign="center";ctx.fillText("↓",x+h.w/2,h.y+h.h-17);ctx.textAlign="start";}else if(h.kind==="spikes"){for(let i=0;i<3;i++){ctx.fillStyle="#bbc8d6";ctx.beginPath();ctx.moveTo(x+i*17,h.y+h.h);ctx.lineTo(x+i*17+8,h.y);ctx.lineTo(x+i*17+17,h.y+h.h);ctx.fill();}}else{const g=ctx.createLinearGradient(x,h.y,x+h.w,h.y+h.h);g.addColorStop(0,"#d1b5a1");g.addColorStop(1,"#51435a");round(x,h.y,h.w,h.h,10,g);round(x+6,h.y+8,h.w-12,6,3,"#eee0c7");round(x+8,h.y+26,h.w-16,5,2,"#3d3545");}}
   for(const p of powerups){if(p.used)continue;const x=p.x-camera,y=p.y+Math.sin(clock*4)*5;ctx.save();ctx.shadowBlur=16;ctx.shadowColor=p.kind==="fire"?"#ff8430":"#55d8ff";circle(x,y,23,p.kind==="fire"?"#d75a16":p.kind==="shield"?"#246fbb":"#aa7826");circle(x,y,19,"#ffffff30");ctx.font="26px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(p.kind==="fire"?"🔥":p.kind==="shield"?"🛡":"🔑",x,y);ctx.restore();}
-  for(const t of treasures){const x=t.x-camera;round(x,t.y+13,56,35,6,"#8d5529");round(x,t.y+(t.open?-7:0),56,20,6,"#d3983c");round(x+23,t.y+18,12,15,3,"#ffe38b");}
+  for(const t of treasures){const x=t.x-camera;round(x,t.y+13,56,35,6,"#8d5529");round(x,t.y+(t.open?-7:0),56,20,6,"#d3983c");round(x+23,t.y+18,12,15,3,"#ffe38b");ctx.fillStyle="#fff";ctx.font="bold 18px Arial";ctx.textAlign="center";ctx.fillText(t.open?"✓":"🔑 "+t.cost,x+28,t.y-12);ctx.textAlign="start";}
   for(const b of shots){const x=b.x-camera;ctx.save();ctx.shadowColor="#ff7b00";ctx.shadowBlur=20;const g=ctx.createRadialGradient(x,b.y,2,x,b.y,17);g.addColorStop(0,"#fffbd2");g.addColorStop(.45,"#ffca39");g.addColorStop(1,"#ff5d00");circle(x,b.y,17,g);ctx.restore();}
   for(const p of particles){ctx.save();ctx.globalAlpha=Math.max(0,p.life/.6);circle(p.x-camera,p.y,4,p.color);ctx.restore();}
   rect(goal-camera,GROUND-155,7,155,"#79532d");round(goal-camera+7,GROUND-155,70,45,5,"#f9ca46");
