@@ -3,6 +3,7 @@ function gameText(id){return window.mhGameTextValues?.[location.pathname.split('
 function formatGameText(template,values){return template.replace(/\{([a-zA-Z]+)\}/g,(match,key)=>Object.hasOwn(values,key)?String(values[key]):match);}
 import {defaultRanks,rankFor,summarize,teamScore} from '../challenge/ranks.js';
 import {connect} from '../auth/firebase.js';
+import {settingsFor} from '../auth/parental.js';
 import {firebaseConfig} from '../auth/firebase-config.js';
 import {makeRun,move,step} from './simulation.js';
 import {createWorld} from './world.js';
@@ -59,7 +60,8 @@ const listen=(p,fn)=>unsub.push(api.onValue(path(p),s=>fn(s.val()),notice));
 const button=(label,fn)=>{const b=document.createElement('button');b.textContent=label;b.onclick=fn;return b;};
 function renderPhrases(){
  el('phrases').replaceChildren();
- Object.entries(phrases).sort((a,b)=>a[1].order-b[1].order).filter(([,v])=>v.enabled).forEach(([id,v])=>el('phrases').append(button(v.text,()=>{if(room&&slot)api.set(path('races/'+room+'/chat/'+slot),{phrase:id,at:api.serverTimestamp()}).catch(notice);})));
+ if(!settingsFor(user.uid).chat)return;
+ Object.entries(phrases).sort((a,b)=>a[1].order-b[1].order).filter(([,v])=>v.enabled).forEach(([id,v])=>el('phrases').append(button(v.text,()=>{if(room&&slot&&settingsFor(user.uid).chat)api.set(path('races/'+room+'/chat/'+slot),{phrase:id,at:api.serverTimestamp()}).catch(notice);})));
 }
 function editRows(){
  const rows=el('phraseRows');rows.replaceChildren();
@@ -79,7 +81,7 @@ async function leave(){
  status(gameText("online7"));
 }
 async function invite(){
- if(room)return;el('invite').disabled=true;
+ if(room||!settingsFor(user.uid).allowed)return;el('invite').disabled=true;
  const id=api.push(path('races')).key;const seed=crypto.getRandomValues(new Uint32Array(1))[0];
  try{await api.set(path('races/'+id),{host:user.uid,seed,mode:selectedMode,created:api.serverTimestamp()});
  room=id;slot='host';waiting=true;matchMode=selectedMode;
@@ -105,7 +107,7 @@ function watchRoom(){
  if(v.left?.[other]){peerLeft=true;if(!playing){leave();status(gameText("online9"));return;}peer={...(peer||{}),out:true};}
  if(v.guest&&!playing&&!finished&&!v.left?.[other]){waiting=false;matchMode=v.mode==='team'?'team':'versus';epoch=v.guest.at+5000;start(v.seed);}
  peer=v.left?.[other]?{...(v.state?.[other]||{}),out:true}:v.state?.[other]||null;
- const msg=v.chat?.[other];if(msg&&msg.at>seen){seen=msg.at;const phrase=phrases[msg.phrase];if(phrase?.enabled){const p=document.createElement('p');p.textContent=gameText("online20")+phrase.text;el('messages').append(p);while(el('messages').children.length>8)el('messages').firstChild.remove();}}
+ const msg=v.chat?.[other];if(settingsFor(user.uid).chat&&msg&&msg.at>seen){seen=msg.at;const phrase=phrases[msg.phrase];if(phrase?.enabled){const p=document.createElement('p');p.textContent=gameText("online20")+phrase.text;el('messages').append(p);while(el('messages').children.length>8)el('messages').firstChild.remove();}}
  });
 }
 function start(seed){
@@ -118,6 +120,7 @@ function start(seed){
 }
 function tick(){
  if(!playing||!room)return;
+ if(!settingsFor(user.uid).allowed){leave().then(()=>{el('lobby').hidden=true;status('أوقف ولي الأمر التحديات عبر الإنترنت على هذا الجهاز.');});return;}
  const me=slot==='host'?0:1,other=1-me,p=run.players[me];
  const elapsed=Math.max(0,(now()-epoch)/1000);
  if(now()<epoch){el('onlineHud').textContent=gameText("online21")+Math.ceil((epoch-now())/1000);graphics.draw(run,0);frameId=requestAnimationFrame(tick);return;}
@@ -163,6 +166,7 @@ el('savePhrases').onclick=async()=>{const next={};for(const [order,row] of [...e
 try{
  const conn=await connect();user=conn?.auth.currentUser;
  if(!user?.emailVerified){status(gameText("online17"));}
+ else if(!settingsFor(user.uid).allowed){status('أوقف ولي الأمر التحديات عبر الإنترنت على هذا الجهاز.');}
  else{
  api=await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js');db=api.getDatabase(conn.auth.app,firebaseConfig.databaseURL);
  api.onValue(path('.info/serverTimeOffset'),s=>offset=s.val()||0);
