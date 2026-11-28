@@ -76,15 +76,18 @@ button:disabled{opacity:.5;cursor:default}
 <div class="choices" id="choices"></div>
 <div id="message" aria-live="polite"></div>
 <div class="actions">
-<button id="previous">السؤال السابق</button>
-<button id="next">السؤال التالي</button>
-<button id="retry">إعادة المحاولة</button>
+<button data-text-key="word-problems.html:button:previous" id="previous">السؤال السابق</button>
+<button data-text-key="word-problems.html:button:next" id="next">السؤال التالي</button>
+<button data-text-key="word-problems.html:button:retry" id="retry">إعادة المحاولة</button>
 </div>
 </section>
 </main>
 <div class="footer">محمد وحبيبة</div>
 
 <script type="module">
+window.mhGameTextDefaults={"questionNumber":"السؤال {current} من {total}","progress":"الأسئلة المنجزة: {completed} من {total} | ⭐ {completed}","answered":"أجبت عن هذا السؤال","wrong":"الإجابة غير صحيحة، حاول مرة أخرى","complete":"🏆 أحسنت! أنهيت جميع الأسئلة!","correct":"⭐ أحسنت! إجابة صحيحة","already":"لقد أجبت عن هذا السؤال بالفعل","loadError":"تعذر تحميل الأسئلة","missing":"تأكد من وجود ملف الأسئلة على الموقع"};
+function gameText(id){return window.mhGameTextValues?.[location.pathname.split('/').pop()+':message:'+id] ?? window.mhGameTextDefaults[id];}
+
 import {connect} from './auth/firebase.js';
 async function loadQuestionResponse(file){
  try{const {data,db}=await connect();const snap=await data.getDoc(data.doc(db,'siteContent','word-problems'));const v=snap.data()?.value;if(Array.isArray(v)&&v.length&&v.every(q=>typeof q.question==='string'&&Array.isArray(q.options)&&q.options.length>=2&&Number.isInteger(q.answer)&&q.answer>=0&&q.answer<q.options.length))return {ok:true,json:async()=>v};}catch(e){console.warn('Content fallback',e)}
@@ -139,16 +142,15 @@ function render(){
  if(!q)return;
 
  answered=progress.stars[questions[current-1]?.id]===1;
- $("level").textContent="السؤال "+current+" من "+TOTAL;
+ $("level").textContent=gameText("questionNumber").replace("{current}",current).replace("{total}",TOTAL);
  $("bar").style.width=(current/TOTAL*100)+"%";
  $("stats").textContent=
-  "الأسئلة المنجزة: "+completedCount()+
-  " من "+TOTAL+" | ⭐ "+completedCount();
+  gameText("progress").replaceAll("{completed}",completedCount()).replace("{total}",TOTAL);
 
  $("question").textContent=q.question;
  $("choices").replaceChildren();
  $("message").textContent=answered
-  ?(current===TOTAL?"🏆 أحسنت! أنهيت جميع الأسئلة!":"أجبت عن هذا السؤال")
+  ?(current===TOTAL?gameText("complete"):gameText("answered"))
   :"";
 
  q.options.forEach((option,index)=>{
@@ -181,7 +183,7 @@ function answer(index){
 
  if(index!==q.answer){
   buttons[index].classList.add("wrong");
-  $("message").textContent="الإجابة غير صحيحة، حاول مرة أخرى";
+  $("message").textContent=gameText("wrong");
   return;
  }
 
@@ -199,12 +201,11 @@ function answer(index){
  });
 
  $("message").textContent=current===TOTAL
-  ?"🏆 أحسنت! أنهيت جميع الأسئلة!"
-  :"⭐ أحسنت! إجابة صحيحة";
+  ?gameText("complete")
+  :gameText("correct");
 
  $("stats").textContent=
-  "الأسئلة المنجزة: "+completedCount()+
-  " من "+TOTAL+" | ⭐ "+completedCount();
+  gameText("progress").replaceAll("{completed}",completedCount()).replace("{total}",TOTAL);
 
  $("next").disabled=current===TOTAL;
 
@@ -233,7 +234,7 @@ function move(direction){
 function retry(){
  cancelNext();
  if(progress.stars[questions[current-1]?.id]===1){
-  $("message").textContent="لقد أجبت عن هذا السؤال بالفعل";
+  $("message").textContent=gameText("already");
   return;
  }
  render();
@@ -272,14 +273,14 @@ async function init(){
  for(const k of Object.keys(progress.stars)){if(/^\d+$/.test(k)){const id='word-problems-'+k;if(progress.stars[k]===1)progress.stars[id]=1;delete progress.stars[k]}}
   render();
  }catch(e){
-  $("question").textContent="تعذر تحميل الأسئلة";
-  $("message").textContent="تأكد من وجود ملف الأسئلة على الموقع";
+  $("question").textContent=gameText("loadError");
+  $("message").textContent=gameText("missing");
  }
 }
 init();
 
 try{const {auth,authApi,data,db}=await connect();authApi.onAuthStateChanged(auth,async u=>{document.getElementById('question-editor')?.remove();if(!u?.emailVerified)return;try{const role=u.email==='quraaty@gmail.com'?'admin':(await data.getDoc(data.doc(db,'roles',u.uid))).data()?.role;if(!['admin','editor'].includes(role))return;const bar=document.createElement('div');bar.id='question-editor';bar.dir='rtl';bar.style.cssText='padding:12px;text-align:center';const make=(label,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.style.cssText='margin:4px;padding:10px;background:#ffdfa9;color:#463426;border:1px solid #e6ad65;border-radius:8px';b.onclick=fn;return b};const ref=data.doc(db,'siteContent','word-problems');async function save(next){if(!next.length)throw Error('ينبغي إبقاء سؤال واحد على الأقل');await data.setDoc(ref,{value:next});location.reload()}function edit(add){if(!questions.length){alert('افتح اللعبة أولًا');return}const index=current-1;const old=add?{question:'',options:['','','',''],answer:0}:questions[index];const d=document.createElement('dialog');d.dir='rtl';d.style.cssText='width:min(85vw,480px);border:1px solid #e6ad65;border-radius:12px';const f=document.createElement('form');const q=document.createElement('textarea');q.value=old.question;q.required=true;q.style.width='95%';f.append('السؤال',q);const fields=old.options.map((v,i)=>{const row=document.createElement('label');row.style.display='block';const x=document.createElement('input');x.value=v;x.required=true;row.append('الخيار '+(i+1)+' ',x);f.append(row);return x});const a=document.createElement('select');fields.forEach((_,i)=>a.add(new Option('الخيار '+(i+1),i)));a.value=old.answer;f.append('الإجابة الصحيحة ',a);const b=make('حفظ',()=>{});b.type='submit';f.append(b,make('إلغاء',()=>d.close()));f.onsubmit=async e=>{e.preventDefault();if(!q.value.trim()||fields.some(x=>!x.value.trim()))return;b.disabled=true;try{const next=questions.slice();const item={...old,id:old.id||crypto.randomUUID(),question:q.value.trim(),options:fields.map(x=>x.value.trim()),answer:Number(a.value)};if(add)next.push(item);else next[index]=item;await save(next)}catch(e){alert(e.message);b.disabled=false}};d.append(f);document.body.append(d);d.onclose=()=>d.remove();d.showModal()}const move=async step=>{const i=current-1,j=i+step;if(i<0||j<0||j>=questions.length)return;const next=questions.slice();[next[i],next[j]]=[next[j],next[i]];try{await save(next)}catch(e){alert(e.message)}};bar.append(make('↑ نقل السؤال',()=>move(-1)),make('↓ نقل السؤال',()=>move(1)));bar.append(make('إضافة سؤال',()=>edit(true)),make('تعديل السؤال الحالي',()=>edit(false)),make('حذف السؤال الحالي',async()=>{if(!questions.length||!confirm('حذف السؤال الحالي؟'))return;try{await save(questions.filter((_,i)=>i!==current-1))}catch(e){alert(e.message)}}));document.body.append(bar)}catch(e){console.warn(e)}})}catch(e){console.warn(e)}
 </script>
-<script type="module" src="auth/navigation.js?v=20261125b"></script>
+<script type="module" src="auth/navigation.js?v=20261128texts"></script>
 </body>
 </html>
