@@ -27,7 +27,7 @@
         "created"
       ],
       "$id": {
-        ".write": "auth != null && auth.token.email_verified == true && (root.child('races').child($id).child('host').val() == auth.uid || root.child('races').child($id).child('guest/uid').val() == auth.uid) && (!newData.exists() || (root.child('races').child($id).child('host').val() == auth.uid && !root.child('races').child($id).child('guest').exists() && !root.child('races').child($id).child('left/host').exists() && !data.exists()))",
+        ".write": "auth != null && auth.token.email_verified == true && (root.child('races').child($id).child('host').val() == auth.uid || root.child('races').child($id).child('guest/uid').val() == auth.uid) && (!newData.exists() || (root.child('races').child($id).child('host').val() == auth.uid && !root.child('races').child($id).child('guest').exists() && !root.child('races').child($id).child('left/host').exists() && !data.exists())) && (!newData.exists() || root.child('parentalSettings').child(auth.uid).child('allowed').val() != false)",
         ".validate": "newData.hasChildren(['created','mode'])",
         "created": {
           ".validate": "newData.isNumber() && newData.val() <= now + 1000 && newData.val() >= now - 15000"
@@ -43,7 +43,7 @@
     "races": {
       "$id": {
         ".read": "auth != null && auth.token.email_verified == true && (root.child('races').child($id).child('host').val() == auth.uid || root.child('races').child($id).child('guest/uid').val() == auth.uid)",
-        ".write": "auth != null && auth.token.email_verified == true && !data.exists() && newData.child('host').val() == auth.uid && newData.hasChildren(['host','seed','created','mode']) && !newData.child('guest').exists() && !newData.child('state').exists() && !newData.child('chat').exists() && !newData.child('left').exists()",
+        ".write": "auth != null && auth.token.email_verified == true && !data.exists() && newData.child('host').val() == auth.uid && newData.hasChildren(['host','seed','created','mode']) && !newData.child('guest').exists() && !newData.child('state').exists() && !newData.child('chat').exists() && !newData.child('left').exists() && root.child('parentalSettings').child(auth.uid).child('allowed').val() != false",
         "host": {
           ".validate": "newData.isString() && newData.val() == auth.uid"
         },
@@ -54,7 +54,7 @@
           ".validate": "newData.isNumber() && newData.val() <= now + 1000 && newData.val() >= now - 15000"
         },
         "guest": {
-          ".write": "auth != null && auth.token.email_verified == true && !data.exists() && root.child('races').child($id).child('host').exists() && root.child('races').child($id).child('host').val() != auth.uid && !root.child('races').child($id).child('left/host').exists() && root.child('raceLobby').child($id).exists() && root.child('races').child($id).child('created').val() > now - 120000 && newData.child('uid').val() == auth.uid",
+          ".write": "auth != null && auth.token.email_verified == true && !data.exists() && root.child('races').child($id).child('host').exists() && root.child('races').child($id).child('host').val() != auth.uid && !root.child('races').child($id).child('left/host').exists() && root.child('raceLobby').child($id).exists() && root.child('races').child($id).child('created').val() > now - 120000 && newData.child('uid').val() == auth.uid && root.child('parentalSettings').child(auth.uid).child('allowed').val() != false",
           ".validate": "newData.hasChildren(['uid','at'])",
           "uid": {
             ".validate": "newData.isString() && newData.val() == auth.uid"
@@ -68,7 +68,7 @@
         },
         "state": {
           "$side": {
-            ".write": "auth != null && auth.token.email_verified == true && (($side == 'host' && root.child('races').child($id).child('host').val() == auth.uid) || ($side == 'guest' && root.child('races').child($id).child('guest/uid').val() == auth.uid)) && newData.exists() && root.child('races').child($id).child('guest').exists() && !root.child('races').child($id).child('left').child($side).exists()",
+            ".write": "auth != null && auth.token.email_verified == true && (($side == 'host' && root.child('races').child($id).child('host').val() == auth.uid) || ($side == 'guest' && root.child('races').child($id).child('guest/uid').val() == auth.uid)) && newData.exists() && root.child('races').child($id).child('guest').exists() && !root.child('races').child($id).child('left').child($side).exists() && root.child('parentalSettings').child(auth.uid).child('allowed').val() != false",
             ".validate": "newData.hasChildren(['x','y','slide','glide','out','stars','distance','at'])",
             "x": {
               ".validate": "newData.isNumber() && newData.val() >= -3 && newData.val() <= 3"
@@ -101,7 +101,7 @@
         },
         "chat": {
           "$side": {
-            ".write": "auth != null && auth.token.email_verified == true && (($side == 'host' && root.child('races').child($id).child('host').val() == auth.uid) || ($side == 'guest' && root.child('races').child($id).child('guest/uid').val() == auth.uid)) && newData.exists() && root.child('races').child($id).child('guest').exists() && !root.child('races').child($id).child('left').child($side).exists()",
+            ".write": "auth != null && auth.token.email_verified == true && (($side == 'host' && root.child('races').child($id).child('host').val() == auth.uid) || ($side == 'guest' && root.child('races').child($id).child('guest/uid').val() == auth.uid)) && newData.exists() && root.child('races').child($id).child('guest').exists() && !root.child('races').child($id).child('left').child($side).exists() && root.child('parentalSettings').child(auth.uid).child('allowed').val() != false && root.child('parentalSettings').child(auth.uid).child('chat').val() != false",
             ".validate": "newData.hasChildren(['phrase','at']) && (!data.exists() || now >= data.child('at').val() + 800)",
             "phrase": {
               ".validate": "newData.isString() && root.child('racePhrases').child(newData.val()).child('enabled').val() == true"
@@ -144,6 +144,22 @@
         },
         "icon": {
           ".validate": "newData.isString() && newData.val().length <= 12"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "parentalSettings": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid && auth.token.email_verified == true",
+        ".write": "auth != null && auth.uid == $uid && auth.token.email_verified == true && auth.token.auth_time * 1000 >= now - 300000 && newData.exists()",
+        ".validate": "newData.hasChildren(['allowed','chat'])",
+        "allowed": {
+          ".validate": "newData.isBoolean()"
+        },
+        "chat": {
+          ".validate": "newData.isBoolean()"
         },
         "$other": {
           ".validate": false
