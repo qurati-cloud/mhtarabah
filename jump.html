@@ -45,7 +45,7 @@ button:disabled{opacity:.5}
  <div class="arcade-hud">
   <span id="stars" aria-label="النجوم">0 ⭐</span>
   <span id="distance" aria-label="المسافة">0</span>
-  <span id="speed" aria-label="السرعة">×1.0</span>
+  <span id="speed" aria-label="المرحلة">1 / 30</span>
   <span id="time" aria-label="الوقت">00:00</span>
  </div>
  <div class="arcade-actions">
@@ -54,21 +54,20 @@ button:disabled{opacity:.5}
   <button id="pause" type="button" aria-label="إيقاف مؤقت">⏸</button>
  </div>
  <div class="arcade-controls">
-  <div class="steering"><button id="up" class="control">↑ قفز</button><button id="down" class="control">↓ انحناء</button></div>
+  <div class="steering" dir="ltr"><button id="left" class="control">←</button><button id="right" class="control">→</button><button id="up" class="control">↑ قفز</button></div>
   <button id="start">▶ ابدأ</button>
  </div>
 </section>
 <div id="message" aria-live="polite"></div>
 <details class="arcade-records"><summary>الأرقام القياسية</summary><section class="stats">
-<div class="stat"><small>رقمك القياسي</small><b id="record">0</b></div>
+<div class="stat"><small>أعلى مرحلة أنهيتها</small><b id="record">0</b></div>
 <div class="stat"><small>رقمك القياسي في النجوم</small><b id="starRecord">0 ⭐</b></div>
-<div class="stat"><small>الرقم القياسي الدولي لمجموع النجوم</small><b id="globalStars">—</b></div>
-<div class="stat"><small>الرقم القياسي الدولي</small><b id="global">—</b></div>
+<div hidden id="globalStars"></div>
+<div hidden id="global"></div>
 <div class="stat"><small>مجموع النجوم</small><b id="totalStars">0</b></div>
 </section></details>
 <p class="note">
-الكمبيوتر: السهم ↑ للقفز، والسهم ↓ للانحناء.
-الهاتف: اسحب للأعلى للقفز، وللأسفل للانحناء.
+الكمبيوتر: السهمان ← → للحركة، والسهم ↑ أو المسافة للقفز. الهاتف: استعمل أزرار الحركة والقفز معًا.
 </p>
 </main>
 
@@ -80,12 +79,12 @@ import { installArcade } from "./arcade/scene.js";
 import { progress as progressStorage } from "./auth/progress.js";
 import {connect,connectRunnerGuest} from "./auth/firebase.js";
 "use strict";
-const view3d=installArcade("land");
+const view3d=null; document.getElementById("scene-3d").style.display="none";
 
 const $=id=>document.getElementById(id);
 const canvas=$("game"),ctx=canvas.getContext("2d");
 const W=900,H=500,GROUND=410;
-const KEY="mh_obstacles_v1";
+const KEY="mh_platform_hurdles_v1";
 
 const mohammadImages={
  run:new Image(),
@@ -132,7 +131,8 @@ let obstacleTimer=2,starTimer=1;
 let runner={x:130,y:0,vy:0};
 let downHeld=false,duckUntil=0;
 let touchId=null,touchY=0,touchDirection="";
-let saved={distance:0,starRecord:0,totalStars:0};
+let saved={distance:0,starRecord:0,totalStars:0,level:1};
+let level=1,worldX=100,feet=GROUND,vy=0,grounded=true,facing=1,camera=0,terrain=[],hazards=[],goal=0,held=new Set(),checkpoint=100;
 
 try{
  const old=JSON.parse(progressStorage.getItem(KEY));
@@ -151,9 +151,10 @@ function showGlobal(){
  $("globalStars").textContent=globalRecord.stars+" ⭐";
 }
 async function publishGlobal(){
+ return; // Separate platform records from legacy endless-run records.
  if(!leaderboard || saved.distance<1)return;
  const {db,data}=leaderboard.auth.currentUser?.emailVerified?leaderboard:await connectRunnerGuest();
- const ref=data.doc(db,"runnerWorldRecords","hurdles");
+ const ref=data.doc(db,"runnerWorldRecords","hurdles-platform");
  await data.runTransaction(db,async tx=>{
   const prev=(await tx.get(ref)).data()||{distance:0,stars:0};
   const next={distance:Math.max(prev.distance,Math.floor(saved.distance)),stars:Math.max(prev.stars,Math.floor(saved.starRecord))};
@@ -213,7 +214,7 @@ const CHARACTER={
 };
 
 function characterPose(){
- if(runner.y>0)return "jump";
+ if(!grounded)return "jump";
  if(isDuck())return "duck";
  return "run";
 }
@@ -236,144 +237,34 @@ function playerBox(){
 
 
 function reset(){
- distance=0;score=0;speed=235;clock=0;elapsed=0;
- obstacles=[];stars=[];
- obstacleTimer=2;starTimer=1;
- runner.y=0;runner.vy=0;
- downHeld=false;duckUntil=0;
- touchId=null;touchDirection="";
-}
-
-function start(){
- reset();
- mode="running";
- (($("message")) || {textContent:""}).textContent=gameText("m2");
-}
-
-function jump(){
- if(mode!=="running")return;
- if(runner.y===0){
-  downHeld=false;
-  duckUntil=0;
-  runner.vy=780;
+ level=Math.max(1,Math.min(30,Math.floor(saved.level||1))); worldX=100;feet=GROUND;vy=0;grounded=true;camera=0;clock=elapsed=score=distance=0;held.clear();terrain=[];hazards=[];stars=[];checkpoint=100;
+ let x=0; const sections=5+Math.floor(level/3);
+ for(let i=0;i<sections;i++){
+  const width=620+(i%3)*90;terrain.push({x,y:GROUND,w:width,h:90});
+  if(i>0)hazards.push({x:x+230,y:GROUND-42,w:42,h:42});
+  for(let j=0;j<3;j++){const px=x+125+j*145,py=GROUND-110-(j%2)*65;terrain.push({x:px,y:py,w:115,h:20});stars.push({x:px+57,y:py-35,r:15});}
+  stars.push({x:x+width-75,y:GROUND-40,r:15});
+  x+=width+(i===sections-1?0:85+Math.min(55,level*2));
  }
+ goal=x-100; runner.x=worldX-55;runner.y=0;
 }
-
-function duck(){
- if(mode!=="running")return;
- runner.y=0;
- runner.vy=0;
- duckUntil=clock+.75;
-}
-
-function crash(){
- mode="crashed";
- saved.distance=Math.max(saved.distance,Math.floor(distance));
- saved.starRecord=Math.max(saved.starRecord,score);
- saved.totalStars+=score;
- save();
- publishGlobal().catch(console.warn);
- (($("message")) || {textContent:""}).textContent=
-  gameText("m1").replace("{score}",score);
-}
-
-function pause(){
- if(mode==="running"){
-  mode="paused";
-  (($("message")) || {textContent:""}).textContent=gameText("m3");
- }else if(mode==="paused"){
-  mode="running";
-  (($("message")) || {textContent:""}).textContent=gameText("m4");
- }
-}
-
-function overlap(a,b){
- return a.x<b.x+b.w&&a.x+a.w>b.x&&
-        a.y<b.y+b.h&&a.y+a.h>b.y;
-}
-
-function spawnObstacle(){
- const high=Math.random()<.43;
- if(high){
-  // حاجز معلّق: المرور من تحته يحتاج انحناء
-  obstacles.push({
-   type:"high",kind:Math.random()<.5?2:3,
-   x:W+20,y:GROUND-115,w:65,h:40
-  });
- }else{
-  obstacles.push({
-   type:"ground",kind:Math.random()<.5?0:1,
-   x:W+20,y:GROUND-52,w:48,h:52
-  });
- }
-}
-
-function spawnStar(){
- stars.push({
-  x:W+20,
-  y:Math.random()<.55?GROUND-145:GROUND-95,
-  r:16
- });
-}
-
+function start(){reset();mode="running";$("message").textContent="اجمع النجوم حتى تصل إلى نهاية المرحلة!";}
+function jump(){if(mode==="running"&&grounded){vy=-690;grounded=false;}}
+function pause(){if(mode==="running"){mode="paused";held.clear();}else if(mode==="paused")mode="running";}
+function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
+function crash(){mode="crashed";held.clear();$("message").textContent="حاول مجددًا!";}
+function finish(){mode="won";held.clear();saved.distance=Math.max(saved.distance,level);saved.starRecord=Math.max(saved.starRecord,score);saved.totalStars+=score;saved.level=Math.min(30,level+1);save();$("message").textContent=level===30?"أتممت جميع المراحل!":"أحسنت! انتقلت إلى المرحلة التالية."; }
 function update(dt){
- if(mode!=="running")return;
-
- clock+=dt;
- elapsed+=dt;
- speed=235*(1+9*Math.min(1,elapsed/120));
- distance+=speed*dt/15;
-
- runner.y+=runner.vy*dt;
- runner.vy-=2000*dt;
- if(runner.y<=0){
-  runner.y=0;
-  runner.vy=0;
- }
-
- obstacleTimer-=dt;
- if(obstacleTimer<=0){
-  spawnObstacle();
-  // مسافات مناسبة للقفز والانحناء
-  obstacleTimer=rand(1.65,2.15);
- }
-
- starTimer-=dt;
- if(starTimer<=0){
-  spawnStar();
-  starTimer=rand(1.15,2.1);
- }
-
- for(const o of obstacles)o.x-=speed*dt;
- for(const s of stars)s.x-=speed*dt;
-
- const p=playerBox();
-
- for(const o of obstacles){
-  const b={
-   x:o.x+6,y:o.y+5,
-   w:o.w-12,h:o.h-10
-  };
-  if(overlap(p,b)){
-   crash();
-   return;
-  }
- }
-
- for(const s of stars){
-  if(s.collected)continue;
-  if(overlap(p,{
-   x:s.x-12,y:s.y-12,w:24,h:24
-  })){
-   s.collected=true;
-   score++;
-  }
- }
-
- obstacles=obstacles.filter(o=>o.x+o.w>-30);
- stars=stars.filter(s=>!s.collected&&s.x+s.r>-30);
+ if(mode!=="running")return;clock+=dt;elapsed+=dt;
+ const dir=Number(held.has("right"))-Number(held.has("left"));if(dir)facing=dir;
+ const oldFeet=feet;worldX=Math.max(25,Math.min(goal+40,worldX+dir*270*dt));vy+=1550*dt;feet+=vy*dt;grounded=false;
+ for(const p of terrain){if(vy>=0&&oldFeet<=p.y+1&&feet>=p.y&&worldX+23>p.x&&worldX-23<p.x+p.w){feet=p.y;vy=0;grounded=true;}}
+ const box={x:worldX-23,y:feet-95,w:46,h:95};
+ if(feet>H+100||hazards.some(h=>overlap(box,h))){crash();return;}
+ for(const star of stars)if(!star.collected&&overlap(box,{x:star.x-15,y:star.y-15,w:30,h:30})){star.collected=true;score++;}
+ camera=Math.max(0,Math.min(goal-W+130,worldX-260));distance=Math.max(distance,worldX/15);runner.x=worldX-camera-55;runner.y=GROUND-feet;
+ if(worldX>=goal&&grounded)finish();
 }
-
 function background(){
  const sky=ctx.createLinearGradient(0,0,0,GROUND);
  sky.addColorStop(0,"#7ccaff");
@@ -396,12 +287,12 @@ function background(){
   circle(x+20,GROUND-39,37,"#91dca0");
  }
 
- rect(0,GROUND,W,H-GROUND,"#c18e59");
- rect(0,GROUND,W,12,"#66bb63");
+ rect(0,GROUND,W,H-GROUND,"#7299b5");
+ 
 
  for(let i=0;i<15;i++){
   const x=((i*100-distance*8)%(W+100)+(W+100))%(W+100);
-  round(x,GROUND+45,55,8,4,"#e8c28d");
+  
  }
 }
 
@@ -657,10 +548,12 @@ function draw(){
   ctx.clearRect(0,0,W,H);
  }else{
   background();
-  for(const s of stars)starShape(s.x,s.y,s.r);
-  for(const o of obstacles)drawObstacle(o);
+  for(const p of terrain){round(p.x-camera,p.y,p.w,p.h,5,"#b78350");round(p.x-camera,p.y,p.w,12,4,"#58b95c");}
+  for(const s of stars)if(!s.collected)starShape(s.x-camera,s.y,s.r);
+  for(const h of hazards)drawObstacle({...h,x:h.x-camera,type:"ground"});
+  rect(goal-camera,GROUND-155,7,155,"#79532d");round(goal-camera+7,GROUND-155,70,45,5,"#f9ca46");
  }
- drawMohammad();
+ ctx.save();if(facing<0){const cx=runner.x+55;ctx.translate(cx*2,0);ctx.scale(-1,1);}drawMohammad();ctx.restore();
 
  if(mode!=="running"){
   ctx.fillStyle="#17283b88";
@@ -671,14 +564,14 @@ function draw(){
   const labels={
    ready:gameText("m5"),
    paused:gameText("m6"),
-   crashed:gameText("m7")
+   crashed:gameText("m7"),won:"أحسنت!"
   };
   ctx.fillText(labels[mode]||"",W/2,105);
  }
 
  (($("distance")) || {textContent:""}).textContent=Math.floor(distance);
  (($("stars")) || {textContent:""}).textContent=score+" ⭐";
- (($("speed")) || {textContent:""}).textContent="×"+(speed/235).toFixed(1);
+ (($("speed")) || {textContent:""}).textContent=level+" / 30";
  const seconds=Math.floor(elapsed);
  (($("time")) || {textContent:""}).textContent=
   String(Math.floor(seconds/60)).padStart(2,"0")+":"+
@@ -687,7 +580,7 @@ function draw(){
  (($("starRecord")) || {textContent:""}).textContent=saved.starRecord+" ⭐";
  (($("totalStars")) || {textContent:""}).textContent=saved.totalStars+" ⭐";
  document.querySelectorAll("[data-character]").forEach(b=>b.disabled=mode==="running"||mode==="paused");
- $("pause").disabled=mode!=="running"&&mode!=="paused";
+ $("start").hidden=mode==="running"||mode==="paused";$("start").textContent=mode==="won"?"المرحلة التالية":mode==="crashed"?"حاول مجددًا":"▶ ابدأ";$("pause").disabled=mode!=="running"&&mode!=="paused";
  (($("pause")) || {textContent:""}).textContent=mode==="paused"?gameText("m9"):gameText("m10");
 }
 
@@ -715,107 +608,12 @@ document.querySelectorAll('[data-character]').forEach(b=>b.onclick=()=>{
 $("start").onclick=start;
 $("pause").onclick=pause;
 
-document.addEventListener("keydown",e=>{
- if(["ArrowUp","ArrowDown","KeyW","KeyS","Space"].includes(e.code)){
-  e.preventDefault();
- }
- if((e.code==="ArrowUp"||e.code==="KeyW")&&!e.repeat){
-  jump();
- }
- if(e.code==="ArrowDown"||e.code==="KeyS"){
-  if(!downHeld)duck();
-  downHeld=true;
- }
- if(e.code==="Space"&&!e.repeat){
-  if(mode==="ready"||mode==="crashed")start();
-  else pause();
- }
-});
-
-document.addEventListener("keyup",e=>{
- if(e.code==="ArrowDown"||e.code==="KeyS"){
-  downHeld=false;
- }
-});
-
-function bindButton(id,action){
- const el=$(id);
- let pointer=null;
-
- el.addEventListener("pointerdown",e=>{
-  e.preventDefault();
-  pointer=e.pointerId;
-  if(action==="jump")jump();
-  else{
-   downHeld=true;
-   duck();
-  }
-  try{el.setPointerCapture(e.pointerId)}catch(err){}
- });
-
- for(const event of ["pointerup","pointercancel","lostpointercapture"]){
-  el.addEventListener(event,e=>{
-   if(pointer!==e.pointerId)return;
-   pointer=null;
-   if(action==="duck")downHeld=false;
-  });
- }
-}
-
-bindButton("up","jump");
-bindButton("down","duck");
-
-// التحكم بالسحب على شاشة الهاتف
-canvas.addEventListener("pointerdown",e=>{
- if(e.pointerType!=="touch"&&e.pointerType!=="pen")return;
- if(touchId!==null)return;
- e.preventDefault();
- touchId=e.pointerId;
- touchY=e.clientY;
- touchDirection="";
- try{canvas.setPointerCapture(e.pointerId)}catch(err){}
-});
-
-canvas.addEventListener("pointermove",e=>{
- if(e.pointerId!==touchId)return;
- e.preventDefault();
-
- const delta=e.clientY-touchY;
-
- if(delta < -22){
-  if(touchDirection!=="up"){
-   downHeld=false;
-   jump();
-   touchDirection="up";
-   touchY=e.clientY;
-  }
- }else if(delta > 22){
-  if(touchDirection!=="down"){
-   downHeld=true;
-   duck();
-   touchDirection="down";
-   touchY=e.clientY;
-  }
- }
-});
-
-function endTouch(e){
- if(e.pointerId!==touchId)return;
- touchId=null;
- touchDirection="";
- downHeld=false;
-}
-
-for(const event of ["pointerup","pointercancel","lostpointercapture"]){
- canvas.addEventListener(event,endTouch);
-}
-
-window.addEventListener("blur",()=>{
- downHeld=false;
- touchId=null;
- if(mode==="running")pause();
-});
-
+const keys={ArrowLeft:"left",KeyA:"left",ArrowRight:"right",KeyD:"right"};
+document.addEventListener("keydown",e=>{if(keys[e.code]){e.preventDefault();held.add(keys[e.code]);}if(["ArrowUp","KeyW","Space"].includes(e.code)){e.preventDefault();if(!e.repeat)jump();}});
+document.addEventListener("keyup",e=>{if(keys[e.code])held.delete(keys[e.code]);});
+for(const id of ["left","right","up"]){const button=$(id);button.addEventListener("pointerdown",e=>{e.preventDefault();button.setPointerCapture(e.pointerId);if(id==="up")jump();else held.add(id);});for(const event of ["pointerup","pointercancel","lostpointercapture"])button.addEventListener(event,()=>held.delete(id));}
+window.addEventListener("blur",()=>{held.clear();if(mode==="running")pause();});
+reset();
 requestAnimationFrame(loop);
 </script>
 <script type="module" src="auth/navigation.js?v=20261128texts"></script>
