@@ -196,6 +196,15 @@ button:focus-visible,a:focus-visible{
 .math-game{
  background:linear-gradient(145deg,#e1ffdf,#8ce6a1);
 }
+.runner-feature{grid-column:1/-1;min-height:300px;padding:16px 12px 22px;gap:8px}
+.runner-art{position:relative;width:min(100%,440px);aspect-ratio:3/2;display:flex;justify-content:center;align-items:center;gap:8px}
+.runner-portrait{width:42%;aspect-ratio:1;background:url('runner/portraits.webp') no-repeat;background-size:200% 100%;border-radius:24px}
+.runner-portrait.boy{background-position:left center}.runner-portrait.girl{background-position:right center}
+.runner-hurdle{position:absolute;bottom:12%;width:75%;height:12%;border:3px solid #ddd;border-radius:5px;background:repeating-linear-gradient(130deg,#e44 0 25px,#fff 25px 50px);box-shadow:0 4px 5px #0002}
+.runner-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:linear-gradient(145deg,#d5f3e7,#76cab9)}
+.runner-art img[hidden]{display:none}
+.runner-feature strong{font-size:clamp(27px,5vw,40px)}
+@media(max-width:520px){.runner-feature{min-height:245px}}
 </style>
 <link rel="stylesheet" href="arcade/quiz.css">
 </head>
@@ -209,6 +218,11 @@ button:focus-visible,a:focus-visible{
 <h2>أسئلة وألعاب</h2>
 
 <div class="games">
+<a href="runner.html" class="game runner-feature" style="background:linear-gradient(145deg,#d5f3e7,#76cab9)">
+<div class="runner-art" aria-hidden="true"><span class="runner-portrait boy"></span><span class="runner-portrait girl"></span><span class="runner-hurdle"></span><img src="runner/featured-hurdles.png" alt="" onerror="this.hidden=true"></div>
+<strong data-text-key="runner:title">سباق النجوم</strong>
+<small data-text-key="runner:card">اركض مع محمد وحبيبة · لاعب واحد أو لاعبان</small>
+</a>
 <a href="colors.html" class="game" style="background:linear-gradient(145deg,#e6e1fc,#83c8be)">
 <span class="icon" aria-hidden="true">🏮</span>
 <strong data-text-key="colors:title">ألوان المرفأ</strong>
@@ -219,11 +233,7 @@ button:focus-visible,a:focus-visible{
 <strong data-text-key="town:buildTitle">بناء</strong>
 <small data-text-key="town:card">ابنِ الجسر واكتشف المرفأ</small>
 </a>
-<a href="runner.html" class="game" style="background:linear-gradient(145deg,#d5f3e7,#76cab9)">
-<span class="icon" aria-hidden="true">⭐</span>
-<strong data-text-key="runner:title">سباق النجوم</strong>
-<small data-text-key="runner:card">اركض مع محمد وحبيبة · لاعب واحد أو لاعبان</small>
-</a>
+
 <a href="flight.html" class="game plane">
 <span class="icon">✈️</span>
 <strong>طائرة</strong>
