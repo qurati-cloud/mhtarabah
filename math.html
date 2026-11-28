@@ -199,6 +199,12 @@ function saveProgress(){
  }catch(e){}
 }
 
+// Recover the next unlocked question from completed question IDs.
+function reconcileUnlocked(){
+ let next=1;
+ while(next<TOTAL && progress.stars[questions[next-1]?.id]===1)next++;
+ progress.unlocked=Math.max(1,Math.min(TOTAL,Math.max(progress.unlocked||1,next)));
+}
 function completedCount(){
  return Object.values(progress.stars)
   .filter(value=>value===1).length;
@@ -210,6 +216,10 @@ function render(){
  if(!q)return;
 
  answered = progress.stars[questions[current-1]?.id]===1;
+ reconcileUnlocked();
+ if(answered && current<TOTAL && progress.unlocked<=current){
+  progress.unlocked=current+1;
+ }
 
  $("level").textContent =
   gameText("questionNumber").replace("{current}",current).replace("{total}",TOTAL);
@@ -349,7 +359,9 @@ async function init(){
 
   questions = data.map((q,i)=>({...q,id:q.id||'math-'+(i+1)})); TOTAL=questions.length; current=Math.max(1,Math.min(current,TOTAL)); progress.unlocked=Math.max(1,Math.min(progress.unlocked,TOTAL));
  for(const k of Object.keys(progress.stars)){if(/^\d+$/.test(k)){const id='math-'+k;if(progress.stars[k]===1)progress.stars[id]=1;delete progress.stars[k]}}
-  render();
+ reconcileUnlocked();
+ current=progress.unlocked;
+ render();
  }catch(e){
   $("question").textContent = gameText("loadError");
   $("message").textContent =
