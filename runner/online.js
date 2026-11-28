@@ -130,6 +130,28 @@ function tick(){
  frameId=requestAnimationFrame(tick);
 }
 function command(c){if(playing&&now()>=epoch&&run)move(run.players[slot==='host'?0:1],c);}
+// Match the ordinary runner's direct touchscreen controls.
+let onlineSwipe;
+for (const canvas of [el('world'), el('worldFallback')]) {
+ canvas.style.touchAction='none';
+ canvas.addEventListener('pointerdown', e=>{
+  if(!playing || now()<epoch || onlineSwipe || !e.isPrimary)return;
+  onlineSwipe={id:e.pointerId,x:e.clientX,y:e.clientY,used:false};
+  canvas.setPointerCapture(e.pointerId);
+  e.preventDefault();
+ });
+ canvas.addEventListener('pointermove', e=>{
+  if(!onlineSwipe || onlineSwipe.id!==e.pointerId || onlineSwipe.used)return;
+  const dx=e.clientX-onlineSwipe.x,dy=e.clientY-onlineSwipe.y;
+  if(Math.max(Math.abs(dx),Math.abs(dy))<24)return;
+  onlineSwipe.used=true;
+  command(Math.abs(dx)>Math.abs(dy)?(dx<0?'left':'right'):(dy<0?'jump':'down'));
+  e.preventDefault();
+ });
+ for(const type of ['pointerup','pointercancel','lostpointercapture']){
+  canvas.addEventListener(type,e=>{if(onlineSwipe?.id===e.pointerId)onlineSwipe=undefined;});
+ }
+}
 document.querySelectorAll('[data-move]').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();command(b.dataset.move);}));
 window.addEventListener('keydown',e=>{if(!playing||e.repeat||/INPUT|TEXTAREA/.test(e.target.tagName))return;const c={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'jump',ArrowDown:'down',Space:'jump',KeyA:'left',KeyD:'right',KeyW:'jump',KeyS:'down'}[e.code];if(c){e.preventDefault();command(c);}});
 el('invite').onclick=invite;el('cancel').onclick=leave;el('leave').onclick=()=>{finished=false;leave();};
