@@ -37,20 +37,23 @@ button[aria-current=true]{outline:3px solid #77522f}
 #message{text-align:center;min-height:25px;margin-top:15px}
 a{display:block;text-align:center;margin-top:16px;color:#77522f}
 select{width:100%;padding:14px;border:1px solid #ddc8ad;border-radius:12px;font:inherit}input:not([type=email]):not([type=password]):not([type=date]){direction:rtl;text-align:right}[hidden]{display:none!important}
+.auth-tabs{display:flex;gap:8px;margin-bottom:20px}.auth-tabs button{margin:0;background:#fff1d9;border:1px solid #e6b77c}.auth-tabs button[aria-pressed=true]{background:#f5a449;outline:2px solid #8c561d}#parentNotice{font-size:14px;line-height:1.7}#parentNotice a{display:inline;margin:0}
 </style>
 </head>
 <body>
 <div class="card">
 <a href="index.html"><img class="logo" src="mohammad-habiba-logo.png" alt="محمد وحبيبة"></a>
-<h1>تسجيل الدخول</h1>
+<h1 id="authHeading">تسجيل الدخول</h1>
 <form id="loginForm" hidden>
+<div class="auth-tabs" role="group" aria-label="نوع الحساب"><button type="button" id="signinTab" aria-pressed="true">تسجيل دخول</button><button type="button" id="registerTab" aria-pressed="false">حساب جديد</button></div>
+<p id="parentNotice" hidden>إنشاء الحساب مخصص لولي الأمر. <a href="privacy.html">سياسة الخصوصية</a></p>
 <label for="email">البريد الإلكتروني للعائلة</label>
 <input id="email" type="email" autocomplete="username" required>
 <label for="password">كلمة المرور</label>
 <input id="password" type="password" autocomplete="current-password" required>
-<button type="submit" value="signin">دخول</button>
+<button id="authSubmit" type="submit" value="signin">تسجيل دخول</button>
 <button type="button" id="resetPassword">نسيت كلمة المرور؟</button>
-<button type="submit" value="register">مستخدم جديد؟ إنشاء حساب</button>
+
 </form>
 <div id="family" hidden>
 <h2>من يستخدم التطبيق؟</h2>
@@ -69,8 +72,12 @@ select{width:100%;padding:14px;border:1px solid #ddc8ad;border-radius:12px;font:
 </div>
 <button id="signOut" hidden>تسجيل الخروج</button>
 <p id="message" role="status"></p>
+<a href="privacy.html">سياسة الخصوصية</a>
 
 </div>
+<script>
+(()=>{const get=id=>document.getElementById(id);function mode(register){get('signinTab').setAttribute('aria-pressed',String(!register));get('registerTab').setAttribute('aria-pressed',String(register));get('authHeading').textContent=register?'حساب جديد':'تسجيل الدخول';get('authSubmit').value=register?'register':'signin';get('authSubmit').textContent=register?'إنشاء حساب':'تسجيل دخول';get('password').autocomplete=register?'new-password':'current-password';get('password').minLength=register?6:0;get('password').value='';get('resetPassword').hidden=register;get('parentNotice').hidden=!register;get('message').textContent='';}get('signinTab').onclick=()=>mode(false);get('registerTab').onclick=()=>mode(true);})();
+</script>
 <script type="module" src="auth/family.js"></script>
 <script type="module" src="auth/navigation.js?v=20261125b"></script>
 </body>
