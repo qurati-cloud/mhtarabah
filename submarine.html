@@ -22,6 +22,8 @@ button{border:0;border-radius:13px;padding:14px 22px;background:#ffca4e;font-siz
 .control{background:white;min-width:130px;min-height:75px}
 .note{text-align:center;color:#526d80;font-size:13px;line-height:1.8}
 @media(max-width:550px){.stats{grid-template-columns:repeat(2,1fr)}.stat b{font-size:17px}}
+#sub-characters button[aria-pressed="true"]{outline:3px solid #fff;box-shadow:0 0 0 5px #1884ac}
+#sub-image-editor{background:#fff;color:#17384d;padding:16px;border-radius:16px;width:min(90vw,500px)}
 </style>
 <link rel="stylesheet" href="arcade/arcade.css">
 </head>
@@ -29,6 +31,7 @@ button{border:0;border-radius:13px;padding:14px 22px;background:#ffca4e;font-siz
 <div style="text-align:center;padding:12px 16px"><h1>🚢 تحدي الغواصة</h1></div>
 <main>
 <p></p>
+<section id="sub-characters" style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:12px 0" aria-label="اختيار الشخصية"><button type="button" data-sub-avatar="habiba" aria-pressed="true">حبيبة</button><button type="button" data-sub-avatar="mohammad" aria-pressed="false">محمد</button></section>
 <section id="arcade-stage" class="arcade-stage">
  <canvas id="scene-3d" aria-hidden="true"></canvas>
  <canvas id="game" width="900" height="500"></canvas>
@@ -64,6 +67,7 @@ button{border:0;border-radius:13px;padding:14px 22px;background:#ffca4e;font-siz
 </main>
 <script type="module">
 import { installArcade } from "./arcade/scene.js";
+import {connect} from "./auth/firebase.js";
 import { progress as progressStorage } from "./auth/progress.js";
 "use strict";
 const view3d=installArcade("ocean");
@@ -75,6 +79,21 @@ const STORAGE="mh_submarine_endless_record_v1";
 const habibaPortrait=new Image();
 habibaPortrait.src="habiba-submarine.png";
 const seaFloor=H-24;
+let avatar="habiba";
+const sprites={habiba:new Image(),mohammad:new Image()};
+sprites.habiba.src="arcade/habiba-submarine-full.png";
+sprites.mohammad.src="arcade/mohammad-submarine-full.png";
+const spriteValues={};
+const portraits=new Image();portraits.src="runner/portraits.webp";
+for(const b of document.querySelectorAll('[data-sub-avatar]'))b.onclick=()=>{
+ if(mode==="flying"||mode==="paused")return;
+ avatar=b.dataset.subAvatar;
+ for(const other of document.querySelectorAll('[data-sub-avatar]'))other.setAttribute('aria-pressed',String(other===b));
+ reset();
+};
+const selectedSprite=()=>sprites[avatar].complete&&sprites[avatar].naturalWidth?sprites[avatar]:null;
+function avatarButtons(){for(const b of document.querySelectorAll('[data-sub-avatar]'))b.disabled=mode==="flying"||mode==="paused";}
+
 
 let record={distance:0,time:0,stars:0};
 try{
@@ -109,6 +128,7 @@ function speed(){
  return BASE_SPEED*multiplier();
 }
 function updateStats(){
+ avatarButtons();
  $("distance").textContent=Math.floor(distance);
  $("time").textContent=formatTime(elapsed);
  $("speed").textContent="×"+multiplier().toFixed(1);
@@ -152,7 +172,7 @@ function begin(){
   mode="flying";
   $("start").textContent="↻ لعبة جديدة";
   $("pause").textContent="⏸ إيقاف";
-  $("message").textContent="ساعد حبيبة على جمع النجوم وتجنّب الحواجز!";
+  $("message").textContent="ساعد "+(avatar==="habiba"?"حبيبة":"محمد")+" على جمع النجوم وتجنّب الحواجز!";
  }else if(mode==="flying"){
   reset();
   mode="flying";
@@ -201,8 +221,8 @@ function update(dt){
  plane.vy=Math.max(-380,Math.min(380,plane.vy));
  plane.y+=plane.vy*s;
 
- if(plane.y-24<=12){plane.y=36;end("اصطدمت بسطح الماء");return}
- if(plane.y+24>=seaFloor){plane.y=seaFloor-24;end("اصطدمت بقاع البحر");return}
+ if(plane.y-(selectedSprite()?Math.min(54,63*selectedSprite().naturalHeight/selectedSprite().naturalWidth):24)<=12){plane.y=36;end("اصطدمت بسطح الماء");return}
+ if(plane.y+(selectedSprite()?Math.min(54,63*selectedSprite().naturalHeight/selectedSprite().naturalWidth):24)>=seaFloor){plane.y=seaFloor-24;end("اصطدمت بقاع البحر");return}
 
  distance+=v*s/10;
  spawnDistance+=v*s;
@@ -219,8 +239,8 @@ function update(dt){
    const tide=Math.sin(elapsed*.95+o.phase)*16;
    o.top=o.baseTop+tide;o.bottom=o.baseBottom+tide;
   }
-  if(plane.x+38>o.x&&plane.x-38<o.x+o.width&&
-     (plane.y-22<o.top||plane.y+22>o.bottom)){
+  if(plane.x+(selectedSprite()?48:38)>o.x&&plane.x-(selectedSprite()?48:38)<o.x+o.width&&
+     (plane.y-(selectedSprite()?46:22)<o.top||plane.y+(selectedSprite()?46:22)>o.bottom)){
    end("اصطدمت بعائق بحري");return;
   }
  }
@@ -365,6 +385,8 @@ function drawSubmarine(){
  ctx.save();ctx.translate(plane.x,plane.y);
  ctx.rotate(Math.max(-.17,Math.min(.17,plane.vy/1500)));
  const tick=performance.now()/1000;
+ const sprite=selectedSprite();
+ if(sprite){const w=126,h=w*sprite.naturalHeight/sprite.naturalWidth;ctx.drawImage(sprite,-w/2,-h/2,w,h);ctx.restore();return;}
  if(!view3d){
  // propeller and bubbles
  for(let i=0;i<3;i++){
@@ -383,7 +405,8 @@ function drawSubmarine(){
  ctx.save();ctx.beginPath();ctx.ellipse(-1,-16,39,37,0,0,Math.PI*2);ctx.clip();
  ctx.fillStyle="#7fd7ed";ctx.fillRect(-42,-55,85,80);
  // Habiba looks forward along the submarine's direction.
- if(habibaPortrait.complete&&habibaPortrait.naturalWidth){
+ if(avatar==="mohammad"&&portraits.complete&&portraits.naturalWidth){ctx.drawImage(portraits,0,0,portraits.naturalWidth/2,portraits.naturalHeight,-37,-57,73,83);}
+ else if(habibaPortrait.complete&&habibaPortrait.naturalWidth){
   // Her face is on the right of the portrait; place it inside the porthole.
   ctx.drawImage(habibaPortrait,-37,-57,73,83);
   // Blink using an alternate portrait, not lines drawn over open eyes.
@@ -413,7 +436,7 @@ function drawSubmarine(){
 }
 function draw(){
  if(view3d){
-  view3d.render(obstacles,stars,distance*10,elapsed,plane);
+  view3d.render(obstacles,stars,distance*10,elapsed,plane,Boolean(selectedSprite()));
   ctx.clearRect(0,0,W,H);
  }else{
   drawBackground();
@@ -547,6 +570,44 @@ $("start").onclick=begin;
 $("pause").onclick=pause;
 reset();
 requestAnimationFrame(loop);
+
+async function setupSpriteEditor(){
+ try{
+ const {auth,authApi,data,db}=await connect();
+ for(const name of ['habiba','mohammad']){
+  const ref=data.doc(db,'siteContent','submarine-sprite-'+name);
+  data.onSnapshot(ref,snap=>{
+   const value=snap.data()?.value;
+   const valid=typeof value==='string'&&/^data:image\/(png|webp|jpeg);base64,[A-Za-z0-9+/=]+$/.test(value);
+   spriteValues[name]=valid?value:null;
+   sprites[name].src=valid?value:'arcade/'+name+'-submarine-full.png';
+  },console.warn);
+ }
+ authApi.onAuthStateChanged(auth,async user=>{
+  document.getElementById('sub-edit-button')?.remove();
+  if(!user?.emailVerified)return;
+  const role=user.email==='quraaty@gmail.com'?'admin':(await data.getDoc(data.doc(db,'roles',user.uid))).data()?.role;
+  if(!['admin','editor'].includes(role)||auth.currentUser?.uid!==user.uid)return;
+  const btn=document.createElement('button');btn.type='button';btn.id='sub-edit-button';btn.textContent='تحرير صور الغواصات';document.getElementById('sub-characters').after(btn);
+  btn.onclick=()=>{
+   const dialog=document.createElement('dialog');dialog.id='sub-image-editor';dialog.dir='rtl';
+   for(const name of ['habiba','mohammad']){
+    const title=document.createElement('h3');title.textContent=name==='habiba'?'غواصة حبيبة':'غواصة محمد';
+    const file=document.createElement('input');file.type='file';file.accept='image/png,image/webp,image/jpeg';
+    const preview=document.createElement('img');preview.style.cssText='display:block;max-width:160px;max-height:160px;margin:8px auto';if(spriteValues[name])preview.src=spriteValues[name];
+    const status=document.createElement('p');const save=document.createElement('button');save.textContent='حفظ الصورة';save.disabled=true;
+    let pending=null,version=0;
+    file.onchange=async()=>{const token=++version;save.disabled=true;pending=null;const f=file.files[0];if(!f)return;const url=URL.createObjectURL(f);try{if(f.size>20*1024*1024)throw Error('الصورة كبيرة جدًا');const im=new Image();im.src=url;await im.decode();const c=document.createElement('canvas');for(const size of [800,640,480,320]){const scale=Math.min(1,size/Math.max(im.naturalWidth,im.naturalHeight));c.width=Math.max(1,Math.round(im.naturalWidth*scale));c.height=Math.max(1,Math.round(im.naturalHeight*scale));c.getContext('2d').drawImage(im,0,0,c.width,c.height);const v=c.toDataURL('image/webp',.86);if(v.length<850000){if(token!==version)return;pending=v;break;}}if(!pending)throw Error('تعذّر ضغط الصورة');preview.src=pending;save.disabled=false;status.textContent='جاهزة للحفظ';}catch(e){status.textContent=e.message;}finally{URL.revokeObjectURL(url);}};
+    save.onclick=async()=>{if(!pending)return;save.disabled=file.disabled=true;try{await data.setDoc(data.doc(db,'siteContent','submarine-sprite-'+name),{value:pending});sprites[name].src=pending;status.textContent='حُفظت الصورة';pending=null;}catch(e){status.textContent='تعذّر الحفظ';}finally{file.disabled=false;save.disabled=!pending;}};
+    dialog.append(title,file,preview,save,status);
+   }
+   const close=document.createElement('button');close.textContent='إغلاق';close.onclick=()=>dialog.close();dialog.append(close);document.body.append(dialog);dialog.onclose=()=>dialog.remove();dialog.showModal();
+  };
+ });
+ }catch(e){console.warn(e);}
+}
+setupSpriteEditor();
+
 </script>
 <script type="module" src="auth/navigation.js?v=20261125b"></script>
 </body></html>
