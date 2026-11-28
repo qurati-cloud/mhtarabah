@@ -16,5 +16,13 @@
       "type": "image/png",
       "purpose": "any"
     }
-  ]
+  ],
+  "description": "تطبيق تعليمي عربي للأطفال يجمع الألعاب التعليمية والتحديات والقراءة والأنشطة اليومية مع محمد وحبيبة، مع حسابات عائلية لمتابعة التقدم.",
+  "categories": [
+    "education",
+    "games",
+    "books"
+  ],
+  "prefer_related_applications": false,
+  "orientation": "any"
 }
