@@ -3,11 +3,13 @@ export function mountFamilyAvatar({brand,nav,panel,button,auth,authApi,data,db})
  const css=document.createElement('style');css.textContent=`
  #mh-brand-header.mh-personal-brand{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;direction:rtl;gap:8px}
  #mh-brand-header.mh-personal-brand>a>img{width:min(320px,43vw)!important}
- #mh-avatar-badge{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;margin:auto;padding:0;background:none;border:0;min-width:0;width:min(180px,42vw);color:#573516;cursor:pointer}
+ #mh-avatar-badge{box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:0;margin:auto;padding:0;background:none;border:0;min-width:0;width:min(320px,43vw);color:#573516;cursor:pointer;position:relative}
  #mh-avatar-badge[hidden]{display:none!important}
- .mh-avatar-picture{width:100%;height:clamp(65px,16vw,150px);object-fit:contain;display:block}
- .mh-avatar-placeholder{font: bold clamp(40px,9vw,86px) Arial;color:#a8732e;line-height:1.1}
- .mh-avatar-name{display:block;max-width:100%;overflow-wrap:anywhere;padding:5px 13px;border:3px double #ce8e1f;border-radius:13px;background:linear-gradient(#fff7c9,#ffd879);box-shadow:0 2px 2px #ad73244a;font:bold clamp(12px,3vw,23px) Tahoma}
+ .mh-avatar-picture{width:100%;height:auto;aspect-ratio:1.35;object-fit:contain;display:block}
+ .mh-avatar-placeholder{font:bold clamp(65px,16vw,150px) Arial;color:#a8732e;line-height:1.1}
+ .mh-avatar-name{position:relative;display:block;box-sizing:border-box;width:88%;max-width:100%;margin-top:-8%;isolation:isolate;overflow-wrap:anywhere;padding:5% 12%;color:#5b2d10;font:bold clamp(14px,3.6vw,34px) Tahoma;line-height:1.1;text-shadow:0 1px #fff3c5;filter:drop-shadow(0 2px 1px #a66a2850)}
+ .mh-avatar-name::before{content:'';position:absolute;inset:0;z-index:-1;background:center/100% 100% no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 75' preserveAspectRatio='none'%3E%3Cpath d='M34 5 Q48 1 68 5 L232 5 Q252 1 266 5 Q270 14 282 15 Q296 18 296 37 Q296 56 282 59 Q270 60 266 70 Q252 74 232 70 L68 70 Q48 74 34 70 Q30 60 18 59 Q4 56 4 37 Q4 18 18 15 Q30 14 34 5Z' fill='%23ffc84e' stroke='%23ba7914' stroke-width='3'/%3E%3Cpath d='M36 9 Q49 5 68 9 L232 9 Q251 5 264 9 Q270 19 281 19 Q291 22 291 37 Q291 52 281 55 Q270 55 264 66 Q251 70 232 66 L68 66 Q49 70 36 66 Q30 55 19 55 Q9 52 9 37 Q9 22 19 19 Q30 19 36 9Z' fill='%23fff0c3' stroke='%23ffed9c' stroke-width='3'/%3E%3C/svg%3E")}
+ @media(max-width:600px){#mh-brand-header.mh-personal-brand>a>img,#mh-avatar-badge{width:min(230px,42vw)!important}.mh-avatar-name{font-size:clamp(12px,4vw,23px)}}
  #mh-avatar-dialog{color:#463426;background:#fff9ee;border:1px solid #dca258;border-radius:18px;padding:18px;width:min(90vw,480px);max-height:88vh;overflow:auto;box-sizing:border-box}
  #mh-avatar-dialog canvas{display:block;width:min(100%,260px);height:auto;margin:10px auto;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 50%/16px 16px;touch-action:none;border-radius:8px}
  #mh-avatar-dialog label{display:block;margin:8px 0}#mh-avatar-dialog input:not([type=checkbox]){max-width:100%;font:inherit}
@@ -17,6 +19,8 @@ export function mountFamilyAvatar({brand,nav,panel,button,auth,authApi,data,db})
  const pic=document.createElement('img');pic.className='mh-avatar-picture';pic.alt='';pic.hidden=true;
  const empty=document.createElement('span');empty.className='mh-avatar-placeholder';empty.textContent='♙';empty.setAttribute('aria-hidden','true');
  const name=document.createElement('span');name.className='mh-avatar-name';badge.append(pic,empty,name);brand.append(badge);
+ const logo=brand.querySelector(':scope > a > img');
+ if(logo && typeof ResizeObserver!=='undefined'){new ResizeObserver(()=>{const h=logo.getBoundingClientRect().height;if(h>0){badge.style.height=h+'px';pic.style.height=h*.86+'px';pic.style.aspectRatio='auto';name.style.minHeight=h*.20+'px';}}).observe(logo);}
  let stop,stopProfiles,activeUser,profileList=[],current,dialog,revision=0;
  const validImage=v=>typeof v==='string'&&/^data:image\/(png|webp|jpeg);base64,[A-Za-z0-9+/=]+$/.test(v);
  const selected=()=>localStorage.getItem('mh-selected-owner')===activeUser?.uid?localStorage.getItem('mh-selected-profile'):null;
