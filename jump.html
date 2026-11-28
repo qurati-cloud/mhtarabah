@@ -98,6 +98,31 @@ mohammadImages.jump.src="mohammad-jump.png";
 mohammadImages.duck.src="mohammad-duck.png";
 
 let selectedCharacter="mohammad";
+const habibaSheet=new Image();
+let habibaFrames=[];
+function prepareHabibaSheet(){
+ const fw=habibaSheet.naturalWidth/4,fh=habibaSheet.naturalHeight/2;
+ const c=document.createElement("canvas");c.width=habibaSheet.naturalWidth;c.height=habibaSheet.naturalHeight;
+ const g=c.getContext("2d",{willReadFrequently:true});g.drawImage(habibaSheet,0,0);
+ const pixels=g.getImageData(0,0,c.width,c.height).data;
+ habibaFrames=Array.from({length:8},(_,i)=>{
+  const x0=Math.round(i%4*fw),x1=Math.round((i%4+1)*fw),y0=Math.round(Math.floor(i/4)*fh),y1=Math.round((Math.floor(i/4)+1)*fh);
+  let l=x1,r=-1,t=y1,b=-1;
+  for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)if(pixels[(y*c.width+x)*4+3]>40){l=Math.min(l,x);r=Math.max(r,x);t=Math.min(t,y);b=Math.max(b,y);}
+  return r>=l?{x:l,y:t,w:r-l+1,h:b-t+1}:null;
+ });
+}
+habibaSheet.onload=prepareHabibaSheet;
+habibaSheet.src="habiba-running-sheet.png";
+function drawHabibaSheet(pose,x,y){
+ const frames=[0,1,3,4,5,2];
+ const i=pose==="duck"?7:pose==="jump"?6:frames[Math.floor(clock*(6+Math.min(10,speed/235)*1.2))%frames.length];
+ const b=habibaFrames[i];if(!b)return false;
+ const size=CHARACTER[pose],scale=Math.min(size.w/b.w,size.h/b.h);
+ ctx.drawImage(habibaSheet,b.x,b.y,b.w,b.h,x-b.w*scale/2,y-b.h*scale,b.w*scale,b.h*scale);
+ return true;
+}
+
 const habibaImages={run:new Image(),jump:new Image(),duck:new Image()};
 for(const [pose,img] of Object.entries(habibaImages))img.src="habiba-"+pose+".png";
 let mode="ready",last=0,clock=0;
@@ -552,6 +577,7 @@ function drawMohammad(){
  ctx.fill();
  ctx.restore();
 
+ if(selectedCharacter==="habiba"&&drawHabibaSheet(pose,centerX,footY))return;
  if(selectedCharacter==="mohammad"&&pose==="run"&&runningSheet.complete&&runningSheet.naturalWidth>0){
   const ratio=Math.max(1,Math.min(10,speed/235));
   const fps=6+ratio*1.2;
