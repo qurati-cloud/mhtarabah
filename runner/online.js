@@ -3,7 +3,7 @@ function gameText(id){return window.mhGameTextValues?.[location.pathname.split('
 function formatGameText(template,values){return template.replace(/\{([a-zA-Z]+)\}/g,(match,key)=>Object.hasOwn(values,key)?String(values[key]):match);}
 import {defaultRanks,rankFor,summarize,teamScore} from '../challenge/ranks.js';
 import {connect} from '../auth/firebase.js';
-import {settingsFor} from '../auth/parental.js';
+import {settingsFor,watchSettings} from '../auth/parental.js';
 import {firebaseConfig} from '../auth/firebase-config.js';
 import {makeRun,move,step} from './simulation.js';
 import {createWorld} from './world.js';
@@ -120,7 +120,7 @@ function start(seed){
 }
 function tick(){
  if(!playing||!room)return;
- if(!settingsFor(user.uid).allowed){leave().then(()=>{el('lobby').hidden=true;status('أوقف ولي الأمر التحديات عبر الإنترنت على هذا الجهاز.');});return;}
+ if(!settingsFor(user.uid).allowed){leave().then(()=>{el('lobby').hidden=true;status('أوقف ولي الأمر التحديات عبر الإنترنت.');});return;}
  const me=slot==='host'?0:1,other=1-me,p=run.players[me];
  const elapsed=Math.max(0,(now()-epoch)/1000);
  if(now()<epoch){el('onlineHud').textContent=gameText("online21")+Math.ceil((epoch-now())/1000);graphics.draw(run,0);frameId=requestAnimationFrame(tick);return;}
@@ -166,15 +166,17 @@ el('savePhrases').onclick=async()=>{const next={};for(const [order,row] of [...e
 try{
  const conn=await connect();user=conn?.auth.currentUser;
  if(!user?.emailVerified){status(gameText("online17"));}
- else if(!settingsFor(user.uid).allowed){status('أوقف ولي الأمر التحديات عبر الإنترنت على هذا الجهاز.');}
  else{
  api=await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js');db=api.getDatabase(conn.auth.app,firebaseConfig.databaseURL);
+ let supervisionReady=false;
+ try{await watchSettings(conn,v=>{if(!v.chat){el('messages').replaceChildren();el('phrases').replaceChildren();}else renderPhrases();if(!supervisionReady)return;if(!v.allowed){if(room)leave().finally(()=>{el('lobby').hidden=true;status('أوقف ولي الأمر التحديات عبر الإنترنت.');});else{el('lobby').hidden=true;status('أوقف ولي الأمر التحديات عبر الإنترنت.');}}else if(!room){el('lobby').hidden=false;status(gameText("online7"));}},()=>status('تعذّرت مزامنة الإشراف الأبوي.'));}catch(e){console.warn('Supervision rules not deployed or unavailable',e);}
  api.onValue(path('.info/serverTimeOffset'),s=>offset=s.val()||0);
  await loadStats(conn);
  api.onValue(path('challengeRanks'),s=>{const value=s.val();const list=value?Object.values(value):defaultRanks; ranks=list.length===7&&list[0].min===0&&list.every((r,i)=>r.label&&Number.isInteger(r.min)&&(!i||r.min>list[i-1].min))?list:defaultRanks;refreshCard();if(!el('rankEditor').hidden)renderRanks();},notice);
  api.onValue(path('racePhrases'),s=>{phrases=s.val()||{};renderPhrases();if(!el('editor').hidden)editRows();},notice);
  api.onValue(api.query(path('raceLobby'),api.orderByChild('created'),api.startAt(now()-120000),api.limitToLast(30)),s=>{el('offers').replaceChildren();s.forEach(c=>{if(c.key===room||c.val().created<now()-120000)return;const row=document.createElement('div');row.append(document.createTextNode(gameText("online19")+modeName(c.val().mode)),button(gameText("online18"),()=>{finished=false;join(c.key);}));el('offers').append(row);});},notice);
- el('lobby').hidden=false;status(gameText("online7"));
+ supervisionReady=true;
+ el('lobby').hidden=!settingsFor(user.uid).allowed;status(settingsFor(user.uid).allowed?gameText("online7"):'أوقف ولي الأمر التحديات عبر الإنترنت.');
  if(user.email==='quraaty@gmail.com'){el('editor').hidden=false;el('rankEditor').hidden=false;renderRanks();editRows();const snap=await api.get(path('racePhrases'));if(!snap.exists()){const initial={};defaults.forEach((text,order)=>initial['p'+order]={text,order,enabled:true});await api.set(path('racePhrases'),initial);}}
  }
 }catch(e){notice(e);}
