@@ -201,7 +201,24 @@ try {
    const reset=button('استعادة الصورة الأصلية',async()=>{if(!confirm('استعادة الصورة الأصلية؟'))return;++version;pending=null;save.disabled=file.disabled=reset.disabled=true;try{await data.deleteDoc(item.ref);item.apply(null);file.value='';if(original?.getAttribute('src')){preview.src=original.src;preview.hidden=false;}else{preview.removeAttribute('src');preview.hidden=true;}status.textContent='استُعيدت الصورة الأصلية.';}catch{status.textContent='تعذّرت الاستعادة.';}finally{file.disabled=reset.disabled=false;}});
    save.disabled=true;
    file.onchange=async()=>{const token=++version;pending=null;save.disabled=true;if(!file.files.length)return;status.textContent='جارٍ تجهيز الصورة…';try{const value=await prepareCardImage(file.files[0]);if(token!==version)return;pending=value;preview.src=value;preview.hidden=false;save.disabled=false;status.textContent='الصورة جاهزة للحفظ.';}catch(error){if(token===version)status.textContent=error.message;}};
-   row.append(label,preview,file,save,reset,status);dialog.append(row);
+const ai=button('إزالة الخلفية بـ AI',()=>{}),undo=button('تراجع عن إزالة الخلفية',()=>{});
+   ai.type=undo.type='button';ai.textContent='إزالة الخلفية بـ AI';undo.textContent='تراجع عن إزالة الخلفية';undo.hidden=true;
+   let beforeAI=null;
+   file.addEventListener('change',()=>{beforeAI=null;undo.hidden=true;});
+   ai.onclick=async()=>{
+    if(!pending){status.textContent='اختر صورة أولًا قبل إزالة الخلفية.';return;}
+    const source=pending;const token=++version;ai.disabled=save.disabled=file.disabled=undo.disabled=true;reset.disabled=true;
+    try{
+     const {removeImageBackground}=await import('./background-removal.js');
+     const result=await removeImageBackground(source,t=>{status.textContent=t;});
+     if(token!==version)return;
+     beforeAI=source;pending=result;preview.src=result;preview.hidden=false;undo.hidden=false;
+     status.textContent='أُزيلت الخلفية. عاين النتيجة ثم احفظ الصورة.';
+    }catch(e){status.textContent='تعذّرت إزالة الخلفية. تحقق من الاتصال وحاول مجددًا.';console.warn(e);}
+    finally{ai.disabled=file.disabled=undo.disabled=false;reset.disabled=false;save.disabled=!pending;}
+   };
+   undo.onclick=()=>{if(!beforeAI||!pending)return;pending=beforeAI;preview.src=pending;beforeAI=null;undo.hidden=true;save.disabled=false;status.textContent='استُعيدت الصورة قبل المعالجة.';};
+      row.append(label,preview,file,ai,undo,save,reset,status);dialog.append(row);
   }
   dialog.append(button('إغلاق',()=>dialog.close()));document.body.append(dialog);activeDialog=dialog;dialog.onclose=()=>{dialog.remove();if(activeDialog===dialog)activeDialog=undefined;};dialog.showModal();
  }
