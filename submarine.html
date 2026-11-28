@@ -599,7 +599,24 @@ async function setupSpriteEditor(){
     let pending=null,version=0;
     file.onchange=async()=>{const token=++version;save.disabled=true;pending=null;const f=file.files[0];if(!f)return;const url=URL.createObjectURL(f);try{if(f.size>20*1024*1024)throw Error('الصورة كبيرة جدًا');const im=new Image();im.src=url;await im.decode();const c=document.createElement('canvas');for(const size of [800,640,480,320]){const scale=Math.min(1,size/Math.max(im.naturalWidth,im.naturalHeight));c.width=Math.max(1,Math.round(im.naturalWidth*scale));c.height=Math.max(1,Math.round(im.naturalHeight*scale));c.getContext('2d').drawImage(im,0,0,c.width,c.height);const v=c.toDataURL('image/webp',.86);if(v.length<850000){if(token!==version)return;pending=v;break;}}if(!pending)throw Error('تعذّر ضغط الصورة');preview.src=pending;save.disabled=false;status.textContent='جاهزة للحفظ';}catch(e){status.textContent=e.message;}finally{URL.revokeObjectURL(url);}};
     save.onclick=async()=>{if(!pending)return;save.disabled=file.disabled=true;try{await data.setDoc(data.doc(db,'siteContent','submarine-sprite-'+name),{value:pending});sprites[name].src=pending;status.textContent='حُفظت الصورة';pending=null;}catch(e){status.textContent='تعذّر الحفظ';}finally{file.disabled=false;save.disabled=!pending;}};
-    dialog.append(title,file,preview,save,status);
+const ai=document.createElement('button'),undo=document.createElement('button');
+   ai.type=undo.type='button';ai.textContent='إزالة الخلفية بـ AI';undo.textContent='تراجع عن إزالة الخلفية';undo.hidden=true;
+   let beforeAI=null;
+   file.addEventListener('change',()=>{beforeAI=null;undo.hidden=true;});
+   ai.onclick=async()=>{
+    if(!pending){status.textContent='اختر صورة أولًا قبل إزالة الخلفية.';return;}
+    const source=pending;const token=++version;ai.disabled=save.disabled=file.disabled=undo.disabled=true;
+    try{
+     const {removeImageBackground}=await import('./auth/background-removal.js');
+     const result=await removeImageBackground(source,t=>{status.textContent=t;});
+     if(token!==version)return;
+     beforeAI=source;pending=result;preview.src=result;preview.hidden=false;undo.hidden=false;
+     status.textContent='أُزيلت الخلفية. عاين النتيجة ثم احفظ الصورة.';
+    }catch(e){status.textContent='تعذّرت إزالة الخلفية. تحقق من الاتصال وحاول مجددًا.';console.warn(e);}
+    finally{ai.disabled=file.disabled=undo.disabled=false;save.disabled=!pending;}
+   };
+   undo.onclick=()=>{if(!beforeAI||!pending)return;pending=beforeAI;preview.src=pending;beforeAI=null;undo.hidden=true;save.disabled=false;status.textContent='استُعيدت الصورة قبل المعالجة.';};
+       dialog.append(title,file,preview,save,status);
    }
    const close=document.createElement('button');close.textContent='إغلاق';close.onclick=()=>dialog.close();dialog.append(close);document.body.append(dialog);dialog.onclose=()=>dialog.remove();dialog.showModal();
   };
