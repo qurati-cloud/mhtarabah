@@ -30,6 +30,7 @@ button:disabled{opacity:.5}
 .stat small{font-size:12px}
 .control{min-width:100px}
 }
+#character-picker button[aria-pressed="true"]{outline:3px solid #398fb7;outline-offset:3px} #character-picker button:disabled{opacity:.55}
 </style>
 <link rel="stylesheet" href="arcade/arcade.css">
 </head>
@@ -38,8 +39,9 @@ button:disabled{opacity:.5}
 <main>
 <div class="top">
 
-<strong>ساعد محمدًا على جمع النجوم وتجاوز الحواجز!</strong>
+<strong data-text-key="jump:help">اجمع النجوم وتجاوز الحواجز!</strong>
 </div>
+<div class="controls" id="character-picker" aria-label="اختيار الشخصية"><button type="button" data-character="mohammad" aria-pressed="true">محمد</button><button type="button" data-character="habiba" aria-pressed="false">حبيبة</button></div>
 <section id="arcade-stage" class="arcade-stage">
  <canvas id="scene-3d" aria-hidden="true"></canvas>
  <canvas id="game" width="900" height="500"></canvas>
@@ -94,6 +96,9 @@ mohammadImages.run.src="mohammad-run.png";
 mohammadImages.jump.src="mohammad-jump.png";
 mohammadImages.duck.src="mohammad-duck.png";
 
+let selectedCharacter="mohammad";
+const habibaImages={run:new Image(),jump:new Image(),duck:new Image()};
+for(const [pose,img] of Object.entries(habibaImages))img.src="habiba-"+pose+".png";
 let mode="ready",last=0,clock=0;
 let distance=0,score=0,speed=235,elapsed=0;
 let obstacles=[],stars=[];
@@ -473,6 +478,22 @@ function prepareMohammadImages(){
 }
 prepareMohammadImages();
 
+const portraits=new Image();portraits.src="runner/portraits.webp";
+function drawHabibaFallback(pose,centerX,footY){
+ const duck=pose==="duck",phase=clock*12;
+ ctx.save();ctx.translate(centerX,footY);
+ const h=duck?55:102;
+ ctx.lineCap="round";ctx.strokeStyle="#813d95";ctx.lineWidth=13;
+ for(const side of [-1,1]){
+ const swing=pose==="run"?Math.sin(phase)*side*14:pose==="jump"?side*13:side*8;
+ ctx.beginPath();ctx.moveTo(side*9,-24);ctx.lineTo(swing,-5);ctx.stroke();
+ ctx.strokeStyle="#f4e9f4";ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(swing,-4);ctx.lineTo(swing+9,-4);ctx.stroke();ctx.strokeStyle="#813d95";ctx.lineWidth=13;
+ }
+ ctx.fillStyle="#9d4caa";ctx.beginPath();ctx.roundRect(-20,-h+32,40,h-48,12);ctx.fill();
+ ctx.strokeStyle="#a651b2";ctx.lineWidth=11;ctx.beginPath();ctx.moveTo(8,-h+40);ctx.lineTo(25,-h+53);ctx.lineTo(34,-h+43);ctx.stroke();
+ if(portraits.complete&&portraits.naturalWidth){const sw=portraits.naturalWidth/2;ctx.drawImage(portraits,sw,0,sw,portraits.naturalHeight,-27,-h,54,52);}
+ ctx.restore();
+}
 function drawMohammad(){
  const pose=characterPose();
  const size=CHARACTER[pose];
@@ -487,7 +508,7 @@ function drawMohammad(){
  ctx.fill();
  ctx.restore();
 
- if(pose==="run"&&runningSheet.complete&&runningSheet.naturalWidth>0){
+ if(selectedCharacter==="mohammad"&&pose==="run"&&runningSheet.complete&&runningSheet.naturalWidth>0){
   const ratio=Math.max(1,Math.min(10,speed/235));
   const fps=6+ratio*1.2;
   const frame=Math.floor(clock*fps)%(RUN_FRAMES-1);
@@ -507,10 +528,12 @@ function drawMohammad(){
   }
  }
 
- const img=mohammadImages[pose];
+ const img=selectedCharacter==="habiba"?habibaImages[pose]:mohammadImages[pose];
+ if(selectedCharacter==="habiba"&&!(img.complete&&img.naturalWidth>0)){drawHabibaFallback(pose,centerX,footY);return;}
 
  if(img.complete&&img.naturalWidth>0){
-  const bounds=spriteBounds[pose]||getSpriteBounds(img,pose);
+  const key=selectedCharacter==="habiba"?"habiba-"+pose:pose;
+  const bounds=spriteBounds[key]||getSpriteBounds(img,key);
   const scale=Math.min(
    size.w/bounds.w,
    size.h/bounds.h
@@ -593,6 +616,7 @@ function draw(){
  (($("record")) || {textContent:""}).textContent=Math.floor(saved.distance);
  (($("starRecord")) || {textContent:""}).textContent=saved.starRecord+" ⭐";
  (($("totalStars")) || {textContent:""}).textContent=saved.totalStars+" ⭐";
+ document.querySelectorAll("[data-character]").forEach(b=>b.disabled=mode==="running"||mode==="paused");
  $("pause").disabled=mode!=="running"&&mode!=="paused";
  (($("pause")) || {textContent:""}).textContent=mode==="paused"?"▶ متابعة":"⏸ إيقاف";
 }
@@ -613,6 +637,11 @@ function loop(now){
  }
 }
 
+document.querySelectorAll('[data-character]').forEach(b=>b.onclick=()=>{
+ if(mode==="running"||mode==="paused")return;
+ selectedCharacter=b.dataset.character;
+ document.querySelectorAll('[data-character]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+});
 $("start").onclick=start;
 $("pause").onclick=pause;
 
