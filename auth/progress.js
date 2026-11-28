@@ -24,6 +24,10 @@ function changes(previous, next, data) {
 }
 
 function status(text) {
+  if (text === 'تمت المزامنة') {
+    document.getElementById('mh-sync-status')?.remove();
+    return;
+  }
   let message = document.getElementById('mh-sync-status');
   if (!message) {
     message = document.createElement('p');
