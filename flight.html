@@ -63,6 +63,9 @@ button{border:0;border-radius:13px;padding:14px 22px;background:#ffad47;font-siz
 </p>
 </main>
 <script type="module">
+window.mhGameTextDefaults={"m1":"{reason} — مجموعك {score} خلال {time} — {record}","m2":"رقم قياسي شخصي جديد!","m3":"حاول مجددًا!","m4":"كأنّك اصطدمت بالسقف","m5":"كأنّك اصطدمت بالأرض","m6":"كأنّك اصطدمت بالحائط","m7":"▶ ابدأ","m8":"⏸ إيقاف","m9":"استعد! السرعة ستصل إلى ×10 خلال دقيقتين.","m10":"↻ لعبة جديدة","m11":"حلّق بحذر وحاول تحطيم رقمك!","m12":"بدأ تحدٍّ جديد!","m13":"↻ حاول مجددًا","m14":"استعد للطيران!","m15":"اللعبة متوقفة مؤقتًا","m16":"انتهت المحاولة!","m17":"▶ متابعة","m18":"اللعبة متوقفة مؤقتًا.","m19":"تابع الطيران!"};
+function gameText(id){const key=location.pathname.split('/').pop()+':message:'+id;return window.mhGameTextValues?.[key] ?? window.mhGameTextDefaults[id];}
+
 import { installArcade } from "./arcade/scene.js";
 import { progress as progressStorage } from "./auth/progress.js";
 "use strict";
@@ -138,23 +141,23 @@ function reset(){
  seed=(Date.now()>>>0)||123456;
  crashReason="";
  mode="ready";
- $("start").textContent="▶ ابدأ";
- $("pause").textContent="⏸ إيقاف";
- $("message").textContent="استعد! السرعة ستصل إلى ×10 خلال دقيقتين.";
+ $("start").textContent=gameText("m7");
+ $("pause").textContent=gameText("m8");
+ $("message").textContent=gameText("m9");
  updateStats();
 }
 function begin(){
  if(mode==="crashed")reset();
  if(mode==="ready"||mode==="paused"){
   mode="flying";
-  $("start").textContent="↻ لعبة جديدة";
-  $("pause").textContent="⏸ إيقاف";
-  $("message").textContent="حلّق بحذر وحاول تحطيم رقمك!";
+  $("start").textContent=gameText("m10");
+  $("pause").textContent=gameText("m8");
+  $("message").textContent=gameText("m11");
  }else if(mode==="flying"){
   reset();
   mode="flying";
-  $("start").textContent="↻ لعبة جديدة";
-  $("message").textContent="بدأ تحدٍّ جديد!";
+  $("start").textContent=gameText("m10");
+  $("message").textContent=gameText("m12");
  }
 }
 function end(reason){
@@ -162,10 +165,8 @@ function end(reason){
  mode="crashed";
  crashReason=reason;
  const newRecord=saveRecord();
- $("message").textContent=reason+" — قطعت "+
- Math.floor(distance)+" خلال "+formatTime(elapsed)+
- (newRecord?" — رقم قياسي شخصي جديد!":" — حاول مجددًا!");
- $("start").textContent="↻ حاول مجددًا";
+ $("message").textContent=gameText("m1").replace(/\{(reason|score|time|record)\}/g,(_,key)=>({reason,score:Math.floor(distance),time:formatTime(elapsed),record:newRecord?gameText("m2"):gameText("m3")})[key]);
+ $("start").textContent=gameText("m13");
  updateStats();
 }
 function spawn(){
@@ -197,8 +198,8 @@ function update(dt){
  plane.vy=Math.max(-380,Math.min(380,plane.vy));
  plane.y+=plane.vy*s;
 
- if(plane.y-16<=0){plane.y=16;end("اصطدمت بالسقف");return}
- if(plane.y+16>=H){plane.y=H-16;end("اصطدمت بالأرض");return}
+ if(plane.y-16<=0){plane.y=16;end(gameText("m4"));return}
+ if(plane.y+16>=H){plane.y=H-16;end(gameText("m5"));return}
 
  distance+=v*s/10;
  spawnDistance+=v*s;
@@ -217,7 +218,7 @@ function update(dt){
   }
   if(plane.x+19>o.x&&plane.x-19<o.x+o.width&&
      (plane.y-14<o.top||plane.y+14>o.bottom)){
-   end("اصطدمت بالحائط");return;
+   end(gameText("m6"));return;
   }
  }
  for(const star of stars){
@@ -321,9 +322,9 @@ function draw(){
   ctx.font="bold 29px Tahoma";
   ctx.textAlign="center";
   const title={
-   ready:"استعد للطيران!",
-   paused:"اللعبة متوقفة مؤقتًا",
-   crashed:"انتهت المحاولة!"
+   ready:gameText("m14"),
+   paused:gameText("m15"),
+   crashed:gameText("m16")
   }[mode];
   ctx.fillText(title||"",W/2,90);
  }
@@ -434,12 +435,12 @@ window.addEventListener("blur",()=>{
 function pause(){
  if(mode==="flying"){
   mode="paused";
-  $("pause").textContent="▶ متابعة";
-  $("message").textContent="اللعبة متوقفة مؤقتًا.";
+  $("pause").textContent=gameText("m17");
+  $("message").textContent=gameText("m18");
  }else if(mode==="paused"){
   mode="flying";
-  $("pause").textContent="⏸ إيقاف";
-  $("message").textContent="تابع الطيران!";
+  $("pause").textContent=gameText("m8");
+  $("message").textContent=gameText("m19");
  }
 }
 $("start").onclick=begin;
@@ -447,5 +448,5 @@ $("pause").onclick=pause;
 reset();
 requestAnimationFrame(loop);
 </script>
-<script type="module" src="auth/navigation.js?v=20261125b"></script>
+<script type="module" src="auth/navigation.js?v=20261128texts"></script>
 </body></html>
