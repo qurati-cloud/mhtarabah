@@ -78,6 +78,7 @@ function gameText(id){const key=location.pathname.split('/').pop()+':message:'+i
 
 import { installArcade } from "./arcade/scene.js";
 import { progress as progressStorage } from "./auth/progress.js";
+import {connect,connectRunnerGuest} from "./auth/firebase.js";
 "use strict";
 const view3d=installArcade("land");
 
@@ -118,6 +119,33 @@ try{
  }
 }catch(e){}
 
+let leaderboard;
+let globalRecord={distance:0,stars:0};
+function showGlobal(){
+ $("global").textContent=String(globalRecord.distance);
+ $("globalStars").textContent=globalRecord.stars+" ⭐";
+}
+async function publishGlobal(){
+ if(!leaderboard || saved.distance<1)return;
+ const {db,data}=leaderboard.auth.currentUser?.emailVerified?leaderboard:await connectRunnerGuest();
+ const ref=data.doc(db,"runnerWorldRecords","hurdles");
+ await data.runTransaction(db,async tx=>{
+  const prev=(await tx.get(ref)).data()||{distance:0,stars:0};
+  const next={distance:Math.max(prev.distance,Math.floor(saved.distance)),stars:Math.max(prev.stars,Math.floor(saved.starRecord))};
+  if(next.distance!==prev.distance||next.stars!==prev.stars)tx.set(ref,next);
+ });
+}
+connect().then(connection=>{
+ if(!connection)return;
+ leaderboard=connection;
+ const {data,db,auth,authApi}=connection;
+ data.onSnapshot(data.doc(db,"runnerWorldRecords","hurdles"),snap=>{
+  if(snap.metadata.fromCache&&!snap.exists())return;
+  globalRecord=snap.data()||{distance:0,stars:0};showGlobal();
+ },error=>console.warn("Hurdles world record unavailable",error));
+ authApi.onAuthStateChanged(auth,user=>{if(user?.emailVerified)publishGlobal().catch(console.warn);});
+ publishGlobal().catch(console.warn);
+}).catch(console.warn);
 function save(){
  try{progressStorage.setItem(KEY,JSON.stringify(saved))}catch(e){}
 }
@@ -219,6 +247,7 @@ function crash(){
  saved.starRecord=Math.max(saved.starRecord,score);
  saved.totalStars+=score;
  save();
+ publishGlobal().catch(console.warn);
  (($("message")) || {textContent:""}).textContent=
   gameText("m1").replace("{score}",score);
 }
