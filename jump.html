@@ -60,7 +60,7 @@ button:disabled{opacity:.5}
   <button id="start">▶ ابدأ</button>
  </div>
 </section>
-<div id="message" aria-live="polite"></div>
+<div id="message" aria-live="polite"></div><details><summary>حقيبة اللاعب <span id="bagKeys"></span></summary><div id="bag"></div><button id="buyArmor" type="button">شراء درع (جوهرتان)</button></details>
 <details class="arcade-records"><summary>الأرقام القياسية</summary><section class="stats">
 <div class="stat"><small>أعلى مرحلة أنهيتها</small><b id="record">0</b></div>
 <div class="stat"><small>رقمك القياسي في النجوم</small><b id="starRecord">0 ⭐</b></div>
@@ -134,7 +134,7 @@ let obstacleTimer=2,starTimer=1;
 let runner={x:130,y:0,vy:0};
 let downHeld=false,duckUntil=0;
 let touchId=null,touchY=0,touchDirection="";
-let saved={distance:0,starRecord:0,totalStars:0,level:1};
+let saved={distance:0,starRecord:0,totalStars:0,level:1,keys:0,extra:0,armor:0,magnet:0,ammo:0,flight:0,jewels:0,claimedLevel:0,claimedMask:0};
 let powerups=[],shots=[],particles=[],fireUntil=0,shield=false,lastFire=-10,keysFound=0,treasures=[],worldTheme=0,night=false; let level=1,worldX=100,feet=GROUND,vy=0,grounded=true,facing=1,camera=0,terrain=[],hazards=[],goal=0,held=new Set(),checkpoint=100;
 
 try{
@@ -254,7 +254,7 @@ const themes=[
 ];
 function seededLevel(n){let a=(n*2654435761)>>>0;return ()=>{a=(Math.imul(a,1664525)+1013904223)>>>0;return a/4294967296;};}
 function buildLevel(n){
- const random=seededLevel(n),pick=(a,b)=>a+random()*(b-a),d=(n-1)/499;
+ const random=seededLevel(n),pick=(a,b)=>a+random()*(b-a),d=Math.pow((n-1)/499,.38);
  const theme=themes[Math.floor((n-1)/2)%themes.length],night=n%4>=2;
  const ground=[],foes=[],gems=[],bonuses=[],chests=[];
  let x=0;const sections=4+Math.floor(d*8)+Math.floor(random()*2);
@@ -263,8 +263,8 @@ function buildLevel(n){
   const count=i===0?0:1+Math.floor(d*2)+(random()<d*.45?1:0);
   for(let j=0;j<count;j++){
    const at=x+140+(w-270)*(j+.5)/count;
-   const kind=n>8&&random()<.18+d*.16?"spikes":n>25&&random()<d*.35?"bar":"walker";
-   foes.push({x:at,origin:at,y:kind==="bar"?GROUND-112:GROUND-(kind==="spikes"?30:42),w:kind==="bar"?65:kind==="spikes"?48:42,h:kind==="bar"?34:kind==="spikes"?30:42,phase:random()*6.28,kind,pace:1.2+d*2.5+random()*.5,range:16+d*30});
+   const kind=n>3&&random()<.18+d*.16?"spikes":n>7&&random()<d*.35?"bar":"walker";
+   foes.push({x:at,origin:at,y:kind==="bar"?GROUND-112:GROUND-(kind==="spikes"?30:42),w:kind==="bar"?65:kind==="spikes"?48:42,h:kind==="bar"?34:kind==="spikes"?30:42,phase:random()*6.28,kind,pace:1.2+d*3.8+random()*.5,range:16+d*30});
   }
   const pc=2+Math.floor(random()*3);
   for(let j=0;j<pc;j++){
@@ -274,37 +274,43 @@ function buildLevel(n){
   }
   gems.push({x:x+w-65,y:GROUND-38,r:15});
   if(i===0||i%Math.max(2,4-Math.floor(d*2))===0)bonuses.push({x:x+85,y:GROUND-40,kind:i%2?"shield":"fire"});
-  if(i===sections-2){bonuses.push({x:x+60,y:GROUND-40,kind:"key"});chests.push({x:x+w-80,y:GROUND-48});}
-  const gap=i===sections-1?0:Math.round(pick(65,105)+d*62);
+  if(i>0){bonuses.push({x:x+60,y:GROUND-40,kind:"key",id:i});} if(i===sections-2){chests.push({x:x+w-80,y:GROUND-48,cost:n%10===0?5:n%3===0?3:1});}
+  const gap=i===sections-1?0:Math.round(pick(65,95)+d*35);
   x+=w+gap;
  }
  return {theme,night,ground,foes,gems,bonuses,chests,goal:x-100};
 }
 
 function reset(){
- level=Math.max(1,Math.min(MAX_LEVEL,Math.floor(saved.level||1)));worldX=100;feet=GROUND;vy=0;grounded=true;camera=0;clock=elapsed=score=distance=0;held.clear();shots=[];particles=[];fireUntil=0;shield=false;lastFire=-10;keysFound=0;
+ level=Math.max(1,Math.min(MAX_LEVEL,Math.floor(saved.level||1)));worldX=100;feet=GROUND;vy=0;grounded=true;camera=0;clock=elapsed=score=distance=0;held.clear();shots=[];particles=[];fireUntil=0;shield=false;lastFire=-10;keysFound=saved.keys;magnetUntil=flightUntil=armorUntil=0;
+ if(saved.claimedLevel!==level){saved.claimedLevel=level;saved.claimedMask=0;save();}
  const map=buildLevel(level);worldTheme=map.theme;night=map.night;terrain=map.ground;hazards=map.foes;stars=map.gems;powerups=map.bonuses;treasures=map.chests;goal=map.goal;runner.x=worldX-55;runner.y=0;
 }
 function start(){reset();mode="running";$("message").textContent=worldTheme[1]+(night?" — ليلًا":" — نهارًا")+" · اجمع النجوم حتى تصل إلى نهاية المرحلة!";}
 function jump(){if(mode==="running"&&grounded){vy=worldTheme[0]==="water"?-560:-740;grounded=false;}}
 function pause(){if(mode==="running"){mode="paused";held.clear();}else if(mode==="paused")mode="running";}
 function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
-function crash(){mode="crashed";held.clear();$("message").textContent="حاول مجددًا!";}
+function crash(){if(saved.extra>0){saved.extra--;save();worldX=100;feet=GROUND;vy=0;grounded=true;held.clear();armorUntil=clock+3;$("message").textContent="استعملت فرصة إضافية";return;}mode="crashed";held.clear();$("message").textContent="حاول مجددًا!";}
+let magnetUntil=0,flightUntil=0,armorUntil=0;
+const items=[["extra","فرصة إضافية"],["armor","درع"],["magnet","مغناطيس"],["ammo","ذخيرة"],["flight","طيران"],["jewels","جواهر"]];
+function renderBag(){ $("bagKeys").textContent="🔑 "+saved.keys; for(const [k,label] of items){let b=$("bag-"+k);if(!b){b=document.createElement("button");b.id="bag-"+k;b.type="button";$("bag").append(b);b.onclick=()=>useItem(k);}b.textContent=label+" : "+saved[k];b.disabled=!saved[k]||k==="extra"||k==="jewels";}}
+function useItem(k){if(mode!=="running"||!saved[k])return;saved[k]--;if(k==="armor")armorUntil=clock+15;if(k==="magnet")magnetUntil=clock+20;if(k==="ammo")fireUntil=Math.max(clock,fireUntil)+30;if(k==="flight")flightUntil=clock+10;save();renderBag();}
+$("buyArmor").onclick=()=>{if(saved.jewels>=2){saved.jewels-=2;saved.armor++;save();renderBag();}};
 function burst(x,y,color,n=16){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,v=60+Math.random()*180;particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.6,color});}}
 function fire(){if(mode!=="running"||clock>=fireUntil||clock-lastFire<.28)return;lastFire=clock;shots.push({x:worldX+facing*42,y:feet-57,vx:facing*640,life:1.6});}
 function finish(){mode="won";held.clear();saved.distance=Math.max(saved.distance,level);saved.starRecord=Math.max(saved.starRecord,score);saved.totalStars+=score;saved.level=Math.min(MAX_LEVEL,level+1);save();$("message").textContent=level===MAX_LEVEL?"أتممت جميع المراحل!":"أحسنت! انتقلت إلى المرحلة التالية.";if(level<MAX_LEVEL)setTimeout(()=>{if(mode==="won")start();},1800); }
 function update(dt){
  if(mode!=="running")return;clock+=dt;elapsed+=dt;
  const dir=Number(held.has("right"))-Number(held.has("left"));if(dir)facing=dir;
- const oldFeet=feet;if(held.has("down")&&!grounded)vy=Math.max(vy,650);worldX=Math.max(25,Math.min(goal+40,worldX+dir*(worldTheme[0]==="water"?245:310)*dt));vy+=(worldTheme[0]==="water"?850:1550)*dt;feet+=vy*dt;grounded=false;
+ const oldFeet=feet;if(held.has("down")&&!grounded)vy=Math.max(vy,650);worldX=Math.max(25,Math.min(goal+40,worldX+dir*(worldTheme[0]==="water"?245:310)*dt));vy+=(worldTheme[0]==="water"?850:1550)*dt;if(clock<flightUntil){feet=Math.min(feet,GROUND-170);vy=0;}feet+=vy*dt;grounded=false;
  for(const p of terrain){if(vy>=0&&oldFeet<=p.y+1&&feet>=p.y&&worldX+23>p.x&&worldX-23<p.x+p.w){feet=p.y;vy=0;grounded=true;}}
  const bh=isDuck()?48:95;const box={x:worldX-23,y:feet-bh,w:46,h:bh};
  if(feet>H+100){crash();return;}
- for(const h of hazards){if(h.dead)continue;if(h.kind==="walker")h.x=h.origin+Math.sin(clock*h.pace+h.phase)*h.range;if(!overlap(box,h))continue;if(h.kind==="walker"&&vy>=0&&oldFeet<=h.y+9){h.dead=true;feet=h.y;vy=-470;score+=2;burst(h.x+21,h.y+20,"#ffd970");}else if(shield){shield=false;h.dead=h.kind==="walker";worldX=Math.max(25,worldX-facing*65);vy=-330;burst(worldX,feet-55,"#72dfff");}else{crash();return;}}
- for(const p of powerups){if(p.used||!overlap(box,{x:p.x-18,y:p.y-18,w:36,h:36}))continue;p.used=true;if(p.kind==="fire"){fireUntil=clock+30;$("message").textContent="قدرة النار لمدة ٣٠ ثانية!";}else if(p.kind==="shield"){shield=true;$("message").textContent="درع يحميك من اصطدام واحد!";}else{keysFound++;$("message").textContent="وجدت مفتاح الكنز!";}burst(p.x,p.y,"#ffd970",22);}
- for(const t of treasures){if(!t.open&&keysFound&&overlap(box,{x:t.x,y:t.y,w:56,h:48})){t.open=true;keysFound--;score+=10;burst(t.x+28,t.y,"#ffd970",28);}}
+ for(const h of hazards){if(h.dead)continue;if(h.kind==="walker")h.x=h.origin+Math.sin(clock*h.pace+h.phase)*h.range;if(!overlap(box,h))continue;if(h.kind==="walker"&&vy>=0&&oldFeet<=h.y+9){h.dead=true;feet=h.y;vy=-470;score+=2;burst(h.x+21,h.y+20,"#ffd970");}else if(clock<armorUntil){continue;}else if(shield){shield=false;h.dead=h.kind==="walker";worldX=Math.max(25,worldX-facing*65);vy=-330;burst(worldX,feet-55,"#72dfff");}else{crash();return;}}
+ for(const p of powerups){if(p.used||!overlap(box,{x:p.x-18,y:p.y-18,w:36,h:36}))continue;p.used=true;if(p.kind==="fire"){fireUntil=clock+30;$("message").textContent="قدرة النار لمدة ٣٠ ثانية!";}else if(p.kind==="shield"){shield=true;$("message").textContent="درع يحميك من اصطدام واحد!";}else{if(!(saved.claimedMask&(1<<p.id))){saved.claimedMask|=1<<p.id;saved.keys++;keysFound=saved.keys;save();renderBag();}$("message").textContent="وجدت مفتاح الكنز!";}burst(p.x,p.y,"#ffd970",22);}
+ for(const t of treasures){if(!t.open&&overlap(box,{x:t.x,y:t.y,w:56,h:48})){if(saved.claimedMask&(1<<20)){t.open=true;continue;}if(saved.keys<t.cost){$("message").textContent="يحتاج الصندوق إلى "+t.cost+" مفاتيح";continue;}t.open=true;saved.keys-=t.cost;keysFound=saved.keys;saved.claimedMask|=1<<20;const rewards=["extra","armor","magnet","ammo","flight","jewels"];const k=rewards[(level-1)%rewards.length];saved[k]+=t.cost===5?2:1;score+=10*t.cost;save();renderBag();$("message").textContent="مكافأة: "+items.find(a=>a[0]===k)[1];burst(t.x+28,t.y,"#ffd970",28);}}
  for(const b of shots){b.x+=b.vx*dt;b.life-=dt;for(const h of hazards){if(!h.dead&&h.kind==="walker"&&overlap({x:b.x-12,y:b.y-12,w:24,h:24},h)){h.dead=true;b.life=0;score+=2;burst(h.x+21,h.y+20,"#ff923d");break;}}}shots=shots.filter(b=>b.life>0);for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=260*dt;p.life-=dt;}particles=particles.filter(p=>p.life>0);
- for(const star of stars)if(!star.collected&&overlap(box,{x:star.x-15,y:star.y-15,w:30,h:30})){star.collected=true;score++;}
+ for(const star of stars)if(!star.collected&&(overlap(box,{x:star.x-15,y:star.y-15,w:30,h:30})||(clock<magnetUntil&&Math.hypot(star.x-worldX,star.y-feet+50)<180))){star.collected=true;score++;}
  camera=Math.max(0,Math.min(goal-W+130,worldX-260));distance=Math.max(distance,worldX/15);runner.x=worldX-camera-55;runner.y=GROUND-feet;
  if(worldX>=goal&&grounded)finish();
 }
@@ -603,7 +609,7 @@ function draw(){
  }
 
  (($("distance")) || {textContent:""}).textContent=Math.floor(distance);
- (($("stars")) || {textContent:""}).textContent=score+" ⭐";
+ (($("stars")) || {textContent:""}).textContent=score+" ⭐";renderBag();
  (($("speed")) || {textContent:""}).textContent=level+" / "+MAX_LEVEL;
  const seconds=Math.floor(elapsed);
  (($("time")) || {textContent:""}).textContent=
