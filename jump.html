@@ -506,20 +506,36 @@ function prepareMohammadImages(){
 }
 prepareMohammadImages();
 
-const portraits=new Image();portraits.src="runner/portraits.webp";
+// Animated side-view character, used until custom sprite artwork is supplied.
 function drawHabibaFallback(pose,centerX,footY){
- const duck=pose==="duck",phase=clock*12;
- ctx.save();ctx.translate(centerX,footY);
- const h=duck?55:102;
- ctx.lineCap="round";ctx.strokeStyle="#813d95";ctx.lineWidth=13;
+ const crouch=pose==="duck", jumpPose=pose==="jump";
+ const phase=clock*(6+Math.min(10,speed/235)*1.2)*Math.PI/4;
+ const swing=pose==="run"?Math.sin(phase):0;
+ ctx.save();ctx.translate(centerX,footY);ctx.scale(1,crouch?.57:1);
+ ctx.translate(crouch?12:0,0);ctx.rotate(crouch?.32:.10);
+ const ellipse=(x,y,rx,ry,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill();};
+ const limb=(points,width,color)=>{ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();};
  for(const side of [-1,1]){
- const swing=pose==="run"?Math.sin(phase)*side*14:pose==="jump"?side*13:side*8;
- ctx.beginPath();ctx.moveTo(side*9,-24);ctx.lineTo(swing,-5);ctx.stroke();
- ctx.strokeStyle="#f4e9f4";ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(swing,-4);ctx.lineTo(swing+9,-4);ctx.stroke();ctx.strokeStyle="#813d95";ctx.lineWidth=13;
+  const stride=jumpPose?side*19:swing*side*24;
+  const lift=jumpPose?12:Math.max(0,-swing*side)*13;
+  limb([[0,-43],[stride*.6,-25-lift*.4],[stride,-8-lift]],13,side<0?"#613278":"#843b9c");
+  ellipse(stride+5,-5-lift,10,5,"#f5eef9");
+  ellipse(stride+5,-2-lift,10,2,"#493950");
  }
- ctx.fillStyle="#9d4caa";ctx.beginPath();ctx.roundRect(-20,-h+32,40,h-48,12);ctx.fill();
- ctx.strokeStyle="#a651b2";ctx.lineWidth=11;ctx.beginPath();ctx.moveTo(8,-h+40);ctx.lineTo(25,-h+53);ctx.lineTo(34,-h+43);ctx.stroke();
- if(portraits.complete&&portraits.naturalWidth){const sw=portraits.naturalWidth/2;ctx.drawImage(portraits,sw,0,sw,portraits.naturalHeight,-27,-h,54,52);}
+ limb([[-3,-83],[-17-swing*15,-66],[-8-swing*20,-55]],10,"#8540a1");
+ ellipse(-8-swing*20,-55,5,5,"#eeb48a");
+ const fabric=ctx.createLinearGradient(-22,-70,22,-45);fabric.addColorStop(0,"#69268b");fabric.addColorStop(.6,"#ad50ce");fabric.addColorStop(1,"#80329d");
+ ctx.fillStyle=fabric;ctx.beginPath();ctx.moveTo(-15,-88);ctx.quadraticCurveTo(9,-91,16,-72);ctx.lineTo(22,-43);ctx.quadraticCurveTo(0,-34,-25,-43);ctx.lineTo(-17,-75);ctx.closePath();ctx.fill();
+ limb([[-22,-44],[0,-39],[20,-44]],3,"#eec568");
+ // The scarf is drawn under the chin and over the entire neck.
+ ellipse(-5,-104,24,26,"#8c30b8");ellipse(-8,-107,20,23,"#b94ae0");
+ ctx.fillStyle="#efb68f";ctx.beginPath();ctx.moveTo(5,-123);ctx.bezierCurveTo(19,-123,22,-111,22,-105);ctx.lineTo(27,-100);ctx.lineTo(21,-96);ctx.quadraticCurveTo(19,-88,8,-87);ctx.quadraticCurveTo(-1,-89,-1,-101);ctx.quadraticCurveTo(-2,-115,5,-123);ctx.fill();
+ ellipse(15,-108,2.8,3.7,"#35231f");ellipse(16,-109,1,1,"white");
+ limb([[11,-115],[18,-116]],1.6,"#623b36");limb([[17,-94],[21,-95]],1.4,"#a15350");
+ ctx.fillStyle="#9d39c6";ctx.beginPath();ctx.moveTo(-23,-110);ctx.quadraticCurveTo(-14,-88,9,-87);ctx.lineTo(20,-88);ctx.quadraticCurveTo(19,-79,5,-76);ctx.quadraticCurveTo(-13,-78,-28,-89);ctx.closePath();ctx.fill();
+ limb([[-19,-104],[-20,-92],[-6,-84]],2,"#d276ec");
+ limb([[9,-77],[22+swing*12,-63],[35+swing*15,-73]],11,"#a647c4");
+ ellipse(35+swing*15,-73,5.5,5.5,"#efb68f");
  ctx.restore();
 }
 function drawMohammad(){
