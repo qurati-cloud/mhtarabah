@@ -32,7 +32,8 @@ nav.id='mh-shared-nav';
 style.textContent+=' #mh-shared-nav{box-sizing:border-box!important;width:100%!important;max-width:none!important;margin:0!important;flex-shrink:0!important} #mh-shared-nav button{font:bold 15px Tahoma,Arial!important;min-height:42px!important;width:auto!important;margin:0!important;padding:10px 16px!important;border:1px solid #e6ad65!important;border-radius:12px!important;background:#ffdfa9!important;color:#463426!important}';
 if(location.pathname===login.pathname){document.body.style.flexDirection='column';document.body.style.justifyContent='flex-start';}
 document.querySelectorAll('img').forEach(img=>{if(/mohammad-habiba-logo/i.test(img.getAttribute('src')||'')){img.style.cursor='pointer';img.tabIndex=0;img.setAttribute('role','link');img.onclick=()=>location.href=home.href;img.onkeydown=e=>{if(e.key==='Enter')location.href=home.href}}});
-try {
+// Start account setup without delaying cached public text rendering.
+void (async()=>{try {
   const {auth, authApi, data, db} = await connect();
   let stopProfiles;
   authApi.onAuthStateChanged(auth, async user => {
@@ -98,12 +99,11 @@ try {
       }
     } catch (error) { console.warn('Role lookup failed', error); }
   });
-} catch { account.title = 'تعذر الاتصال بخدمة الحسابات'; }
+} catch { account.title = 'تعذر الاتصال بخدمة الحسابات'; }})();
 
 /* Keep positional keys for existing headings. Home cards have explicit keys. */
+const textCacheKey='mh-public-site-texts-v1';
 try {
- const {auth, authApi, data, db} = await connect();
- const ref = data.doc(db, 'siteContent', 'texts');
  const page = location.pathname.split('/').pop() || 'index.html';
  const headings = [...document.querySelectorAll('h1,h2,.hero p,.menu-card strong,.menu-card span')]
   .filter(node => !node.closest('#mh-shared-nav,#mh-brand-header,#daily-editor,#question-editor,#users,#content')
@@ -119,16 +119,30 @@ try {
  fields.push(...cardFields, ...explicit);
  for (const field of fields) field.defaultText = field.node.textContent;
 
+ function applyTexts(values) {
+  for (const {node, key, defaultText} of fields) {
+   const next = typeof values[key] === 'string' ? values[key] : defaultText;
+   if(node.textContent !== next) node.textContent = next;
+  }
+ }
+ let cachedTexts;
+ try { cachedTexts=JSON.parse(localStorage.getItem(textCacheKey)||'null'); } catch {}
+ if(cachedTexts && typeof cachedTexts==='object' && !Array.isArray(cachedTexts)) applyTexts(cachedTexts);
+ const {auth, authApi, data, db} = await connect();
+ const ref = data.doc(db, 'siteContent', 'texts');
  function showTexts(snapshot) {
   const values = snapshot.data()?.value || {};
-  for (const {node, key, defaultText} of fields) {
-   node.textContent = typeof values[key] === 'string' ? values[key] : defaultText;
+  applyTexts(values);
+  if(!snapshot.metadata?.fromCache) {
+   try { localStorage.setItem(textCacheKey,JSON.stringify(values)); } catch {}
   }
  }
 
  if (fields.length) {
-  if (isHome || page === 'runner.html' || page === 'neighborhood.html' || page === 'colors.html') data.onSnapshot(ref, showTexts, error => console.warn('Text loading failed', error));
-  else data.getDoc(ref).then(showTexts).catch(error => console.warn('Text loading failed', error));
+  data.onSnapshot(ref, {includeMetadataChanges:true}, snapshot=>{
+   if(snapshot.metadata.fromCache && !snapshot.exists() && cachedTexts)return;
+   showTexts(snapshot);
+  }, error => console.warn('Text loading failed', error));
  }
 
  let controls = [];
