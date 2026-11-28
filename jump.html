@@ -50,17 +50,17 @@ button:disabled{opacity:.5}
   <span id="speed" aria-label="المرحلة">1 / 500</span>
   <span id="time" aria-label="الوقت">00:00</span>
  </div>
- <div class="arcade-actions">
+ <div class="arcade-actions"><button type="button" id="openBag" aria-label="حقيبة اللاعب" title="حقيبة اللاعب">🎒</button>
   <button type="button" id="full-game" aria-label="ملء الشاشة" title="ملء الشاشة">⛶</button>
   <button type="button" id="leave-full" aria-label="الخروج من ملء الشاشة">✕</button>
   <button id="pause" type="button" aria-label="إيقاف مؤقت">⏸</button>
  </div>
- <div class="arcade-controls">
+ <div id="bagPanel" hidden style="position:absolute;z-index:100;top:50%;left:50%;transform:translate(-50%,-50%);width:min(90%,340px);max-height:85%;overflow:auto;background:#fff;color:#24354a;border-radius:16px;padding:14px;box-shadow:0 8px 30px #0008;direction:rtl"><div style="display:flex;justify-content:space-between;align-items:center"><strong>🎒 حقيبة اللاعب <span id="bagKeys"></span></strong><button type="button" id="closeBag" aria-label="إغلاق الحقيبة">✕</button></div><div id="bag" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0"></div><button id="buyArmor" type="button">شراء درع (جوهرتان)</button></div><div class="arcade-controls">
   <div class="steering adventure-pad" dir="ltr"><div class="pad-left"><button id="left" class="control" aria-label="رجوع">←</button><button id="up" class="control" aria-label="قفز">↑</button><button id="fire" class="control" aria-label="إطلاق النار" disabled>🔥</button></div><div class="pad-right"><button id="down" class="control" aria-label="نزول وانحناء">↓</button><button id="right" class="control" aria-label="تقدم">→</button></div></div>
   <button id="start">▶ ابدأ</button>
  </div>
 </section>
-<div id="message" aria-live="polite"></div><details><summary>حقيبة اللاعب <span id="bagKeys"></span></summary><div id="bag"></div><button id="buyArmor" type="button">شراء درع (جوهرتان)</button></details>
+<div id="message" aria-live="polite"></div>
 <details class="arcade-records"><summary>الأرقام القياسية</summary><section class="stats">
 <div class="stat"><small>أعلى مرحلة أنهيتها</small><b id="record">0</b></div>
 <div class="stat"><small>رقمك القياسي في النجوم</small><b id="starRecord">0 ⭐</b></div>
@@ -294,7 +294,11 @@ function crash(){if(saved.extra>0){saved.extra--;save();worldX=100;feet=GROUND;v
 let magnetUntil=0,flightUntil=0,armorUntil=0,rewardUntil=0;
 const items=[["extra","فرصة إضافية"],["armor","درع"],["magnet","مغناطيس"],["ammo","ذخيرة"],["flight","طيران"],["jewels","جواهر"]];
 function renderBag(){ $("stageKeys").textContent="🔑 "+(saved.claimedMask&1048575).toString(2).replace(/0/g,"").length; if(clock>=rewardUntil)$("rewardHud").style.display="none"; $("bagKeys").textContent="🔑 "+saved.keys; for(const [k,label] of items){let b=$("bag-"+k);if(!b){b=document.createElement("button");b.id="bag-"+k;b.type="button";$("bag").append(b);b.onclick=()=>useItem(k);}b.textContent=label+" : "+saved[k];b.disabled=!saved[k]||k==="extra"||k==="jewels"||k==="ammo";}}
-function useItem(k){if(mode!=="running"||!saved[k]||k==="ammo")return;saved[k]--;if(k==="armor")armorUntil=clock+15;if(k==="magnet")magnetUntil=clock+20;if(k==="flight")flightUntil=clock+10;save();renderBag();}
+function useItem(k){if((mode!=="running"&&!(mode==="paused"&&bagResume))||!saved[k]||k==="ammo")return;saved[k]--;if(k==="armor")armorUntil=clock+15;if(k==="magnet")magnetUntil=clock+20;if(k==="flight")flightUntil=clock+10;save();renderBag();}
+let bagResume=false;
+function closeBag(){ $("bagPanel").hidden=true;if(bagResume&&mode==="paused")mode="running";bagResume=false; }
+$("openBag").onclick=()=>{if(!$("bagPanel").hidden){closeBag();return;}bagResume=mode==="running";if(bagResume){mode="paused";held.clear();}renderBag();$("bagPanel").hidden=false;};
+$("closeBag").onclick=closeBag;
 $("buyArmor").onclick=()=>{if(saved.jewels>=2){saved.jewels-=2;saved.armor++;save();renderBag();}};
 function burst(x,y,color,n=16){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,v=60+Math.random()*180;particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.6,color});}}
 function fire(){if(mode!=="running"||saved.ammo<1||clock-lastFire<.28)return;lastFire=clock;saved.ammo--;save();shots.push({x:worldX+facing*28,y:Math.min(GROUND-21,feet-21),vx:facing*640,life:1.6});}
