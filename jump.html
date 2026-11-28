@@ -271,7 +271,7 @@ function buildLevel(n){
   const pc=2+Math.floor(random()*3);
   for(let j=0;j<pc;j++){
    const px=x+90+j*(w-210)/pc,py=GROUND-Math.round(pick(70,150)+d*25),pw=Math.round(pick(95,145)-d*25);
-   if(foes.some(h=>h.kind==="bar"&&px<h.x+h.w+35&&px+pw>h.x-35))continue;const motion=n>=120&&(i+j)%7===0?"fall":n>=40&&(i+j)%4===0?"vertical":n>=20&&(i+j)%3===0?"horizontal":"";const p={x:px,y:py,w:pw,h:24,baseX:px,baseY:py,motion,travel:20+d*22,pace:.8+d*1.8,phase:0};ground.push(p);
+   if(foes.some(h=>h.kind==="bar"&&px<h.x+h.w+35&&px+pw>h.x-35))continue;const motion=n>=120&&(i+j)%7===0?"fall":n>=40&&(i+j)%4===0?"vertical":n>=20&&(i+j)%3===0?"horizontal":"";const travel=20+d*22;const safeMotion=foes.some(h=>h.kind==="bar"&&px-travel<h.x+h.w+35&&px+pw+travel>h.x-35)?"":motion;const p={x:px,y:py,w:pw,h:24,baseX:px,baseY:py,motion:safeMotion,travel,pace:.8+d*1.8,phase:0};ground.push(p);
    const gem={x:px+pw/2,y:py-32,r:15,platform:p};gems.push(gem);
   }
   gems.push({x:x+w-65,y:GROUND-38,r:15});
