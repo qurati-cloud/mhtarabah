@@ -260,12 +260,12 @@ function buildLevel(n){
  const ground=[],foes=[],gems=[],bonuses=[],chests=[];
  let x=0;const sections=4+Math.floor(d*8)+Math.floor(random()*2);
  for(let i=0;i<sections;i++){
-  const w=Math.round(pick(610,790)+d*80);ground.push({x,y:GROUND,w,h:90});
-  const count=i===0?0:3+Math.floor(d*2)+(random()<d*.45?1:0);
+  const w=Math.round(pick(900,1120)+d*180);ground.push({x,y:GROUND,w,h:90});
+  const count=i===0?0:4+Math.floor(d*2)+(random()<d*.45?1:0);
   for(let j=0;j<count;j++){
    const at=x+140+(w-270)*(j+.5)/count;
    const kind=(n>=2&&j===0&&(i%2===0||i===1))||(n>=12&&random()<.30+d*.18)?"bar":n>3&&random()<.18+d*.16?"spikes":"walker";
-   foes.push({x:at,origin:at,y:kind==="bar"?GROUND-112:GROUND-(kind==="spikes"?30:42),w:kind==="bar"?Math.round(85+d*45):kind==="spikes"?48:42,h:kind==="bar"?52:kind==="spikes"?30:42,phase:random()*6.28,kind,hp:kind==="walker"&&n>=3&&(i+j)%3===0?2:1,pace:1.2+d*3.8+random()*.5,range:16+d*30});
+   foes.push({x:at,origin:at,y:kind==="bar"?GROUND-112:GROUND-(kind==="spikes"?30:42),w:kind==="bar"?Math.round(85+d*45):kind==="spikes"?48:42,h:kind==="bar"?52:kind==="spikes"?30:42,phase:random()*6.28,kind,hp:kind==="walker"&&n>=3&&(i+j)%2===0?2:1,pace:1.2+d*3.8+random()*.5,range:16+d*30});
   }
   const pc=2+Math.floor(random()*3);
   for(let j=0;j<pc;j++){
