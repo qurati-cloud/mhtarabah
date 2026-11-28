@@ -49,6 +49,20 @@ service cloud.firestore {
       allow read: if ownsFamily(uid) || admin();
       allow create, update: if ownsFamily(uid) && request.resource.data.keys().hasOnly(['email']) && request.resource.data.email == request.auth.token.email;
     }
+    // Family portraits are private, including from site editors and administrators.
+    match /families/{uid}/avatars/{avatarId} {
+      allow read, delete: if ownsFamily(uid);
+      allow create, update: if ownsFamily(uid)
+        && (avatarId == 'account' || (exists(profilePath(uid, avatarId))
+          && !exists(deletionPath(uid, avatarId))))
+        && request.resource.data.keys().hasOnly(['name','image'])
+        && request.resource.data.keys().hasAll(['name','image'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 40
+        && request.resource.data.image is string
+        && request.resource.data.image.size() <= 600000
+        && (request.resource.data.image == '' || request.resource.data.image.matches('data:image/(png|webp|jpeg);base64,[A-Za-z0-9+/=]+'));
+    }
     match /libraryBooks/{bookId} {
       allow read: if admin() || resource.data.published == true;
       allow write: if admin();
