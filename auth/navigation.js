@@ -145,6 +145,64 @@ try {
   }, error => console.warn('Text loading failed', error));
  }
 
+
+ // Card images are stored individually, keeping the text document small.
+ const imageCards = (isHome || page==='games.html') ? [...document.querySelectorAll('#home .game')].map(card=>{
+  const title=card.querySelector('strong[data-text-key]');
+  const art=card.querySelector('.runner-art,.icon');
+  if(!title||!art)return null;
+  const key='card-image-'+title.dataset.textKey.replace(/[^a-zA-Z0-9_-]/g,'-');
+  const img=document.createElement('img');
+  img.alt='';img.hidden=true;
+  img.style.cssText='display:none;width:min(100%,130px);height:110px;object-fit:contain;flex-shrink:0';
+  if(card.classList.contains('runner-feature'))img.style.cssText='display:none;width:min(100%,440px);height:auto;max-height:290px;object-fit:contain';
+  card.insertBefore(img,art);
+  const imageRef=data.doc(db,'siteContent',key);
+  const item={title,art,img,ref:imageRef,current:null,ready:false};
+  item.apply=value=>{
+   item.current=typeof value==='string'&&/^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(value)?value:null;
+   if(item.current){img.src=item.current;img.hidden=false;img.style.display='block';art.hidden=true;art.style.setProperty('display','none','important');}
+   else{img.hidden=true;img.style.display='none';img.removeAttribute('src');art.hidden=false;art.style.removeProperty('display');}
+  };
+  data.onSnapshot(imageRef,snapshot=>{if(snapshot.metadata.fromCache&&!snapshot.exists())return;item.ready=true;item.apply(snapshot.data()?.value);},error=>console.warn('Card image loading failed',error));
+  return item;
+ }).filter(Boolean):[];
+ async function prepareCardImage(file){
+  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>20*1024*1024)throw Error('اختر صورة PNG أو JPG أو WebP لا تتجاوز ٢٠ ميغابايت.');
+  const url=URL.createObjectURL(file);
+  try{
+   const source=new Image();source.src=url;await source.decode();
+   const canvas=document.createElement('canvas');const ctx=canvas.getContext('2d');
+   for(const size of [900,720,560,420,320]){
+    const scale=Math.min(1,size/Math.max(source.naturalWidth,source.naturalHeight));
+    canvas.width=Math.max(1,Math.round(source.naturalWidth*scale));canvas.height=Math.max(1,Math.round(source.naturalHeight*scale));
+    ctx.drawImage(source,0,0,canvas.width,canvas.height);
+    const value=canvas.toDataURL('image/webp',.87);
+    if(value.length<850000)return value;
+   }
+   throw Error('تعذّر ضغط الصورة إلى الحجم المناسب.');
+  }finally{URL.revokeObjectURL(url);}
+ }
+ function openCardEditor(){
+  const dialog=document.createElement('dialog');dialog.dir='rtl';dialog.style.cssText='width:min(90vw,680px);max-height:85vh;overflow:auto;border:1px solid #e6ad65;border-radius:16px;padding:18px';
+  const heading=document.createElement('h2');heading.textContent='تحرير البطاقات';dialog.append(heading);
+  const note=document.createElement('p');note.textContent='اختر صورة لكل بطاقة واحفظها بصورة مستقلة. تدعم الصور الشفافة.';dialog.append(note);
+  for(const item of imageCards){
+   const row=document.createElement('section');row.style.cssText='border-bottom:1px solid #ddd;padding:14px 0;display:grid;gap:8px';
+   const label=document.createElement('strong');label.textContent=item.title.textContent;
+   const preview=document.createElement('img');preview.alt='معاينة الصورة';preview.style.cssText='max-width:100%;max-height:150px;object-fit:contain;margin:auto';
+   const original=item.art.querySelector('img');const initial=item.current||original?.getAttribute('src');if(initial)preview.src=initial;else preview.hidden=true;
+   const file=document.createElement('input');file.type='file';file.accept='image/png,image/jpeg,image/webp';
+   const status=document.createElement('p');status.setAttribute('role','status');status.style.margin='0';
+   let pending=null,version=0;
+   const save=button('حفظ الصورة',async()=>{if(!pending)return;save.disabled=file.disabled=reset.disabled=true;try{await data.setDoc(item.ref,{value:pending});item.apply(pending);pending=null;status.textContent='حُفظت الصورة.';}catch(error){status.textContent='تعذّر الحفظ. تحقق من الصلاحيات والاتصال.';}finally{file.disabled=reset.disabled=false;save.disabled=!pending;}});
+   const reset=button('استعادة الصورة الأصلية',async()=>{if(!confirm('استعادة الصورة الأصلية؟'))return;++version;pending=null;save.disabled=file.disabled=reset.disabled=true;try{await data.deleteDoc(item.ref);item.apply(null);file.value='';if(original?.getAttribute('src')){preview.src=original.src;preview.hidden=false;}else{preview.removeAttribute('src');preview.hidden=true;}status.textContent='استُعيدت الصورة الأصلية.';}catch{status.textContent='تعذّرت الاستعادة.';}finally{file.disabled=reset.disabled=false;}});
+   save.disabled=true;
+   file.onchange=async()=>{const token=++version;pending=null;save.disabled=true;if(!file.files.length)return;status.textContent='جارٍ تجهيز الصورة…';try{const value=await prepareCardImage(file.files[0]);if(token!==version)return;pending=value;preview.src=value;preview.hidden=false;save.disabled=false;status.textContent='الصورة جاهزة للحفظ.';}catch(error){if(token===version)status.textContent=error.message;}};
+   row.append(label,preview,file,save,reset,status);dialog.append(row);
+  }
+  dialog.append(button('إغلاق',()=>dialog.close()));document.body.append(dialog);activeDialog=dialog;dialog.onclose=()=>{dialog.remove();if(activeDialog===dialog)activeDialog=undefined;};dialog.showModal();
+ }
  let controls = [];
  let activeDialog;
  let authChange = 0;
@@ -233,11 +291,12 @@ try {
     nav.insertBefore(signEditor,panel);
     controls.push(signEditor);
    }
-   const editor = button(['runner.html','neighborhood.html','colors.html'].includes(page) ? 'تحرير نصوص اللعبة' : 'تحرير عناوين الصفحة',
+   const editor = button('تحرير النصوص',
      () => openTextEditor(editable));
    editor.id = 'mh-text-editor';
    nav.insertBefore(editor, panel);
    controls.push(editor);
+   if(imageCards.length){const cardsEditor=button('تحرير البطاقات',openCardEditor);nav.insertBefore(cardsEditor,panel);controls.push(cardsEditor);}
 
    for (const field of cardFields) {
     const card = field.node.closest('.home-card');
