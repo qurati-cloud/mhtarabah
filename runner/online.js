@@ -1,3 +1,6 @@
+window.mhGameTextDefaults={"online1":"تحدي الفريق","online2":"تحدي المنافس","online3":"اجمعا النجوم وحققا رقمًا مشتركًا.","online4":"يفوز من يصمد مدة أطول.","online5":"اختر ملف الطفل أولًا لحفظ إحصاءات التجربة.","online6":"إحصاءات تجريبية على هذا الجهاز، غير معتمدة للتصنيف العام.","online7":"اختر منافسًا للعب.","online8":"بانتظار منافس...","online9":"غادر المنافس.","online10":"انقطع الاتصال أو توقفت اللعبة. ابدأ جولة جديدة.","online11":"انتهت الجولة بعد انقطاع المنافس، دون احتساب نتيجة.","online12":"فزت بالسباق!","online13":"فاز المنافس!","online14":"تعادل اللاعبان!","online15":"خرجت من السباق، بانتظار نتيجة المنافس.","online16":"السباق جارٍ","online17":"ينبغي تسجيل الدخول بحساب موثق للعب عبر الإنترنت.","online18":"أنا!","online19":"لاعب ينتظر · ","online20":"المنافس: ","online21":"استعد: ","online22":"حُفظت المستويات.","online23":"حُفظت العبارات.","online24":"أدخل عبارة صحيحة.","online25":"الحد الأقصى ٤٠ عبارة.","online26":"صلاحيات قاعدة البيانات غير مفعّلة. ينبغي نشر قواعد Realtime Database الجديدة في Firebase.","online27":"تعذّر الاتصال أو تنفيذ الطلب: ","online28":"خطأ في الاتصال","online29":"عدد المباريات: {matches} | المباريات الرابحة: {wins} | نسبة الفوز: {rate}٪","online30":"أعلى نتيجة للفريق: {distance} · ★ {stars}","online31":"أنت: {distance} م · ★ {stars} | المنافس: {peerDistance} م · ★ {peerStars}","online32":"نتيجة الفريق: {distance} م · ★ {stars}"};
+function gameText(id){return window.mhGameTextValues?.[location.pathname.split('/').pop()+':message:'+id] ?? window.mhGameTextDefaults[id];}
+function formatGameText(template,values){return template.replace(/\{([a-zA-Z]+)\}/g,(match,key)=>Object.hasOwn(values,key)?String(values[key]):match);}
 import {defaultRanks,rankFor,summarize,teamScore} from '../challenge/ranks.js';
 import {connect} from '../auth/firebase.js';
 import {firebaseConfig} from '../auth/firebase-config.js';
@@ -10,17 +13,17 @@ const defaults=['السلام عليكم','هل أنت مستعد؟','هيا ن�
 let api,db,user,room,slot,run,graphics,offset=0,phrases={},remote=null,peer=null,unsub=[],epoch=0,lastSent=0,finished=false,playing=false,frameId=0,clock=0,seen=0,waiting=false,reportedOut=false;
 let selectedMode='versus', matchMode='versus', ranks=defaultRanks, statsKey=null, history=[], teamBest={distance:0,stars:0}, ownFinal=null, peerLeft=false;
 const path=p=>api.ref(db,p);
-const modeName=m=>m==='team'?'تحدي الفريق':'تحدي المنافس';
-function selectMode(m){if(room)return;selectedMode=m;el('versusMode').setAttribute('aria-pressed',String(m==='versus'));el('teamMode').setAttribute('aria-pressed',String(m==='team'));el('modeInfo').textContent=m==='team'?'اجمعا النجوم وحققا رقمًا مشتركًا.':'يفوز من يصمد مدة أطول.';}
+const modeName=m=>m==='team'?gameText("online1"):gameText("online2");
+function selectMode(m){if(room)return;selectedMode=m;el('versusMode').setAttribute('aria-pressed',String(m==='versus'));el('teamMode').setAttribute('aria-pressed',String(m==='team'));el('modeInfo').textContent=m==='team'?gameText("online3"):gameText("online4");}
 el('versusMode').onclick=()=>selectMode('versus');el('teamMode').onclick=()=>selectMode('team');
 function refreshCard(){
  const card=el('playerCard');card.hidden=false;card.replaceChildren();
- if(!statsKey){card.textContent='اختر ملف الطفل أولًا لحفظ إحصاءات التجربة.';return;}
+ if(!statsKey){card.textContent=gameText("online5");return;}
  const s=summarize(history),rank=rankFor(s.wins,ranks);
  const title=document.createElement('strong');title.textContent=rank.icon+' '+rank.label;title.style.color=rank.color;
- const details=document.createElement('p');details.textContent='عدد المباريات: '+s.matches+' | المباريات الرابحة: '+s.wins+' | نسبة الفوز: '+s.rate+'٪';
- const best=document.createElement('p');best.textContent='أعلى نتيجة للفريق: '+Math.floor(teamBest.distance)+' · ★ '+teamBest.stars;
- const note=document.createElement('small');note.textContent='إحصاءات تجريبية على هذا الجهاز، غير معتمدة للتصنيف العام.';
+ const details=document.createElement('p');details.textContent=formatGameText(gameText("online29"),{matches:s.matches,wins:s.wins,rate:s.rate});
+ const best=document.createElement('p');best.textContent=formatGameText(gameText("online30"),{distance:Math.floor(teamBest.distance),stars:teamBest.stars});
+ const note=document.createElement('small');note.textContent=gameText("online6");
  card.append(title,details,best,note);
 }
 function loadStats(conn){
@@ -47,10 +50,10 @@ function renderRanks(){
 el('saveRanks').onclick=async()=>{
  const next=[...el('rankRows').children].map((row,i)=>{const [label,min,color]=row.querySelectorAll('input');return {label:label.value.trim(),min:Number(min.value),color:color.value,icon:defaultRanks[i].icon};});
  if(next.length!==7||next[0].min!==0||next.some((r,i)=>!r.label||!Number.isInteger(r.min)||r.min<0||r.min>1000000||(i>0&&r.min<=next[i-1].min))){status('ينبغي أن يبدأ المستوى الأول بصفر، وأن تزيد الحدود تدريجيًا.');return;}
- try{await api.set(path('challengeRanks'),Object.fromEntries(next.map((r,i)=>[String(i),r])));status('حُفظت المستويات.');}catch(e){notice(e);}
+ try{await api.set(path('challengeRanks'),Object.fromEntries(next.map((r,i)=>[String(i),r])));status(gameText("online22"));}catch(e){notice(e);}
 };
 const now=()=>Date.now()+offset;
-const notice=e=>{console.warn(e);status(/permission.denied|permission_denied/i.test(String(e?.code)+' '+String(e?.message)) ? 'صلاحيات قاعدة البيانات غير مفعّلة. ينبغي نشر قواعد Realtime Database الجديدة في Firebase.' : 'تعذّر الاتصال أو تنفيذ الطلب: '+(e?.code||'خطأ في الاتصال'));};
+const notice=e=>{console.warn(e);status(/permission.denied|permission_denied/i.test(String(e?.code)+' '+String(e?.message)) ? gameText("online26") : gameText("online27")+(e?.code||gameText("online28")));};
 const seeded=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
 const listen=(p,fn)=>unsub.push(api.onValue(path(p),s=>fn(s.val()),notice));
 const button=(label,fn)=>{const b=document.createElement('button');b.textContent=label;b.onclick=fn;return b;};
@@ -73,7 +76,7 @@ async function leave(){
  const old=room,side=slot;room=null;slot=null;waiting=false;playing=false;finished=false;cancelAnimationFrame(frameId);unsub.splice(0).forEach(fn=>fn());
  el('track').hidden=el('chat').hidden=true;el('lobby').hidden=false;el('invite').disabled=false;el('cancel').hidden=true;el('messages').replaceChildren();remote=peer=null;peerLeft=false;ownFinal=null;
  if(old){if(side==='host')await api.remove(path('raceLobby/'+old)).catch(()=>{});await api.set(path('races/'+old+'/left/'+side),true).catch(()=>{});}
- status('اختر منافسًا للعب.');
+ status(gameText("online7"));
 }
 async function invite(){
  if(room)return;el('invite').disabled=true;
@@ -83,7 +86,7 @@ async function invite(){
  await api.onDisconnect(path('races/'+id+'/left/host')).set(true);
  await api.set(path('raceLobby/'+id),{created:api.serverTimestamp(),mode:matchMode});
  await api.onDisconnect(path('raceLobby/'+id)).remove();
- el('cancel').hidden=false;status('بانتظار منافس...');
+ el('cancel').hidden=false;status(gameText("online8"));
  watchRoom();
  }catch(e){await leave();notice(e);}
 }
@@ -99,10 +102,10 @@ function watchRoom(){
  const id=room,other=slot==='host'?'guest':'host';
  listen('races/'+id,v=>{
  if(!v||room!==id)return;
- if(v.left?.[other]){peerLeft=true;if(!playing){leave();status('غادر المنافس.');return;}peer={...(peer||{}),out:true};}
+ if(v.left?.[other]){peerLeft=true;if(!playing){leave();status(gameText("online9"));return;}peer={...(peer||{}),out:true};}
  if(v.guest&&!playing&&!finished&&!v.left?.[other]){waiting=false;matchMode=v.mode==='team'?'team':'versus';epoch=v.guest.at+5000;start(v.seed);}
  peer=v.left?.[other]?{...(v.state?.[other]||{}),out:true}:v.state?.[other]||null;
- const msg=v.chat?.[other];if(msg&&msg.at>seen){seen=msg.at;const phrase=phrases[msg.phrase];if(phrase?.enabled){const p=document.createElement('p');p.textContent='المنافس: '+phrase.text;el('messages').append(p);while(el('messages').children.length>8)el('messages').firstChild.remove();}}
+ const msg=v.chat?.[other];if(msg&&msg.at>seen){seen=msg.at;const phrase=phrases[msg.phrase];if(phrase?.enabled){const p=document.createElement('p');p.textContent=gameText("online20")+phrase.text;el('messages').append(p);while(el('messages').children.length>8)el('messages').firstChild.remove();}}
  });
 }
 function start(seed){
@@ -117,16 +120,16 @@ function tick(){
  if(!playing||!room)return;
  const me=slot==='host'?0:1,other=1-me,p=run.players[me];
  const elapsed=Math.max(0,(now()-epoch)/1000);
- if(now()<epoch){el('onlineHud').textContent='استعد: '+Math.ceil((epoch-now())/1000);graphics.draw(run,0);frameId=requestAnimationFrame(tick);return;}
- if(elapsed-clock>3){leave();status('انقطع الاتصال أو توقفت اللعبة. ابدأ جولة جديدة.');return;}
+ if(now()<epoch){el('onlineHud').textContent=gameText("online21")+Math.ceil((epoch-now())/1000);graphics.draw(run,0);frameId=requestAnimationFrame(tick);return;}
+ if(elapsed-clock>3){leave();status(gameText("online10"));return;}
  while(clock+1/90<=elapsed){step(run,1/90);clock+=1/90;}
  const snapshot={x:p.x,y:p.y,slide:p.slide,glide:p.glide,out:p.out,stars:p.stars,distance:p.distance,at:api.serverTimestamp()};
  if(!reportedOut&&now()-lastSent>=200||p.out&&!reportedOut){lastSent=now();if(p.out)reportedOut=true;const isFinal=p.out;api.set(path('races/'+room+'/state/'+slot),snapshot).then(()=>{if(isFinal)ownFinal=true;}).catch(e=>{if(isFinal)reportedOut=false;notice(e);});}
  const ghost=run.players[other];
  if(peer){const original={...ghost};Object.assign(ghost,peer,{avatar:original.avatar,shield:0,support:null});graphics.draw(run,run.time);Object.assign(ghost,original);}else graphics.draw(run,run.time);
- el('onlineHud').textContent='أنت: '+Math.floor(p.distance)+' م · ★ '+p.stars+' | المنافس: '+Math.floor(peer?.distance||0)+' م · ★ '+(peer?.stars||0);
- if(p.out&&peer?.out&&ownFinal){finished=true;playing=false;const a=p.distance,b=peer.distance||0;const result=a>b?'win':a<b?'loss':'draw';if(peerLeft){status('انتهت الجولة بعد انقطاع المنافس، دون احتساب نتيجة.');return;}saveOutcome(result,p,peer);if(matchMode==='team'){const score=teamScore(p,peer);status('نتيجة الفريق: '+Math.floor(score.distance)+' م · ★ '+score.stars);}else status(result==='win'?'فزت بالسباق!':result==='loss'?'فاز المنافس!':'تعادل اللاعبان!');return;}
- status(p.out?'خرجت من السباق، بانتظار نتيجة المنافس.':'السباق جارٍ');
+ el('onlineHud').textContent=formatGameText(gameText("online31"),{distance:Math.floor(p.distance),stars:p.stars,peerDistance:Math.floor(peer?.distance||0),peerStars:peer?.stars||0});
+ if(p.out&&peer?.out&&ownFinal){finished=true;playing=false;const a=p.distance,b=peer.distance||0;const result=a>b?'win':a<b?'loss':'draw';if(peerLeft){status(gameText("online11"));return;}saveOutcome(result,p,peer);if(matchMode==='team'){const score=teamScore(p,peer);status(formatGameText(gameText("online32"),{distance:Math.floor(score.distance),stars:score.stars}));}else status(result==='win'?gameText("online12"):result==='loss'?gameText("online13"):gameText("online14"));return;}
+ status(p.out?gameText("online15"):gameText("online16"));
  frameId=requestAnimationFrame(tick);
 }
 function command(c){if(playing&&now()>=epoch&&run)move(run.players[slot==='host'?0:1],c);}
@@ -156,18 +159,18 @@ document.querySelectorAll('[data-move]').forEach(b=>b.addEventListener('pointerd
 window.addEventListener('keydown',e=>{if(!playing||e.repeat||/INPUT|TEXTAREA/.test(e.target.tagName))return;const c={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'jump',ArrowDown:'down',Space:'jump',KeyA:'left',KeyD:'right',KeyW:'jump',KeyS:'down'}[e.code];if(c){e.preventDefault();command(c);}});
 el('invite').onclick=invite;el('cancel').onclick=leave;el('leave').onclick=()=>{finished=false;leave();};
 el('addPhrase').onclick=addRow;
-el('savePhrases').onclick=async()=>{const next={};for(const [order,row] of [...el('phraseRows').children].entries()){const [input,enabled]=row.querySelectorAll('input');const text=input.value.trim();if(!text||text.length>80){status('أدخل عبارة صحيحة.');return;}next[row.dataset.id]={text,enabled:enabled.checked,order};}if(Object.keys(next).length>40){status('الحد الأقصى ٤٠ عبارة.');return;}try{await api.set(path('racePhrases'),next);status('حُفظت العبارات.');}catch(e){notice(e);}};
+el('savePhrases').onclick=async()=>{const next={};for(const [order,row] of [...el('phraseRows').children].entries()){const [input,enabled]=row.querySelectorAll('input');const text=input.value.trim();if(!text||text.length>80){status(gameText("online24"));return;}next[row.dataset.id]={text,enabled:enabled.checked,order};}if(Object.keys(next).length>40){status(gameText("online25"));return;}try{await api.set(path('racePhrases'),next);status(gameText("online23"));}catch(e){notice(e);}};
 try{
  const conn=await connect();user=conn?.auth.currentUser;
- if(!user?.emailVerified){status('ينبغي تسجيل الدخول بحساب موثق للعب عبر الإنترنت.');}
+ if(!user?.emailVerified){status(gameText("online17"));}
  else{
  api=await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js');db=api.getDatabase(conn.auth.app,firebaseConfig.databaseURL);
  api.onValue(path('.info/serverTimeOffset'),s=>offset=s.val()||0);
  await loadStats(conn);
  api.onValue(path('challengeRanks'),s=>{const value=s.val();const list=value?Object.values(value):defaultRanks; ranks=list.length===7&&list[0].min===0&&list.every((r,i)=>r.label&&Number.isInteger(r.min)&&(!i||r.min>list[i-1].min))?list:defaultRanks;refreshCard();if(!el('rankEditor').hidden)renderRanks();},notice);
  api.onValue(path('racePhrases'),s=>{phrases=s.val()||{};renderPhrases();if(!el('editor').hidden)editRows();},notice);
- api.onValue(api.query(path('raceLobby'),api.orderByChild('created'),api.startAt(now()-120000),api.limitToLast(30)),s=>{el('offers').replaceChildren();s.forEach(c=>{if(c.key===room||c.val().created<now()-120000)return;const row=document.createElement('div');row.append(document.createTextNode('لاعب ينتظر · '+modeName(c.val().mode)),button('أنا!',()=>{finished=false;join(c.key);}));el('offers').append(row);});},notice);
- el('lobby').hidden=false;status('اختر منافسًا للعب.');
+ api.onValue(api.query(path('raceLobby'),api.orderByChild('created'),api.startAt(now()-120000),api.limitToLast(30)),s=>{el('offers').replaceChildren();s.forEach(c=>{if(c.key===room||c.val().created<now()-120000)return;const row=document.createElement('div');row.append(document.createTextNode(gameText("online19")+modeName(c.val().mode)),button(gameText("online18"),()=>{finished=false;join(c.key);}));el('offers').append(row);});},notice);
+ el('lobby').hidden=false;status(gameText("online7"));
  if(user.email==='quraaty@gmail.com'){el('editor').hidden=false;el('rankEditor').hidden=false;renderRanks();editRows();const snap=await api.get(path('racePhrases'));if(!snap.exists()){const initial={};defaults.forEach((text,order)=>initial['p'+order]={text,order,enabled:true});await api.set(path('racePhrases'),initial);}}
  }
 }catch(e){notice(e);}
