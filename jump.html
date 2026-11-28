@@ -31,6 +31,7 @@ button:disabled{opacity:.5}
 .control{min-width:100px}
 }
 #character-picker button[aria-pressed="true"]{outline:3px solid #398fb7;outline-offset:3px} #character-picker button:disabled{opacity:.55}
+#arcade-stage.adventure-full{position:fixed;inset:0;z-index:10000;margin:0;max-width:none}#arcade-stage:fullscreen,#arcade-stage.adventure-full{background:#102c3a;display:grid;place-items:center}#arcade-stage:fullscreen #game,#arcade-stage.adventure-full #game{width:100%;height:100%;object-fit:contain}#arcade-stage.adventure-full #leave-full,#arcade-stage:fullscreen #leave-full{display:block!important}#arcade-stage .steering{display:flex;gap:5px;flex-wrap:wrap}#arcade-stage .control{min-width:0;min-height:44px;padding:8px 12px;font-size:16px}#arcade-stage #game{image-rendering:auto} @media(max-width:600px){#arcade-stage .control{padding:6px 8px;font-size:13px;min-height:40px}#arcade-stage .arcade-controls{gap:5px}}
 </style>
 <link rel="stylesheet" href="arcade/arcade.css">
 </head>
@@ -80,11 +81,12 @@ import { progress as progressStorage } from "./auth/progress.js";
 import {connect,connectRunnerGuest} from "./auth/firebase.js";
 "use strict";
 const view3d=null; document.getElementById("scene-3d").style.display="none";
+const stage=document.getElementById("arcade-stage");document.getElementById("full-game").onclick=async()=>{try{if(stage.requestFullscreen)await stage.requestFullscreen();else stage.classList.toggle("adventure-full");}catch{stage.classList.toggle("adventure-full");}};document.getElementById("leave-full").onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();stage.classList.remove("adventure-full");};
 
 const $=id=>document.getElementById(id);
 const canvas=$("game"),ctx=canvas.getContext("2d");
 const W=900,H=500,GROUND=410;
-const KEY="mh_platform_hurdles_v1";
+const KEY="mh_obstacles_v1";
 
 const mohammadImages={
  run:new Image(),
@@ -115,7 +117,7 @@ habibaSheet.onload=prepareHabibaSheet;
 habibaSheet.src="habiba-running-sheet.png";
 function drawHabibaSheet(pose,x,y){
  const frames=[0,1,3,4,5,2];
- const i=pose==="duck"?7:pose==="jump"?6:frames[Math.floor(clock*(6+Math.min(10,speed/235)*1.2))%frames.length];
+ const i=pose==="duck"?7:pose==="jump"?6:frames[(held.has("left")||held.has("right"))?Math.floor(clock*9)%frames.length:0];
  const b=habibaFrames[i];if(!b)return false;
  const size=CHARACTER[pose],scale=Math.min(size.w/b.w,size.h/b.h);
  ctx.drawImage(habibaSheet,b.x,b.y,b.w,b.h,x-b.w*scale/2,y-b.h*scale,b.w*scale,b.h*scale);
@@ -135,7 +137,7 @@ let saved={distance:0,starRecord:0,totalStars:0,level:1};
 let portals=[],powerups=[],shots=[],particles=[],fireUntil=0,shield=false,lastFire=-10,transition=0,keysFound=0,treasures=[],worldTheme=0; let level=1,worldX=100,feet=GROUND,vy=0,grounded=true,facing=1,camera=0,terrain=[],hazards=[],goal=0,held=new Set(),checkpoint=100;
 
 try{
- const old=JSON.parse(progressStorage.getItem(KEY));
+ const old=JSON.parse(progressStorage.getItem(KEY))?.adventure || JSON.parse(progressStorage.getItem("mh_platform_hurdles_v1"));
  if(old&&typeof old==="object"){
   for(const k of Object.keys(saved)){
    const n=Number(old[k]);
@@ -173,7 +175,7 @@ connect().then(connection=>{
  publishGlobal().catch(console.warn);
 }).catch(console.warn);
 function save(){
- try{progressStorage.setItem(KEY,JSON.stringify(saved))}catch(e){}
+ try{progressStorage.setItem(KEY,JSON.stringify({...JSON.parse(progressStorage.getItem(KEY)||"{}"),adventure:saved}))}catch(e){}
 }
 
 function rand(a,b){return a+Math.random()*(b-a)}
@@ -252,7 +254,7 @@ function reset(){
  goal=x-100;if(portals.length===2){portals[0].target=portals[1].x+110;portals[1].target=portals[0].x+110;} runner.x=worldX-55;runner.y=0;
 }
 function start(){reset();mode="running";$("message").textContent="اجمع النجوم حتى تصل إلى نهاية المرحلة!";}
-function jump(){if(mode==="running"&&grounded){vy=-690;grounded=false;}}
+function jump(){if(mode==="running"&&grounded){vy=-740;grounded=false;}}
 function pause(){if(mode==="running"){mode="paused";held.clear();}else if(mode==="paused")mode="running";}
 function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
 function crash(){mode="crashed";held.clear();$("message").textContent="حاول مجددًا!";}
@@ -263,7 +265,7 @@ function finish(){mode="won";held.clear();saved.distance=Math.max(saved.distance
 function update(dt){
  if(mode!=="running")return;clock+=dt;elapsed+=dt;
  const dir=Number(held.has("right"))-Number(held.has("left"));if(dir)facing=dir;
- const oldFeet=feet;worldX=Math.max(25,Math.min(goal+40,worldX+dir*270*dt));vy+=1550*dt;feet+=vy*dt;grounded=false;
+ const oldFeet=feet;worldX=Math.max(25,Math.min(goal+40,worldX+dir*310*dt));vy+=1550*dt;feet+=vy*dt;grounded=false;
  for(const p of terrain){if(vy>=0&&oldFeet<=p.y+1&&feet>=p.y&&worldX+23>p.x&&worldX-23<p.x+p.w){feet=p.y;vy=0;grounded=true;}}
  const box={x:worldX-23,y:feet-95,w:46,h:95};
  if(feet>H+100){crash();return;}
@@ -277,11 +279,13 @@ function update(dt){
  if(worldX>=goal&&grounded)finish();
 }
 function background(){
- const sky=ctx.createLinearGradient(0,0,0,GROUND);
+ const sky=ctx.createLinearGradient(0,0,0,H);
  const palettes=[["#65bafa","#dffbff"],["#f2a65c","#fff0bd"],["#789cca","#e4f6ff"],["#41396e","#e7a8be"],["#357c9d","#d7f6da"],["#243767","#bb9de6"]];sky.addColorStop(0,palettes[worldTheme][0]);sky.addColorStop(1,palettes[worldTheme][1]);
- rect(0,0,W,GROUND,sky);
+ rect(0,0,W,H,sky);
 
- circle(750,85,43,"#ffe17b");
+ const sun=ctx.createRadialGradient(750,80,10,750,80,100);sun.addColorStop(0,"#fffbd2");sun.addColorStop(.45,"#ffe8a9");sun.addColorStop(1,"#fff4bd00");circle(750,80,100,sun);
+ for(let layer=0;layer<3;layer++){ctx.beginPath();ctx.moveTo(0,H);for(let x=-100;x<=W+120;x+=18){const q=x+camera*(.07+layer*.055);const y=235+layer*48+Math.sin(q/115+layer*2)*45+Math.cos(q/57)*17;ctx.lineTo(x,y);}ctx.lineTo(W,H);ctx.closePath();ctx.fillStyle=["#7cacc477","#598f9c99","#387f7e99"][layer];ctx.fill();}
+
 
  for(let i=0;i<6;i++){
   const x=((i*210-distance*1.4)%(W+250)+(W+250))%(W+250)-100;
@@ -297,7 +301,7 @@ function background(){
   circle(x+20,GROUND-39,37,"#91dca0");
  }
 
- rect(0,GROUND,W,H-GROUND,"#7299b5");
+ const water=ctx.createLinearGradient(0,GROUND,0,H);water.addColorStop(0,"#56bbdc");water.addColorStop(1,"#17496f");rect(0,GROUND,W,H-GROUND,water);for(let i=0;i<10;i++){const x=((i*123-camera*.5+clock*12)%(W+150)+W+150)%(W+150)-70;round(x,GROUND+18+i%3*20,65,3,2,"#a5e9f366");}
  
 
  for(let i=0;i<15;i++){
@@ -482,7 +486,7 @@ function drawMohammad(){
  if(selectedCharacter==="mohammad"&&pose==="run"&&runningSheet.complete&&runningSheet.naturalWidth>0){
   const ratio=Math.max(1,Math.min(10,speed/235));
   const fps=6+ratio*1.2;
-  const frame=Math.floor(clock*fps)%(RUN_FRAMES-1);
+  const frame=(held.has("left")||held.has("right"))?Math.floor(clock*fps)%(RUN_FRAMES-1):0;
 
   const bounds=runFrameBounds[frame];
 
@@ -595,7 +599,7 @@ function draw(){
  (($("starRecord")) || {textContent:""}).textContent=saved.starRecord+" ⭐";
  (($("totalStars")) || {textContent:""}).textContent=saved.totalStars+" ⭐";
  document.querySelectorAll("[data-character]").forEach(b=>b.disabled=mode==="running"||mode==="paused");
- $("start").hidden=mode==="running"||mode==="paused";$("start").textContent=mode==="won"?"المرحلة التالية":mode==="crashed"?"حاول مجددًا":"▶ ابدأ";$("pause").disabled=mode!=="running"&&mode!=="paused";$("fire").disabled=mode!=="running"||clock>=fireUntil;$("fire").textContent=clock<fireUntil?"🔥 "+Math.ceil(fireUntil-clock):"🔥";$("portal").disabled=mode!=="running"||transition>0||!portals.some(p=>Math.abs(worldX-p.x-32)<75&&Math.abs(feet-GROUND)<35);
+ $("start").hidden=mode==="running"||mode==="paused"||(mode==="won"&&level===30);$("start").textContent=mode==="won"?"المرحلة التالية":mode==="crashed"?"حاول مجددًا":"▶ ابدأ";$("pause").disabled=mode!=="running"&&mode!=="paused";$("fire").disabled=mode!=="running"||clock>=fireUntil;$("fire").textContent=clock<fireUntil?"🔥 "+Math.ceil(fireUntil-clock):"🔥";$("portal").disabled=mode!=="running"||transition>0||!portals.some(p=>Math.abs(worldX-p.x-32)<75&&Math.abs(feet-GROUND)<35);
  (($("pause")) || {textContent:""}).textContent=mode==="paused"?gameText("m9"):gameText("m10");
 }
 
