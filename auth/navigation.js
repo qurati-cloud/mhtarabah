@@ -119,6 +119,13 @@ try {
   .filter(node => !cardFields.some(field => field.node === node))
   .map(node => ({node, key: node.dataset.textKey, label: node.dataset.editorLabel}));
  fields.push(...cardFields, ...explicit);
+ // Game message templates are registered before this module runs.
+ for(const [id, defaultText] of Object.entries(window.mhGameTextDefaults||{})){
+  const node=document.createElement('span');
+  node.textContent=defaultText;
+  fields.push({node,key:page+':message:'+id});
+ }
+
  // Additional fixed labels: never capture changing scores, user information or quiz answers.
  const fixedSelectors='main button,main summary,main .note,main .stat small,main .top strong,main label,main h3,main h4,main legend,main [data-static-text]';
  const additional=[...document.querySelectorAll(fixedSelectors)].filter(node=>
@@ -134,6 +141,7 @@ try {
  for (const field of fields) field.defaultText = field.node.textContent;
 
  function applyTexts(values) {
+  window.mhGameTextValues=values;
   for (const {node, key, defaultText} of fields) {
    const next = typeof values[key] === 'string' ? values[key] : defaultText;
    if(node.textContent !== next) node.textContent = next;
@@ -249,7 +257,7 @@ const ai=button('إزالة الخلفية بـ AI',()=>{}),undo=button('ترا�
    const input = document.createElement('textarea');
    input.value = node.textContent;
    input.required = !fieldLabel;
-   if (fieldLabel && key.includes('roadPhrase')) input.maxLength = 110;
+   if (fieldLabel) input.maxLength = 110;
    else input.maxLength = 500;
    input.style.cssText = 'display:block;width:100%;box-sizing:border-box;margin:8px 0';
    input.oninput = () => input.setCustomValidity('');
@@ -284,6 +292,7 @@ const ai=button('إزالة الخلفية بـ AI',()=>{}),undo=button('ترا�
      const previous = (await transaction.get(ref)).data()?.value || {};
      transaction.set(ref, {value: {...previous, ...updates}}, {merge: true});
     });
+    window.mhGameTextValues={...(window.mhGameTextValues||{}),...updates};
     if (!isHome) {
      for (const {key, node} of fields) if (Object.hasOwn(updates, key)) node.textContent = updates[key];
     }
@@ -316,8 +325,8 @@ const ai=button('إزالة الخلفية بـ AI',()=>{}),undo=button('ترا�
     : (await data.getDoc(data.doc(db, 'roles', user.uid))).data()?.role;
    if (change !== authChange || !['admin', 'editor'].includes(role)) return;
 
-   const editable = [...new Map(fields.filter(field=>!field.label || !field.key.includes('roadPhrase')).map(field => [field.key, field])).values()];
-   const signs = fields.filter(field=>field.label && field.key.includes('roadPhrase'));
+   const editable = [...new Map(fields.filter(field=>!field.label).map(field => [field.key, field])).values()];
+   const signs = fields.filter(field=>field.label);
    if (signs.length) {
     const signEditor = button('لافتات الطريق (٣٠)', () => openTextEditor(signs));
     nav.insertBefore(signEditor,panel);
