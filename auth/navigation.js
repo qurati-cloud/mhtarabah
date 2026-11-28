@@ -150,7 +150,46 @@ try {
  let cachedTexts;
  try { cachedTexts=JSON.parse(localStorage.getItem(textCacheKey)||'null'); } catch {}
  if(cachedTexts && typeof cachedTexts==='object' && !Array.isArray(cachedTexts)) applyTexts(cachedTexts);
+ // Card images are stored individually, keeping the text document small.
+ const imageCards = (isHome || page==='games.html') ? [...document.querySelectorAll('#home .game')].map(card=>{
+  const title=card.querySelector('strong[data-text-key]');
+  const art=card.querySelector('.runner-art,.icon');
+  if(!title||!art)return null;
+  const key='card-image-'+title.dataset.textKey.replace(/[^a-zA-Z0-9_-]/g,'-');
+  const img=document.createElement('img');
+  img.alt='';img.hidden=true;
+  img.style.cssText='display:none;width:min(100%,130px);height:110px;object-fit:contain;flex-shrink:0';
+  if(card.classList.contains('runner-feature'))img.style.cssText='display:none;width:min(100%,440px);height:auto;max-height:290px;object-fit:contain';
+  card.insertBefore(img,art);
+  const cacheKey='mh-card-art-v1:'+key;
+  const item={title,art,img,key,cacheKey,current:null,ready:false};
+  item.apply=value=>{
+   item.current=typeof value==='string'&&/^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(value)?value:null;
+   if(item.current){img.src=item.current;img.hidden=false;img.style.display='block';art.hidden=true;art.style.setProperty('display','none','important');}
+   else{img.hidden=true;img.style.display='none';img.removeAttribute('src');art.hidden=false;art.style.removeProperty('display');}
+  };
+  let cached;
+  try {const raw=localStorage.getItem(cacheKey);if(raw!==null)cached=JSON.parse(raw);} catch {}
+  if(cached!==undefined){item.apply(cached);item.ready=true;}
+  else {art.style.visibility='hidden';}
+  item.resolve=value=>{
+   item.apply(value);
+   art.style.removeProperty('visibility');
+   item.ready=true;
+   try{localStorage.setItem(cacheKey,JSON.stringify(item.current));}catch{}
+  };
+  return item;
+ }).filter(Boolean):[];
+ 
  const {auth, authApi, data, db} = await connect();
+ for(const item of imageCards){
+  item.ref=data.doc(db,'siteContent',item.key);
+  const fallback=setTimeout(()=>{if(!item.ready){item.art.style.removeProperty('visibility');}},4500);
+  data.onSnapshot(item.ref,{includeMetadataChanges:true},snapshot=>{
+   if(snapshot.metadata.fromCache&&!snapshot.exists())return;
+   clearTimeout(fallback);item.resolve(snapshot.data()?.value);
+  },error=>{clearTimeout(fallback);item.art.style.removeProperty('visibility');console.warn('Card image loading failed',error);});
+ }
  const ref = data.doc(db, 'siteContent', 'texts');
  function showTexts(snapshot) {
   const values = snapshot.data()?.value || {};
@@ -168,27 +207,6 @@ try {
  }
 
 
- // Card images are stored individually, keeping the text document small.
- const imageCards = (isHome || page==='games.html') ? [...document.querySelectorAll('#home .game')].map(card=>{
-  const title=card.querySelector('strong[data-text-key]');
-  const art=card.querySelector('.runner-art,.icon');
-  if(!title||!art)return null;
-  const key='card-image-'+title.dataset.textKey.replace(/[^a-zA-Z0-9_-]/g,'-');
-  const img=document.createElement('img');
-  img.alt='';img.hidden=true;
-  img.style.cssText='display:none;width:min(100%,130px);height:110px;object-fit:contain;flex-shrink:0';
-  if(card.classList.contains('runner-feature'))img.style.cssText='display:none;width:min(100%,440px);height:auto;max-height:290px;object-fit:contain';
-  card.insertBefore(img,art);
-  const imageRef=data.doc(db,'siteContent',key);
-  const item={title,art,img,ref:imageRef,current:null,ready:false};
-  item.apply=value=>{
-   item.current=typeof value==='string'&&/^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(value)?value:null;
-   if(item.current){img.src=item.current;img.hidden=false;img.style.display='block';art.hidden=true;art.style.setProperty('display','none','important');}
-   else{img.hidden=true;img.style.display='none';img.removeAttribute('src');art.hidden=false;art.style.removeProperty('display');}
-  };
-  data.onSnapshot(imageRef,snapshot=>{if(snapshot.metadata.fromCache&&!snapshot.exists())return;item.ready=true;item.apply(snapshot.data()?.value);},error=>console.warn('Card image loading failed',error));
-  return item;
- }).filter(Boolean):[];
  async function prepareCardImage(file){
   if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>20*1024*1024)throw Error('اختر صورة PNG أو JPG أو WebP لا تتجاوز ٢٠ ميغابايت.');
   const url=URL.createObjectURL(file);
@@ -217,8 +235,8 @@ try {
    const file=document.createElement('input');file.type='file';file.accept='image/png,image/jpeg,image/webp';
    const status=document.createElement('p');status.setAttribute('role','status');status.style.margin='0';
    let pending=null,version=0;
-   const save=button('حفظ الصورة',async()=>{if(!pending)return;save.disabled=file.disabled=reset.disabled=true;try{await data.setDoc(item.ref,{value:pending});item.apply(pending);pending=null;status.textContent='حُفظت الصورة.';}catch(error){status.textContent='تعذّر الحفظ. تحقق من الصلاحيات والاتصال.';}finally{file.disabled=reset.disabled=false;save.disabled=!pending;}});
-   const reset=button('استعادة الصورة الأصلية',async()=>{if(!confirm('استعادة الصورة الأصلية؟'))return;++version;pending=null;save.disabled=file.disabled=reset.disabled=true;try{await data.deleteDoc(item.ref);item.apply(null);file.value='';if(original?.getAttribute('src')){preview.src=original.src;preview.hidden=false;}else{preview.removeAttribute('src');preview.hidden=true;}status.textContent='استُعيدت الصورة الأصلية.';}catch{status.textContent='تعذّرت الاستعادة.';}finally{file.disabled=reset.disabled=false;}});
+   const save=button('حفظ الصورة',async()=>{if(!pending)return;save.disabled=file.disabled=reset.disabled=true;try{await data.setDoc(item.ref,{value:pending});item.resolve(pending);pending=null;status.textContent='حُفظت الصورة.';}catch(error){status.textContent='تعذّر الحفظ. تحقق من الصلاحيات والاتصال.';}finally{file.disabled=reset.disabled=false;save.disabled=!pending;}});
+   const reset=button('استعادة الصورة الأصلية',async()=>{if(!confirm('استعادة الصورة الأصلية؟'))return;++version;pending=null;save.disabled=file.disabled=reset.disabled=true;try{await data.deleteDoc(item.ref);item.resolve(null);file.value='';if(original?.getAttribute('src')){preview.src=original.src;preview.hidden=false;}else{preview.removeAttribute('src');preview.hidden=true;}status.textContent='استُعيدت الصورة الأصلية.';}catch{status.textContent='تعذّرت الاستعادة.';}finally{file.disabled=reset.disabled=false;}});
    save.disabled=true;
    file.onchange=async()=>{const token=++version;pending=null;save.disabled=true;if(!file.files.length)return;status.textContent='جارٍ تجهيز الصورة…';try{const value=await prepareCardImage(file.files[0]);if(token!==version)return;pending=value;preview.src=value;preview.hidden=false;save.disabled=false;status.textContent='الصورة جاهزة للحفظ.';}catch(error){if(token===version)status.textContent=error.message;}};
 const ai=button('إزالة الخلفية بـ AI',()=>{}),undo=button('تراجع عن إزالة الخلفية',()=>{});
