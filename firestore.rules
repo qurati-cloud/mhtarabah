@@ -85,7 +85,7 @@ service cloud.firestore {
     match /runnerWorldRecords/{mode} {
       function validRecord() {
         let score = request.resource.data;
-        return mode in ['solo', 'duo']
+        return mode in ['solo', 'duo', 'hurdles']
           && score.keys().hasOnly(['distance','stars'])
           && score.distance is int && score.distance >= 1 && score.distance <= 10000000
           && score.stars is int && score.stars >= 0 && score.stars <= score.distance * 2;
@@ -93,7 +93,7 @@ service cloud.firestore {
       function runnerPlayer() {
         return verified() || (request.auth != null && request.auth.token.firebase.sign_in_provider == 'anonymous');
       }
-      allow get: if mode in ['solo', 'duo'];
+      allow get: if mode in ['solo', 'duo', 'hurdles'];
       allow create: if runnerPlayer() && validRecord();
       allow update: if runnerPlayer() && validRecord()
         && request.resource.data.distance >= resource.data.distance
