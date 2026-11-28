@@ -47,7 +47,7 @@ button:disabled{opacity:.5}
  <div class="arcade-hud">
   <span id="stars" aria-label="النجوم">0 ⭐</span>
   <span id="distance" aria-label="المسافة">0</span>
-  <span id="speed" aria-label="المرحلة">1 / 30</span>
+  <span id="speed" aria-label="المرحلة">1 / 500</span>
   <span id="time" aria-label="الوقت">00:00</span>
  </div>
  <div class="arcade-actions">
@@ -135,7 +135,7 @@ let runner={x:130,y:0,vy:0};
 let downHeld=false,duckUntil=0;
 let touchId=null,touchY=0,touchDirection="";
 let saved={distance:0,starRecord:0,totalStars:0,level:1};
-let powerups=[],shots=[],particles=[],fireUntil=0,shield=false,lastFire=-10,keysFound=0,treasures=[],worldTheme=0; let level=1,worldX=100,feet=GROUND,vy=0,grounded=true,facing=1,camera=0,terrain=[],hazards=[],goal=0,held=new Set(),checkpoint=100;
+let powerups=[],shots=[],particles=[],fireUntil=0,shield=false,lastFire=-10,keysFound=0,treasures=[],worldTheme=0,night=false; let level=1,worldX=100,feet=GROUND,vy=0,grounded=true,facing=1,camera=0,terrain=[],hazards=[],goal=0,held=new Set(),checkpoint=100;
 
 try{
  const old=JSON.parse(progressStorage.getItem(KEY))?.adventure || JSON.parse(progressStorage.getItem("mh_platform_hurdles_v1"));
@@ -239,36 +239,68 @@ function playerBox(){
 
 
 
-function reset(){
- level=Math.max(1,Math.min(30,Math.floor(saved.level||1))); worldX=100;feet=GROUND;vy=0;grounded=true;camera=0;clock=elapsed=score=distance=0;held.clear();terrain=[];hazards=[];stars=[];checkpoint=100;powerups=[];shots=[];particles=[];treasures=[];fireUntil=0;shield=false;lastFire=-10;keysFound=0;worldTheme=Math.floor((level-1)/5)%6;
- let x=0; const sections=5+Math.floor(level/3);
+const MAX_LEVEL=500;
+const themes=[
+ ["forest","الغابة", "#65bafa","#e2ffd8","#74b94d","#34763b"],
+ ["village","القرية","#87ccff","#ffe6b4","#d4af72","#96703e"],
+ ["city","المدينة","#64b1ef","#e6eaf5","#aebdce","#536477"],
+ ["road","الطريق الداخلية","#90c9ec","#f6edce","#90989e","#414e57"],
+ ["highway","الطريق السريعة","#8abfe5","#e6f2ff","#777e89","#3a414d"],
+ ["water","عالم الماء","#075d9b","#49c8c8","#64bcb8","#276c78"],
+ ["tunnel","الأنفاق","#24283d","#655b69","#a49a93","#58515d"],
+ ["desert","الصحراء","#f0b265","#fff0ba","#f3ce7c","#ad7839"],
+ ["mountain","الجبال","#78b0d9","#eaf5ff","#c2d6df","#677a85"],
+ ["garden","الحدائق","#82d8c7","#f1ffe6","#8ed34b","#398143"]
+];
+function seededLevel(n){let a=(n*2654435761)>>>0;return ()=>{a=(Math.imul(a,1664525)+1013904223)>>>0;return a/4294967296;};}
+function buildLevel(n){
+ const random=seededLevel(n),pick=(a,b)=>a+random()*(b-a),d=(n-1)/499;
+ const theme=themes[Math.floor((n-1)/2)%themes.length],night=n%4>=2;
+ const ground=[],foes=[],gems=[],bonuses=[],chests=[];
+ let x=0;const sections=4+Math.floor(d*8)+Math.floor(random()*2);
  for(let i=0;i<sections;i++){
-  const width=620+(i%3)*90;terrain.push({x,y:GROUND,w:width,h:90});
-  if(i>0){hazards.push({x:x+230,origin:x+230,y:GROUND-42,w:42,h:42,phase:i,kind:"walker"});if(level>=4)hazards.push({x:x+width-155,y:GROUND-32,w:52,h:32,kind:"spikes"});}
-  if(i===0||i%3===1)powerups.push({x:x+420,y:GROUND-40,kind:i%2?"shield":"fire"});
-  if(i===sections-2){powerups.push({x:x+470,y:GROUND-40,kind:"key"});treasures.push({x:x+width-90,y:GROUND-48});}
-  for(let j=0;j<3;j++){const px=x+125+j*145,py=GROUND-110-(j%2)*65;terrain.push({x:px,y:py,w:115,h:20});stars.push({x:px+57,y:py-35,r:15});}
-  stars.push({x:x+width-75,y:GROUND-40,r:15});
-  x+=width+(i===sections-1?0:85+Math.min(55,level*2));
+  const w=Math.round(pick(610,790)+d*80);ground.push({x,y:GROUND,w,h:90});
+  const count=i===0?0:1+Math.floor(d*2)+(random()<d*.45?1:0);
+  for(let j=0;j<count;j++){
+   const at=x+140+(w-270)*(j+.5)/count;
+   const kind=n>8&&random()<.18+d*.16?"spikes":n>25&&random()<d*.35?"bar":"walker";
+   foes.push({x:at,origin:at,y:kind==="bar"?GROUND-112:GROUND-(kind==="spikes"?30:42),w:kind==="bar"?65:kind==="spikes"?48:42,h:kind==="bar"?34:kind==="spikes"?30:42,phase:random()*6.28,kind,pace:1.2+d*2.5+random()*.5,range:16+d*30});
+  }
+  const pc=2+Math.floor(random()*3);
+  for(let j=0;j<pc;j++){
+   const px=x+90+j*(w-210)/pc,py=GROUND-Math.round(pick(70,150)+d*25),pw=Math.round(pick(95,145)-d*25);
+   ground.push({x:px,y:py,w:pw,h:24});
+   gems.push({x:px+pw/2,y:py-32,r:15});
+  }
+  gems.push({x:x+w-65,y:GROUND-38,r:15});
+  if(i===0||i%Math.max(2,4-Math.floor(d*2))===0)bonuses.push({x:x+85,y:GROUND-40,kind:i%2?"shield":"fire"});
+  if(i===sections-2){bonuses.push({x:x+60,y:GROUND-40,kind:"key"});chests.push({x:x+w-80,y:GROUND-48});}
+  const gap=i===sections-1?0:Math.round(pick(65,105)+d*62);
+  x+=w+gap;
  }
- goal=x-100; runner.x=worldX-55;runner.y=0;
+ return {theme,night,ground,foes,gems,bonuses,chests,goal:x-100};
 }
-function start(){reset();mode="running";$("message").textContent="اجمع النجوم حتى تصل إلى نهاية المرحلة!";}
-function jump(){if(mode==="running"&&grounded){vy=-740;grounded=false;}}
+
+function reset(){
+ level=Math.max(1,Math.min(MAX_LEVEL,Math.floor(saved.level||1)));worldX=100;feet=GROUND;vy=0;grounded=true;camera=0;clock=elapsed=score=distance=0;held.clear();shots=[];particles=[];fireUntil=0;shield=false;lastFire=-10;keysFound=0;
+ const map=buildLevel(level);worldTheme=map.theme;night=map.night;terrain=map.ground;hazards=map.foes;stars=map.gems;powerups=map.bonuses;treasures=map.chests;goal=map.goal;runner.x=worldX-55;runner.y=0;
+}
+function start(){reset();mode="running";$("message").textContent=worldTheme[1]+(night?" — ليلًا":" — نهارًا")+" · اجمع النجوم حتى تصل إلى نهاية المرحلة!";}
+function jump(){if(mode==="running"&&grounded){vy=worldTheme[0]==="water"?-560:-740;grounded=false;}}
 function pause(){if(mode==="running"){mode="paused";held.clear();}else if(mode==="paused")mode="running";}
 function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
 function crash(){mode="crashed";held.clear();$("message").textContent="حاول مجددًا!";}
 function burst(x,y,color,n=16){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,v=60+Math.random()*180;particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.6,color});}}
 function fire(){if(mode!=="running"||clock>=fireUntil||clock-lastFire<.28)return;lastFire=clock;shots.push({x:worldX+facing*42,y:feet-57,vx:facing*640,life:1.6});}
-function finish(){mode="won";held.clear();saved.distance=Math.max(saved.distance,level);saved.starRecord=Math.max(saved.starRecord,score);saved.totalStars+=score;saved.level=Math.min(30,level+1);save();$("message").textContent=level===30?"أتممت جميع المراحل!":"أحسنت! انتقلت إلى المرحلة التالية.";if(level<30)setTimeout(()=>{if(mode==="won")start();},1800); }
+function finish(){mode="won";held.clear();saved.distance=Math.max(saved.distance,level);saved.starRecord=Math.max(saved.starRecord,score);saved.totalStars+=score;saved.level=Math.min(MAX_LEVEL,level+1);save();$("message").textContent=level===MAX_LEVEL?"أتممت جميع المراحل!":"أحسنت! انتقلت إلى المرحلة التالية.";if(level<MAX_LEVEL)setTimeout(()=>{if(mode==="won")start();},1800); }
 function update(dt){
  if(mode!=="running")return;clock+=dt;elapsed+=dt;
  const dir=Number(held.has("right"))-Number(held.has("left"));if(dir)facing=dir;
- const oldFeet=feet;if(held.has("down")&&!grounded)vy=Math.max(vy,650);worldX=Math.max(25,Math.min(goal+40,worldX+dir*310*dt));vy+=1550*dt;feet+=vy*dt;grounded=false;
+ const oldFeet=feet;if(held.has("down")&&!grounded)vy=Math.max(vy,650);worldX=Math.max(25,Math.min(goal+40,worldX+dir*(worldTheme[0]==="water"?245:310)*dt));vy+=(worldTheme[0]==="water"?850:1550)*dt;feet+=vy*dt;grounded=false;
  for(const p of terrain){if(vy>=0&&oldFeet<=p.y+1&&feet>=p.y&&worldX+23>p.x&&worldX-23<p.x+p.w){feet=p.y;vy=0;grounded=true;}}
  const bh=isDuck()?48:95;const box={x:worldX-23,y:feet-bh,w:46,h:bh};
  if(feet>H+100){crash();return;}
- for(const h of hazards){if(h.dead)continue;if(h.kind==="walker")h.x=h.origin+Math.sin(clock*1.7+h.phase)*42;if(!overlap(box,h))continue;if(h.kind==="walker"&&vy>=0&&oldFeet<=h.y+9){h.dead=true;feet=h.y;vy=-470;score+=2;burst(h.x+21,h.y+20,"#ffd970");}else if(shield){shield=false;h.dead=h.kind==="walker";worldX=Math.max(25,worldX-facing*65);vy=-330;burst(worldX,feet-55,"#72dfff");}else{crash();return;}}
+ for(const h of hazards){if(h.dead)continue;if(h.kind==="walker")h.x=h.origin+Math.sin(clock*h.pace+h.phase)*h.range;if(!overlap(box,h))continue;if(h.kind==="walker"&&vy>=0&&oldFeet<=h.y+9){h.dead=true;feet=h.y;vy=-470;score+=2;burst(h.x+21,h.y+20,"#ffd970");}else if(shield){shield=false;h.dead=h.kind==="walker";worldX=Math.max(25,worldX-facing*65);vy=-330;burst(worldX,feet-55,"#72dfff");}else{crash();return;}}
  for(const p of powerups){if(p.used||!overlap(box,{x:p.x-18,y:p.y-18,w:36,h:36}))continue;p.used=true;if(p.kind==="fire"){fireUntil=clock+30;$("message").textContent="قدرة النار لمدة ٣٠ ثانية!";}else if(p.kind==="shield"){shield=true;$("message").textContent="درع يحميك من اصطدام واحد!";}else{keysFound++;$("message").textContent="وجدت مفتاح الكنز!";}burst(p.x,p.y,"#ffd970",22);}
  for(const t of treasures){if(!t.open&&keysFound&&overlap(box,{x:t.x,y:t.y,w:56,h:48})){t.open=true;keysFound--;score+=10;burst(t.x+28,t.y,"#ffd970",28);}}
  for(const b of shots){b.x+=b.vx*dt;b.life-=dt;for(const h of hazards){if(!h.dead&&h.kind==="walker"&&overlap({x:b.x-12,y:b.y-12,w:24,h:24},h)){h.dead=true;b.life=0;score+=2;burst(h.x+21,h.y+20,"#ff923d");break;}}}shots=shots.filter(b=>b.life>0);for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=260*dt;p.life-=dt;}particles=particles.filter(p=>p.life>0);
@@ -277,39 +309,24 @@ function update(dt){
  if(worldX>=goal&&grounded)finish();
 }
 function background(){
- const sky=ctx.createLinearGradient(0,0,0,H);
- const palettes=[["#65bafa","#dffbff"],["#f2a65c","#fff0bd"],["#789cca","#e4f6ff"],["#41396e","#e7a8be"],["#357c9d","#d7f6da"],["#243767","#bb9de6"]];sky.addColorStop(0,palettes[worldTheme][0]);sky.addColorStop(1,palettes[worldTheme][1]);
- rect(0,0,W,H,sky);
-
- const sun=ctx.createRadialGradient(750,80,10,750,80,100);sun.addColorStop(0,"#fffbd2");sun.addColorStop(.45,"#ffe8a9");sun.addColorStop(1,"#fff4bd00");circle(750,80,100,sun);
- for(let layer=0;layer<3;layer++){ctx.beginPath();ctx.moveTo(0,H);for(let x=-100;x<=W+120;x+=18){const q=x+camera*(.07+layer*.055);const y=235+layer*48+Math.sin(q/115+layer*2)*45+Math.cos(q/57)*17;ctx.lineTo(x,y);}ctx.lineTo(W,H);ctx.closePath();ctx.fillStyle=["#7cacc477","#598f9c99","#387f7e99"][layer];ctx.fill();}
-
-
- for(let i=0;i<6;i++){
-  const x=((i*210-distance*1.4)%(W+250)+(W+250))%(W+250)-100;
-  const y=80+i%3*38;
-  circle(x,y,23,"#ffffffbb");
-  circle(x+28,y-9,30,"#ffffffbb");
-  circle(x+55,y,22,"#ffffffbb");
+ const [type,name,top,bottom]=worldTheme,sky=ctx.createLinearGradient(0,0,0,H);
+ sky.addColorStop(0,night?"#10213c":top);sky.addColorStop(1,night?"#465d83":bottom);rect(0,0,W,H,sky);
+ const scroll=(i,step,factor)=>((i*step-camera*factor)%(W+step)+(W+step))%(W+step)-step/2;
+ if(type==="water"){for(let i=0;i<28;i++){const x=scroll(i,83,.2),y=(i*73-clock*16+H*10)%H;ctx.strokeStyle="#c8fbff88";ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,4+i%5*2,0,7);ctx.stroke();}for(let i=0;i<12;i++){const x=scroll(i,92,.4);ctx.strokeStyle="#2f987b";ctx.lineWidth=7;for(let j=0;j<3;j++){ctx.beginPath();ctx.moveTo(x,GROUND+20);ctx.quadraticCurveTo(x+j*15-15,GROUND-30,x+j*12-12,GROUND-75-i%3*18);ctx.stroke();}}}
+ else if(type==="tunnel"){rect(0,0,W,65,"#282a36");for(let i=0;i<9;i++){const x=scroll(i,150,.55);round(x,35,22,H-35,8,"#414453");round(x-32,63,86,10,5,"#ffd48d");const glow=ctx.createRadialGradient(x+10,70,2,x+10,70,95);glow.addColorStop(0,"#ffc65b55");glow.addColorStop(1,"#ffc65b00");circle(x+10,70,95,glow);}}
+ else{
+ if(night){circle(750,75,35,"#fff3cf");circle(765,64,28,"#192f50");for(let i=0;i<36;i++)circle((i*173)%W,22+(i*37)%145,1+i%2,"#ffffffb0");}
+ else{circle(750,78,39,"#ffe7a1");for(let i=0;i<7;i++){const x=scroll(i,170,.09),y=65+i%3*34;circle(x,y,23,"#ffffffbb");circle(x+24,y-10,28,"#ffffffbb");circle(x+49,y,21,"#ffffffbb");}}
+ for(let layer=0;layer<2;layer++){ctx.beginPath();ctx.moveTo(0,H);for(let x=-20;x<W+30;x+=15){const q=x+camera*(.08+layer*.08);ctx.lineTo(x,240+layer*55+Math.sin(q/115+layer)*45+Math.cos(q/61)*12);}ctx.lineTo(W,H);ctx.closePath();ctx.fillStyle=night?"#233f5e99":type==="desert"?"#c7894977":"#518f9c88";ctx.fill();}
+ for(let i=0;i<12;i++){const x=scroll(i,100,.35);
+ if(type==="city"||type==="village"||type==="road"||type==="highway"){const h=type==="city"?105+(i*67)%165:55+(i*17)%55;rect(x,GROUND-h,70,h,night?"#34465d":i%2?"#c5b4a2":"#9aaebb");if(type==="village"){ctx.fillStyle="#b56e43";ctx.beginPath();ctx.moveTo(x-7,GROUND-h);ctx.lineTo(x+35,GROUND-h-28);ctx.lineTo(x+77,GROUND-h);ctx.fill();}for(let yy=GROUND-h+14;yy<GROUND-12;yy+=28)for(let xx=x+10;xx<x+58;xx+=24)rect(xx,yy,12,15,night?"#ffe09a":"#527d93");}
+ else if(type==="desert"){circle(x,GROUND+5,60,"#dca35c");}
+ else if(type==="mountain"){ctx.fillStyle="#c2d6df";ctx.beginPath();ctx.moveTo(x-55,GROUND);ctx.lineTo(x+25,GROUND-150-(i%3)*35);ctx.lineTo(x+105,GROUND);ctx.fill();}
+ else{rect(x+20,GROUND-100,13,100,"#76583c");circle(x+26,GROUND-113,36,night?"#23564d":"#38864b");circle(x+5,GROUND-87,28,night?"#2a6254":"#5ca853");}}
+ if(type==="road"||type==="highway"){rect(0,GROUND-25,W,25,"#535e69");for(let i=0;i<12;i++)rect(scroll(i,100,.65),GROUND-14,50,3,"#efe4ac");}
  }
-
- for(let i=0;i<9;i++){
-  const x=((i*160-distance*2)%(W+200)+(W+200))%(W+200)-80;
-  circle(x,GROUND-22,44,"#79c88d");
-  circle(x+20,GROUND-39,37,"#91dca0");
- }
-
- const water=ctx.createLinearGradient(0,GROUND,0,H);water.addColorStop(0,"#56bbdc");water.addColorStop(1,"#17496f");rect(0,GROUND,W,H-GROUND,water);for(let i=0;i<10;i++){const x=((i*123-camera*.5+clock*12)%(W+150)+W+150)%(W+150)-70;round(x,GROUND+18+i%3*20,65,3,2,"#a5e9f366");}
- 
-
- for(let i=0;i<15;i++){
-  const x=((i*100-distance*8)%(W+100)+(W+100))%(W+100);
-  
- }
+ rect(0,GROUND,W,H-GROUND,type==="water"?"#185d83":type==="tunnel"?"#30303c":night?"#234261":"#527f9b");
 }
-
-
-
 const runningSheet=new Image();
 runningSheet.src="mohammad-running-frames.png";
 const RUN_FRAMES=8;
@@ -560,9 +577,9 @@ function draw(){
   ctx.clearRect(0,0,W,H);
  }else{
   background();
-  for(const p of terrain){const x=p.x-camera;if(x+p.w<0||x>W)continue;const g=ctx.createLinearGradient(0,p.y,0,p.y+p.h);g.addColorStop(0,"#cda66d");g.addColorStop(1,"#674737");round(x,p.y,p.w,p.h,7,g);const grass=ctx.createLinearGradient(0,p.y,0,p.y+14);grass.addColorStop(0,worldTheme===1?"#ffd582":"#a0e15a");grass.addColorStop(1,worldTheme===1?"#b97a32":"#398844");round(x,p.y,p.w,14,5,grass);ctx.strokeStyle="#ffffff21";for(let a=28;a<p.w;a+=48){ctx.beginPath();ctx.moveTo(x+a,p.y+17);ctx.lineTo(x+a-8,p.y+p.h);ctx.stroke();}}
+  for(const p of terrain){const x=p.x-camera;if(x+p.w<0||x>W)continue;const g=ctx.createLinearGradient(0,p.y,0,p.y+p.h);g.addColorStop(0,"#cda66d");g.addColorStop(1,"#674737");round(x,p.y,p.w,p.h,7,g);const grass=ctx.createLinearGradient(0,p.y,0,p.y+14);grass.addColorStop(0,worldTheme[4]);grass.addColorStop(1,worldTheme[5]);round(x,p.y,p.w,14,5,grass);ctx.strokeStyle="#ffffff21";for(let a=28;a<p.w;a+=48){ctx.beginPath();ctx.moveTo(x+a,p.y+17);ctx.lineTo(x+a-8,p.y+p.h);ctx.stroke();}}
   for(const s of stars)if(!s.collected)starShape(s.x-camera,s.y,s.r);
-  for(const h of hazards){if(h.dead)continue;const x=h.x-camera;if(h.kind==="spikes"){for(let i=0;i<3;i++){ctx.fillStyle="#bbc8d6";ctx.beginPath();ctx.moveTo(x+i*17,h.y+h.h);ctx.lineTo(x+i*17+8,h.y);ctx.lineTo(x+i*17+17,h.y+h.h);ctx.fill();}}else{const g=ctx.createLinearGradient(x,h.y,x+h.w,h.y+h.h);g.addColorStop(0,"#d1b5a1");g.addColorStop(1,"#51435a");round(x,h.y,h.w,h.h,10,g);round(x+6,h.y+8,h.w-12,6,3,"#eee0c7");round(x+8,h.y+26,h.w-16,5,2,"#3d3545");}}
+  for(const h of hazards){if(h.dead)continue;const x=h.x-camera;if(h.kind==="bar"){round(x,h.y,h.w,h.h,5,"#d69836");for(let k=0;k<3;k++)rect(x+8+k*20,h.y+5,9,h.h-10,"#563d29");}else if(h.kind==="spikes"){for(let i=0;i<3;i++){ctx.fillStyle="#bbc8d6";ctx.beginPath();ctx.moveTo(x+i*17,h.y+h.h);ctx.lineTo(x+i*17+8,h.y);ctx.lineTo(x+i*17+17,h.y+h.h);ctx.fill();}}else{const g=ctx.createLinearGradient(x,h.y,x+h.w,h.y+h.h);g.addColorStop(0,"#d1b5a1");g.addColorStop(1,"#51435a");round(x,h.y,h.w,h.h,10,g);round(x+6,h.y+8,h.w-12,6,3,"#eee0c7");round(x+8,h.y+26,h.w-16,5,2,"#3d3545");}}
   for(const p of powerups){if(p.used)continue;const x=p.x-camera,y=p.y+Math.sin(clock*4)*5;ctx.save();ctx.shadowBlur=16;ctx.shadowColor=p.kind==="fire"?"#ff8430":"#55d8ff";circle(x,y,23,p.kind==="fire"?"#d75a16":p.kind==="shield"?"#246fbb":"#aa7826");circle(x,y,19,"#ffffff30");ctx.font="26px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(p.kind==="fire"?"🔥":p.kind==="shield"?"🛡":"🔑",x,y);ctx.restore();}
   for(const t of treasures){const x=t.x-camera;round(x,t.y+13,56,35,6,"#8d5529");round(x,t.y+(t.open?-7:0),56,20,6,"#d3983c");round(x+23,t.y+18,12,15,3,"#ffe38b");}
   for(const b of shots){const x=b.x-camera;ctx.save();ctx.shadowColor="#ff7b00";ctx.shadowBlur=20;const g=ctx.createRadialGradient(x,b.y,2,x,b.y,17);g.addColorStop(0,"#fffbd2");g.addColorStop(.45,"#ffca39");g.addColorStop(1,"#ff5d00");circle(x,b.y,17,g);ctx.restore();}
@@ -587,7 +604,7 @@ function draw(){
 
  (($("distance")) || {textContent:""}).textContent=Math.floor(distance);
  (($("stars")) || {textContent:""}).textContent=score+" ⭐";
- (($("speed")) || {textContent:""}).textContent=level+" / 30";
+ (($("speed")) || {textContent:""}).textContent=level+" / "+MAX_LEVEL;
  const seconds=Math.floor(elapsed);
  (($("time")) || {textContent:""}).textContent=
   String(Math.floor(seconds/60)).padStart(2,"0")+":"+
@@ -596,7 +613,7 @@ function draw(){
  (($("starRecord")) || {textContent:""}).textContent=saved.starRecord+" ⭐";
  (($("totalStars")) || {textContent:""}).textContent=saved.totalStars+" ⭐";
  document.querySelectorAll("[data-character]").forEach(b=>b.disabled=mode==="running"||mode==="paused");
- $("start").hidden=mode==="running"||mode==="paused"||(mode==="won"&&level===30);$("start").textContent=mode==="won"?"المرحلة التالية":mode==="crashed"?"حاول مجددًا":"▶ ابدأ";$("pause").disabled=mode!=="running"&&mode!=="paused";$("fire").disabled=mode!=="running"||clock>=fireUntil;$("fire").textContent=clock<fireUntil?"🔥 "+Math.ceil(fireUntil-clock):"🔥";
+ $("start").hidden=mode==="running"||mode==="paused"||(mode==="won"&&level===MAX_LEVEL);$("start").textContent=mode==="won"?"المرحلة التالية":mode==="crashed"?"حاول مجددًا":"▶ ابدأ";$("pause").disabled=mode!=="running"&&mode!=="paused";$("fire").disabled=mode!=="running"||clock>=fireUntil;$("fire").textContent=clock<fireUntil?"🔥 "+Math.ceil(fireUntil-clock):"🔥";
  (($("pause")) || {textContent:""}).textContent=mode==="paused"?gameText("m9"):gameText("m10");
 }
 
